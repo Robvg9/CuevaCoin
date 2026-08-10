@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "dev.workers.robvg9.cuevacoin.twa",
+        "sha256_cert_fingerprints": ["2F:8B:02:9E:42:7F:8E:D7:7C:C4:5B:18:26:96:5A:07:1C:87:1B:BB:2D:15:1E:A9:CF:56:3E:CD:5E:D3:75:67"]
+      }
+    }]
