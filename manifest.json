@@ -1,0 +1,25 @@
+{
+  "name": "CuevaCoin - Banco Digital",
+  "short_name": "CuevaCoin",
+  "description": "Banco digital privado para trabajadoras de la cafetería La Cueva",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F7FA",
+  "theme_color": "#0F172A",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
