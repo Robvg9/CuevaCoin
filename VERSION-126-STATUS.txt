@@ -1,0 +1,1 @@
+v126 is being prepared. The application must not be considered v126 until index.html and service-worker.js are updated and deployed together.
