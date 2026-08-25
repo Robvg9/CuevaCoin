@@ -1,0 +1,5 @@
+CuevaCoin v126
+
+Release marker for BUG #1 retirement duplicate protection.
+
+NOTE: This marker alone does not change the existing application UI/version or retirement flow. The production app version must be bumped in index.html/service-worker.js as part of the complete v126 release.
