@@ -6768,6 +6768,61 @@
         // cambios: no se tocaron a propósito.
         const CLAVE_COLA_PENDIENTE = 'cuevacoin_cola_pendiente';
 
+        // BUG #1 — idempotency key estable para retiros (RPC solicitar_retiro)
+        let retiroIdempotencyKeyEnVuelo = null;
+        const RETIRO_IDEMPOTENCY_STORAGE_KEY = 'cuevacoin_retiro_idempotency_key';
+
+        function generarIdempotencyKey() {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+            return 'ret-' + Date.now() + '-' + Math.random().toString(36).slice(2, 12);
+        }
+
+        function obtenerOCrearRetiroIdempotencyKey() {
+            if (retiroIdempotencyKeyEnVuelo) return retiroIdempotencyKeyEnVuelo;
+            try {
+                const guardada = sessionStorage.getItem(RETIRO_IDEMPOTENCY_STORAGE_KEY);
+                if (guardada) {
+                    retiroIdempotencyKeyEnVuelo = guardada;
+                    return guardada;
+                }
+            } catch (e) { /* sessionStorage puede fallar en modo privado */ }
+            const key = generarIdempotencyKey();
+            retiroIdempotencyKeyEnVuelo = key;
+            try { sessionStorage.setItem(RETIRO_IDEMPOTENCY_STORAGE_KEY, key); } catch (e) {}
+            return key;
+        }
+
+        function limpiarRetiroIdempotencyKey() {
+            retiroIdempotencyKeyEnVuelo = null;
+            try { sessionStorage.removeItem(RETIRO_IDEMPOTENCY_STORAGE_KEY); } catch (e) {}
+        }
+
+        // Dedup de notificación al admin por solicitud_id (evita duplicar si online + cola reintentan)
+        async function notificarAdminRetiroSiNoDuplicado(solicitudId, mensaje, adminId) {
+            if (!adminId || !solicitudId) return;
+            const dedupKey = 'notif_retiro_' + solicitudId;
+            try {
+                if (sessionStorage.getItem(dedupKey)) return;
+            } catch (e) {}
+            try {
+                const { error } = await supabaseClient
+                    .from('notificaciones')
+                    .insert({ usuario_id: adminId, mensaje: mensaje, leida: false, tipo_evento: 'solicitud_retiro' });
+                if (error) {
+                    console.error('Error notificación retiro:', error);
+                } else {
+                    try { sessionStorage.setItem(dedupKey, '1'); } catch (e) {}
+                    actualizarBadgeNotificaciones(adminId);
+                }
+                supabaseClient.functions.invoke('enviar-push', {
+                    body: { usuario_id: adminId, mensaje: mensaje, tipo_evento: 'solicitud_retiro' }
+                }).catch((err) => console.error('Error push retiro:', err));
+            } catch (err) {
+                console.error('Error notificando admin retiro:', err);
+            }
+        }
+
+
         function obtenerColaPendiente() {
             try {
                 return JSON.parse(localStorage.getItem(CLAVE_COLA_PENDIENTE)) || [];
@@ -6864,68 +6919,43 @@
                 return;
             }
             if (item.tipo === 'retiro') {
-                const { data: perfil, error: errorLeer } = await supabaseClient
-                    .from('perfiles')
-                    .select('saldo, nombre, usuario')
-                    .eq('id', item.datos.usuario_id)
-                    .single();
-                if (errorLeer) throw errorLeer;
-                if (item.datos.cantidad > Number(perfil.saldo)) {
-                    throw new Error('Saldo insuficiente');
-                }
-                const { error } = await supabaseClient
-                    .from('solicitudes_retiro')
-                    .insert({
-                        usuario_id: item.datos.usuario_id,
-                        cantidad: item.datos.cantidad,
-                        motivo: item.datos.motivo,
-                        estado: 'pendiente'
-                    });
-                if (error) throw error;
-
-                // Punto 2 (2026-08-08): mismo criterio que en el camino
-                // online (retiro-form) - reservar/descontar el monto acá,
-                // no esperar a que el admin apruebe.
-                const { error: errorReserva } = await supabaseClient
-                    .from('perfiles')
-                    .update({ saldo: Number(perfil.saldo) - item.datos.cantidad })
-                    .eq('id', item.datos.usuario_id);
-                if (errorReserva) console.error('Error reservando saldo desde cola offline:', errorReserva);
-
-                // Mismo aviso al admin que en el camino online (retiro-form):
-                // acá también hay que avisarle, no solo cuando hay internet
-                // en el momento exacto de pedirlo.
-                const { data: adminRetiroCola } = await supabaseClient
-                    .from('perfiles')
-                    .select('id')
-                    .eq('es_admin', true)
-                    .limit(1)
-                    .single();
-                
-                console.log('[A2-DEBUG] Retiro desde cola offline - buscando admin:', adminRetiroCola);
-                
-                if (adminRetiroCola) {
-                    const nombreSolicitanteCola = perfil.nombre || perfil.usuario;
-                    const mensajeNotifRetiroCola = `${nombreSolicitanteCola} solicitó un retiro de $${item.datos.cantidad}`;
-                    
-                    console.log('[A2-DEBUG] Insertando notificación desde cola offline:', mensajeNotifRetiroCola);
-                    
-                    const { error: errorNotifRetiroCola } = await supabaseClient
-                        .from('notificaciones')
-                        .insert({ usuario_id: adminRetiroCola.id, mensaje: mensajeNotifRetiroCola, leida: false, tipo_evento: 'solicitud_retiro' });
-                    
-                    if (errorNotifRetiroCola) {
-                        console.error('[A2-DEBUG] Error notificación retiro desde cola:', errorNotifRetiroCola);
-                    } else {
-                        console.log('[A2-DEBUG] Notificación desde cola insertada correctamente');
-                        actualizarBadgeNotificaciones(adminRetiroCola.id);
+                // BUG #1: RPC atómica solicitar_retiro (mismo camino online/offline)
+                // Key estable: la de la cola o, en items viejos, una derivada de item.id (nunca Date.now en retry)
+                const keyCola = item.datos.idempotency_key || ('cola-item-' + item.id);
+                const { data, error } = await supabaseClient.rpc('solicitar_retiro', {
+                    p_cantidad: item.datos.cantidad,
+                    p_motivo: item.datos.motivo || 'Solicitud de retiro',
+                    p_idempotency_key: keyCola
+                });
+                if (error) {
+                    const msg = (error.message || '') + ' ' + (error.details || '') + ' ' + (error.hint || '');
+                    if (/saldo.?insuficiente|insufficient/i.test(msg)) throw new Error('Saldo insuficiente');
+                    if (/retiro_pendiente_existente|ya tienes un retiro pendiente/i.test(msg)) {
+                        throw new Error('Ya tienes un retiro pendiente. Espera a que el admin lo resuelva.');
                     }
-                    
-                    supabaseClient.functions.invoke('enviar-push', {
-                        body: { usuario_id: adminRetiroCola.id, mensaje: mensajeNotifRetiroCola, tipo_evento: 'solicitud_retiro' }
-                    }).catch((err) => console.error('[A2-DEBUG] Error push retiro cola:', err));
-                } else {
-                    console.error('[A2-DEBUG] No se encontró admin para notificación desde cola');
+                    throw error;
+                }
+                const fila = Array.isArray(data) ? data[0] : data;
+                if (fila && fila.error) {
+                    if (fila.error === 'saldo_insuficiente') throw new Error('Saldo insuficiente');
+                    if (fila.error === 'retiro_pendiente_existente') {
+                        throw new Error('Ya tienes un retiro pendiente. Espera a que el admin lo resuelva.');
+                    }
+                    throw new Error(fila.error);
+                }
+                // Notificar admin (dedup por solicitud_id); el saldo ya lo reservó la RPC
+                if (fila && fila.solicitud_id) {
+                    const { data: adminRetiroCola } = await supabaseClient
+                        .from('perfiles')
+                        .select('id')
+                        .eq('es_admin', true)
+                        .limit(1)
+                        .maybeSingle();
+                    if (adminRetiroCola) {
+                        const nombre = (item.datos.nombre_usuario) || 'Trabajadora';
+                        const mensaje = `${nombre} solicitó un retiro de $${item.datos.cantidad}`;
+                        await notificarAdminRetiroSiNoDuplicado(fila.solicitud_id, mensaje, adminRetiroCola.id);
+                    }
                 }
                 return;
             }
@@ -11141,6 +11171,11 @@
         // ============================================
         document.getElementById('retiro-form').addEventListener('submit', async function(e) {
             e.preventDefault();
+            const formEl = this;
+            const btnSubmit = formEl.querySelector('button[type="submit"]');
+            // BUG #1: bloquear doble click ANTES de cualquier await
+            if (btnSubmit) btnSubmit.disabled = true;
+
             const valorCantidadRetiro = document.getElementById('retiro-cantidad').value;
             const cantidad = parseInt(valorCantidadRetiro, 10);
             const motivo = document.getElementById('retiro-motivo').value || 'Solicitud de retiro';
@@ -11152,149 +11187,125 @@
             if (cuentaDesactivadaGlobal) {
                 showToast('❌ Tu cuenta está desactivada. Contacta a soporte para más información.', 3500);
                 closeModal('retiro-modal');
+                if (btnSubmit) btnSubmit.disabled = false;
                 return;
             }
 
             if (usuario && !usuario.esAdmin && !usuario.perfilCompleto) {
                 showToast('Completa tu perfil antes de solicitar un retiro', 4000);
                 closeModal('retiro-modal');
+                if (btnSubmit) btnSubmit.disabled = false;
                 return;
             }
 
             if (!esMontoEnteroValido(valorCantidadRetiro)) {
                 showToast('La cantidad debe ser un número entero mayor a 0, sin decimales', 3500);
+                if (btnSubmit) btnSubmit.disabled = false;
                 return;
             }
 
-            // Punto 36c: sin internet no hay forma de leer el saldo real
-            // para validar acá, así que se encola tal cual y esa validación
-            // se hace de verdad al sincronizar (ver ejecutarAccionDeCola).
+            // BUG #1: key estable por intención — no se limpia en timeout/red
+            const idempotencyKey = obtenerOCrearRetiroIdempotencyKey();
+
+            // Offline: encolar con la misma key (no validar saldo acá)
             if (!navigator.onLine) {
-                encolarAccion('retiro', { usuario_id: usuario.id, cantidad: cantidad, motivo: motivo });
-                closeModal('retiro-modal');
-                document.getElementById('retiro-cantidad').value = '';
-                document.getElementById('retiro-motivo').value = '';
-                return;
-            }
-
-            // Leer el saldo real y actual desde Supabase antes de validar
-            // (el saldo guardado en sessionStorage puede estar desactualizado
-            // si un admin ya lo ajustó desde que el trabajador inició sesión)
-            const { data: perfil, error: errorLeer } = await supabaseClient
-                .from('perfiles')
-                .select('saldo')
-                .eq('id', usuario.id)
-                .single();
-            if (errorLeer) {
-                console.error(errorLeer);
-                showToast('No se pudo verificar tu saldo', 3000);
-                return;
-            }
-
-            if (cantidad > Number(perfil.saldo)) {
-                showToast('Saldo insuficiente', 3000);
-                return;
-            }
-
-            // Punto 2 (2026-08-08, bug crítico reportado por el usuario con la
-            // cuenta de prueba "Belkis"): antes el saldo NO se tocaba hasta que
-            // el admin aprobaba, así que un trabajador podía mandar varias
-            // solicitudes seguidas que en conjunto superaban su saldo real -
-            // todas pasaban la validación de arriba porque cada una se
-            // comparaba contra el mismo saldo sin descontar, y al aprobarlas
-            // todas la cuenta terminaba en negativo. Ahora el monto se
-            // reserva/descuenta ACÁ MISMO, al solicitar (no al aprobar): así
-            // la siguiente solicitud ya valida contra el saldo real
-            // disponible. Si se rechaza, rechazarSolicitud() lo devuelve; si
-            // se aprueba, aprobarSolicitud() ya no vuelve a descontarlo.
-            const saldoAntesReserva = Number(perfil.saldo);
-            const saldoDespuesReserva = saldoAntesReserva - cantidad;
-
-            // Crear la solicitud (queda "pendiente" hasta que el admin la
-            // apruebe o rechace)
-            const { error: errorInsert } = await supabaseClient
-                .from('solicitudes_retiro')
-                .insert({
+                encolarAccion('retiro', {
                     usuario_id: usuario.id,
                     cantidad: cantidad,
                     motivo: motivo,
-                    estado: 'pendiente'
+                    idempotency_key: idempotencyKey,
+                    nombre_usuario: usuario.nombre || usuario.usuario
                 });
-            if (errorInsert) {
-                console.error(errorInsert);
-                showToast('No se pudo enviar la solicitud', 3000);
+                closeModal('retiro-modal');
+                document.getElementById('retiro-cantidad').value = '';
+                document.getElementById('retiro-motivo').value = '';
+                // Key se limpia al sincronizar con éxito en ejecutarAccionDeCola / o al éxito online
+                if (btnSubmit) btnSubmit.disabled = false;
                 return;
             }
 
-            const { error: errorReserva } = await supabaseClient
-                .from('perfiles')
-                .update({ saldo: saldoDespuesReserva })
-                .eq('id', usuario.id);
-            if (errorReserva) {
-                console.error(errorReserva);
-                // La solicitud ya se envió, pero no se pudo reservar el monto
-                // - caso raro (falla de red/permisos justo acá). Se avisa
-                // claro en vez de fallar en silencio, mismo criterio que usa
-                // aprobarSolicitud() para el error simétrico.
-                showToast('¡Atención! La solicitud se envió pero no se pudo reservar el monto de tu saldo. Avisa al administrador.', 6000);
-            } else {
-                // Reflejar el nuevo saldo al toque en pantalla y en la sesión,
-                // para no esperar a la próxima carga de Inicio.
-                usuario.saldo = saldoDespuesReserva;
-                sessionStorage.setItem('cuevacoin_usuario_actual', JSON.stringify(usuario));
-                const saldoSpan = document.getElementById('user-saldo');
-                if (saldoSpan) saldoSpan.textContent = saldoDespuesReserva.toFixed(2);
-                const perfilSaldoSpan = document.getElementById('perfil-saldo');
-                if (perfilSaldoSpan) perfilSaldoSpan.textContent = saldoDespuesReserva.toFixed(2);
-            }
+            try {
+                // BUG #1: una sola RPC atómica (reserva saldo + insert solicitud)
+                const { data, error } = await supabaseClient.rpc('solicitar_retiro', {
+                    p_cantidad: cantidad,
+                    p_motivo: motivo,
+                    p_idempotency_key: idempotencyKey
+                });
 
-            // Notificar al admin (campanita + punto rojo + push) - antes esto
-            // solo insertaba en solicitudes_retiro y el admin nunca se enteraba
-            // sin entrar a revisar manualmente (mismo patrón que sendUserMessage).
-            const { data: adminRetiro, error: errorAdminRetiro } = await supabaseClient
-                .from('perfiles')
-                .select('id')
-                .eq('es_admin', true)
-                .limit(1)
-                .single();
-
-            if (errorAdminRetiro || !adminRetiro) {
-                console.error('[A2-DEBUG] Error buscando admin para notificación retiro:', errorAdminRetiro);
-                showToast('Solicitud enviada, pero hubo un error al notificar al admin', 4000);
-            } else {
-                const nombreSolicitante = usuario.nombre || usuario.usuario;
-                const mensajeNotifRetiro = `${nombreSolicitante} solicitó un retiro de $${cantidad}`;
-                
-                console.log('[A2-DEBUG] Intentando insertar notificación para admin:', adminRetiro.id, mensajeNotifRetiro);
-                
-                const { error: errorNotifRetiro } = await supabaseClient
-                    .from('notificaciones')
-                    .insert({
-                        usuario_id: adminRetiro.id,
-                        mensaje: mensajeNotifRetiro,
-                        leida: false,
-                        tipo_evento: 'solicitud_retiro'
-                    });
-                
-                if (errorNotifRetiro) {
-                    console.error('[A2-DEBUG] Error insertando notificación retiro:', errorNotifRetiro);
-                    console.error('[A2-DEBUG] Detalles del error:', JSON.stringify(errorNotifRetiro, null, 2));
-                    showToast('Solicitud enviada, pero hubo error de notificación (ver consola)', 5000);
-                } else {
-                    console.log('[A2-DEBUG] Notificación insertada correctamente');
-                    // Actualizar badge inmediatamente
-                    actualizarBadgeNotificaciones(adminRetiro.id);
+                if (error) {
+                    console.error('Error solicitar_retiro:', error);
+                    const msg = (error.message || '') + ' ' + (error.details || '') + ' ' + (error.hint || '');
+                    if (/saldo.?insuficiente|insufficient/i.test(msg)) {
+                        showToast('Saldo insuficiente', 3000);
+                        limpiarRetiroIdempotencyKey();
+                    } else if (/retiro_pendiente_existente|ya tienes un retiro pendiente/i.test(msg)) {
+                        showToast('Ya tienes un retiro pendiente. Espera a que el admin lo resuelva.', 4000);
+                        limpiarRetiroIdempotencyKey();
+                    } else if (esErrorDeConexion(error) || /timeout|fetch|network|Load failed/i.test(msg)) {
+                        // NO limpiar key: mismo reintento reutiliza la key
+                        showToast('No sabemos si la solicitud se registró. Puedes reintentar; no se duplicará.', 5000);
+                    } else {
+                        showToast('No se pudo enviar la solicitud. Intenta de nuevo.', 3500);
+                    }
+                    if (btnSubmit) btnSubmit.disabled = false;
+                    return;
                 }
 
-                supabaseClient.functions.invoke('enviar-push', {
-                    body: { usuario_id: adminRetiro.id, mensaje: mensajeNotifRetiro, tipo_evento: 'solicitud_retiro' }
-                }).catch((err) => console.error('[A2-DEBUG] Error mandando push de solicitud de retiro:', err));
-            }
+                const fila = Array.isArray(data) ? data[0] : data;
+                if (fila && fila.error) {
+                    if (fila.error === 'saldo_insuficiente') {
+                        showToast('Saldo insuficiente', 3000);
+                    } else if (fila.error === 'retiro_pendiente_existente') {
+                        showToast('Ya tienes un retiro pendiente. Espera a que el admin lo resuelva.', 4000);
+                    } else {
+                        showToast(String(fila.error), 3500);
+                    }
+                    limpiarRetiroIdempotencyKey();
+                    if (btnSubmit) btnSubmit.disabled = false;
+                    return;
+                }
 
-            showToast('Solicitud de retiro enviada al admin', 3000);
-            closeModal('retiro-modal');
-            document.getElementById('retiro-cantidad').value = '';
-            document.getElementById('retiro-motivo').value = '';
+                // Actualizar UI con el saldo que devolvió la RPC
+                if (fila && fila.nuevo_saldo != null) {
+                    const nuevoSaldo = Number(fila.nuevo_saldo);
+                    usuario.saldo = nuevoSaldo;
+                    sessionStorage.setItem('cuevacoin_usuario_actual', JSON.stringify(usuario));
+                    const saldoSpan = document.getElementById('user-saldo');
+                    if (saldoSpan) saldoSpan.textContent = nuevoSaldo.toFixed(2);
+                    const perfilSaldoSpan = document.getElementById('perfil-saldo');
+                    if (perfilSaldoSpan) perfilSaldoSpan.textContent = nuevoSaldo.toFixed(2);
+                }
+
+                // Notificar admin (dedup); la RPC ya creó la solicitud
+                if (fila && fila.solicitud_id) {
+                    const { data: adminRetiro } = await supabaseClient
+                        .from('perfiles')
+                        .select('id')
+                        .eq('es_admin', true)
+                        .limit(1)
+                        .maybeSingle();
+                    if (adminRetiro) {
+                        const nombreSolicitante = usuario.nombre || usuario.usuario;
+                        const mensajeNotifRetiro = `${nombreSolicitante} solicitó un retiro de $${cantidad}`;
+                        await notificarAdminRetiroSiNoDuplicado(fila.solicitud_id, mensajeNotifRetiro, adminRetiro.id);
+                    }
+                }
+
+                limpiarRetiroIdempotencyKey();
+                showToast('Solicitud de retiro enviada al admin', 3000);
+                closeModal('retiro-modal');
+                document.getElementById('retiro-cantidad').value = '';
+                document.getElementById('retiro-motivo').value = '';
+            } catch (err) {
+                console.error('Error inesperado en retiro-form:', err);
+                if (esErrorDeConexion(err)) {
+                    showToast('No sabemos si la solicitud se registró. Puedes reintentar; no se duplicará.', 5000);
+                } else {
+                    showToast('No se pudo enviar la solicitud. Intenta de nuevo.', 3500);
+                }
+            } finally {
+                if (btnSubmit) btnSubmit.disabled = false;
+            }
         });
 
         // Si la persona toca el campo de correo después de escanear un QR,
