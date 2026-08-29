@@ -1,7 +1,29 @@
 /**
  * CuevaCoin — js/legacy-app.js
- * Lógica restante del monolito tras Oleada 1 (core+data extraídos).
- * TEMP: file must be restored from local fixed version — see artifacts.
- * If you see this message, run deploy of full legacy-app.js from artifacts.
+ * Cargador secuencial de partes (a/b/c) por límite de tamaño en deploy.
+ * Ejecuta las partes en orden, mismo scope global que el monolito original.
  */
-console.error('[CuevaCoin] legacy-app.js incomplete deploy — contact admin');
+(function loadLegacyParts() {
+  var parts = [
+    'js/legacy-app-a.js',
+    'js/legacy-app-b.js',
+    'js/legacy-app-c.js'
+  ];
+  var i = 0;
+  function next() {
+    if (i >= parts.length) return;
+    var s = document.createElement('script');
+    s.src = parts[i] + '?v=restore-retiro-1';
+    i += 1;
+    s.onload = next;
+    s.onerror = function () {
+      console.error('[CuevaCoin] No se pudo cargar', s.src);
+    };
+    (document.body || document.head || document.documentElement).appendChild(s);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', next);
+  } else {
+    next();
+  }
+})();
