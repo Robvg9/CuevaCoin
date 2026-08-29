@@ -168,10 +168,13 @@ export async function ejecutarAccionDeCola(item) {
             p_idempotency_key: keyCola
         });
         if (error) {
-            const msg = (error.message || '') + ' ' + (error.details || '') + ' ' + (error.hint || '');
+            const msg = (error.message || '') + ' ' + (error.details || '') + ' ' + (error.hint || '') + ' ' + (error.code || '');
             if (/saldo.?insuficiente|insufficient/i.test(msg)) throw new Error('Saldo insuficiente');
             if (/retiro_pendiente_existente|ya tienes un retiro pendiente/i.test(msg)) {
                 throw new Error('Ya tienes un retiro pendiente. Espera a que el admin lo resuelva.');
+            }
+            if (/permission denied|42501|not authorized|JWT|expired|PGRST301/i.test(msg)) {
+                throw new Error('No autorizado para retirar. Vuelve a iniciar sesión.');
             }
             throw error;
         }
@@ -183,8 +186,13 @@ export async function ejecutarAccionDeCola(item) {
             }
             throw new Error(fila.error);
         }
+        // Éxito solo con solicitud_id real (no marcar sincronizado si el backend no creó nada)
+        if (!fila || !fila.solicitud_id) {
+            console.error('solicitar_retiro (cola) sin solicitud_id:', { data: data, keyCola: keyCola });
+            throw new Error('La solicitud de retiro no se registró en el servidor');
+        }
         // Notificar admin (dedup por solicitud_id); el saldo ya lo reservó la RPC
-        if (fila && fila.solicitud_id) {
+        try {
             const { data: adminRetiroCola } = await window.supabaseClient
                 .from('perfiles')
                 .select('id')
@@ -196,6 +204,8 @@ export async function ejecutarAccionDeCola(item) {
                 const mensaje = `${nombre} solicitó un retiro de $${item.datos.cantidad}`;
                 await window.notificarAdminRetiroSiNoDuplicado(fila.solicitud_id, mensaje, adminRetiroCola.id);
             }
+        } catch (eNotifCola) {
+            console.error('Notif admin retiro cola (no bloquea):', eNotifCola);
         }
         return;
     }
