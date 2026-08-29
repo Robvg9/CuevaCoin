@@ -1,6 +1,14 @@
-/** Fase 3 / Oleada 9 — procesarSesionYMostrarPantalla */
+/** Fase 3 / Oleada 9 — procesarSesionYMostrarPantalla
+ * FIX-LOADING (v129): todos los awaits de red van con conTimeoutArranque;
+ * early-returns limpian overlay; sincronizarGoogle también con timeout.
+ */
 
 export async function procesarSesionYMostrarPantalla() {
+    const limpiarOverlays = () => {
+        if (typeof window.ocultarCargando === 'function') window.ocultarCargando();
+        if (typeof window.ocultarSplashArranque === 'function') window.ocultarSplashArranque();
+    };
+
     if (!navigator.onLine) {
         const haySesionGuardadaEnDispositivo = Object.keys(localStorage)
             .some((clave) => /^sb-.*-auth-token$/.test(clave));
@@ -11,13 +19,17 @@ export async function procesarSesionYMostrarPantalla() {
 
     let session;
     try {
-        const resultado = await window.conTimeoutArranque(window.supabaseClient.auth.getSession(), window.TIMEOUT_RED_ARRANQUE_MS);
+        const resultado = await window.conTimeoutArranque(
+            window.supabaseClient.auth.getSession(),
+            window.TIMEOUT_RED_ARRANQUE_MS
+        );
         session = resultado.data.session;
     } catch (err) {
         console.error('getSession() falló al arrancar la app:', err);
         if (window.esErrorDeConexion(err) && window.entrarModoOfflineConPerfilCacheado()) {
             return;
         }
+        limpiarOverlays();
         window.showLoginScreen();
         return;
     }
@@ -34,6 +46,7 @@ export async function procesarSesionYMostrarPantalla() {
             console.error('No se pudo cerrar la sesión vencida:', err);
         }
         localStorage.removeItem('cuevacoin_sesion_inicio');
+        limpiarOverlays();
         window.showLoginScreen();
         return;
     }
@@ -42,16 +55,28 @@ export async function procesarSesionYMostrarPantalla() {
     if (session) {
         try {
             window.supabaseClient.realtime.setAuth(session.access_token);
-            let usuario = await window.conTimeoutArranque(window.obtenerMiPerfilApp(), window.TIMEOUT_RED_ARRANQUE_MS);
+            let usuario = await window.conTimeoutArranque(
+                window.obtenerMiPerfilApp(),
+                window.TIMEOUT_RED_ARRANQUE_MS
+            );
             if (!usuario) {
                 await new Promise(resolve => setTimeout(resolve, 700));
-                usuario = await window.obtenerMiPerfilApp();
+                usuario = await window.conTimeoutArranque(
+                    window.obtenerMiPerfilApp(),
+                    window.TIMEOUT_RED_ARRANQUE_MS
+                );
             }
             if (!usuario) {
+                limpiarOverlays();
                 window.showLoginScreen();
                 return;
             }
-            usuario = await window.sincronizarVinculacionGoogleSiCorresponde(usuario);
+            if (typeof window.sincronizarVinculacionGoogleSiCorresponde === 'function') {
+                usuario = await window.conTimeoutArranque(
+                    window.sincronizarVinculacionGoogleSiCorresponde(usuario),
+                    window.TIMEOUT_RED_ARRANQUE_MS
+                );
+            }
             if (localStorage.getItem('cuevacoin_google_flujo') === 'signup') {
                 window.showToast('Ya tenías una cuenta creada con este correo de Google — te iniciamos sesión en ella.', 5000);
             }
@@ -66,11 +91,20 @@ export async function procesarSesionYMostrarPantalla() {
             if (err?.code === 'PGRST116') {
                 const flujoGoogle = localStorage.getItem('cuevacoin_google_flujo');
                 if (flujoGoogle === 'signup') {
-                    const { data: { user: usuarioGoogle } } = await window.supabaseClient.auth.getUser();
-                    const identidadGoogle = usuarioGoogle?.identities?.find(i => i.provider === 'google');
-                    const correoGoogle = identidadGoogle?.identity_data?.email || usuarioGoogle?.email || '';
-                    if (typeof window.mostrarCompletarRegistroGoogle === 'function') {
-                        window.mostrarCompletarRegistroGoogle(correoGoogle);
+                    try {
+                        const { data: { user: usuarioGoogle } } = await window.conTimeoutArranque(
+                            window.supabaseClient.auth.getUser(),
+                            window.TIMEOUT_RED_ARRANQUE_MS
+                        );
+                        const identidadGoogle = usuarioGoogle?.identities?.find(i => i.provider === 'google');
+                        const correoGoogle = identidadGoogle?.identity_data?.email || usuarioGoogle?.email || '';
+                        if (typeof window.mostrarCompletarRegistroGoogle === 'function') {
+                            window.mostrarCompletarRegistroGoogle(correoGoogle);
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        limpiarOverlays();
+                        window.showLoginScreen();
                     }
                     return;
                 }
@@ -86,6 +120,7 @@ export async function procesarSesionYMostrarPantalla() {
                 }
                 localStorage.removeItem('cuevacoin_google_flujo');
                 window.showToast('Esta cuenta de Google no está vinculada a ningún usuario de CuevaCoin. Inicia sesión con tu usuario y contraseña para vincularla.', 5000);
+                limpiarOverlays();
                 window.showLoginScreen();
                 return;
             }
@@ -93,12 +128,12 @@ export async function procesarSesionYMostrarPantalla() {
                 return;
             }
             console.error('DIAGNÓSTICO LOGIN:', err?.message || err, err?.code);
-            if (typeof window.ocultarCargando === 'function') window.ocultarCargando();
-            if (typeof window.ocultarSplashArranque === 'function') window.ocultarSplashArranque();
+            limpiarOverlays();
             window.showLoginScreen();
             return;
         }
     }
+    limpiarOverlays();
     window.showLoginScreen();
 }
 
