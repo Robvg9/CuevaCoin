@@ -82,16 +82,20 @@ export function corriendoComoAppInstalada() {
 // VERSIÓN DE LA APP (desde Service Worker)
 // ============================================
 export async function mostrarVersionApp() {
+    // Fuente única de verdad: CACHE_NAME del Service Worker (GET_VERSION).
+    // Actualiza TODOS los elementos .js-app-version y #app-version-text
+    // (login + página principal autenticada).
+    const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
+    if (els.length === 0) return;
+
+    const VERSION_FALLBACK = 'V.129';
+    const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
+
     try {
-        const versionEl = document.getElementById('app-version-text');
-        if (!versionEl) return;
-
-        const VERSION_FALLBACK = 'V.77';
-
         const sw = navigator.serviceWorker.controller
             || (await navigator.serviceWorker.ready).active;
         if (!sw) {
-            versionEl.textContent = VERSION_FALLBACK;
+            aplicar(VERSION_FALLBACK);
             return;
         }
 
@@ -107,14 +111,13 @@ export async function mostrarVersionApp() {
 
         if (version) {
             const numero = version.match(/v(\d+)$/i)?.[1];
-            versionEl.textContent = numero ? `V.${numero}` : version;
+            aplicar(numero ? `V.${numero}` : version);
         } else {
-            versionEl.textContent = VERSION_FALLBACK;
+            aplicar(VERSION_FALLBACK);
         }
     } catch (err) {
         console.log('No se pudo leer la versión del service worker:', err);
-        const versionEl = document.getElementById('app-version-text');
-        if (versionEl) versionEl.textContent = 'V.77';
+        aplicar(VERSION_FALLBACK);
     }
 }
 
