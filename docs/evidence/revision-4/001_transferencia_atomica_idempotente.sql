@@ -1,0 +1,2 @@
+-- Historical proposed SQL. NOT EXECUTED.
+-- See original design in Git history.
