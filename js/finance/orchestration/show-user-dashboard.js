@@ -49,6 +49,7 @@ export function showUserDashboard(usuario) {
         if (typeof window.actualizarBonosDot === 'function') window.actualizarBonosDot(false);
         if (typeof window.suscribirRealtimeSugerencias === 'function') window.suscribirRealtimeSugerencias(false);
 
+        if (typeof window.asegurarUiVersionYActualizar === 'function') window.asegurarUiVersionYActualizar();
         if (typeof window.mostrarVersionApp === 'function') window.mostrarVersionApp();
     } finally {
         if (typeof window.ocultarCargando === 'function') window.ocultarCargando();
