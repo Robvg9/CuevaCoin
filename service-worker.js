@@ -6,7 +6,7 @@
 // nunca a caché, para que la app nunca muestre saldos ni movimientos
 // desactualizados.
 
-const CACHE_NAME = 'cuevacoin-shell-v126';
+const CACHE_NAME = 'cuevacoin-shell-v127';
 const SHELL_FILES = [
   '/',
   '/index.html',
