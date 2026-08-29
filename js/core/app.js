@@ -1,24 +1,7 @@
 /**
  * CuevaCoin — js/core/app.js
- * Arranque, splash, reloj de sesión y pantallas de entrada (Fase 2 / Oleada 1).
- * Comportamiento 1:1 con el monolito original (v125).
- *
- * Incluye solo el esqueleto de arranque / sesión / login screen.
- * NO incluye: showAdminPanel / showUserDashboard completos, logout,
- * procesarSesionYMostrarPantalla (siguen en el monolito por dependencias
- * con paneles, chat, admin y finanzas), ni lógica de retiros/cola.
- *
- * Depende de:
- *   - window.ocultarCargando, window.closeSidebar (utils / monolito)
- *   - window.showAdminPanel, window.showUserDashboard, window.mostrarConexionStrip,
- *     window.actualizarIndicadorColaPendiente (monolito)
- *   - window.esErrorDeConexion (utils)
+ * Arranque, versión, timeouts y modo offline con perfil cacheado.
  */
-
-// ============================================
-// TIEMPO DE SESIÓN CONFIGURABLE (F5)
-// ============================================
-export const DURACION_SESION_MS = { '1h': 3600000, '1d': 86400000, '7d': 604800000 };
 
 export function reiniciarRelojSesion() {
     localStorage.setItem('cuevacoin_sesion_inicio', Date.now().toString());
@@ -30,57 +13,39 @@ export function iniciarRelojSesionSiNoExiste() {
 
 export function sesionExpiradaPorTiempo() {
     const opcion = localStorage.getItem('cuevacoin_tiempo_sesion') || 'nunca';
-    const ms = DURACION_SESION_MS[opcion];
-    if (!ms) return false;
+    if (opcion === 'nunca') return false;
+    const limites = { '1h': 3600000, '1d': 86400000, '7d': 604800000 };
+    const maxMs = limites[opcion];
+    if (!maxMs) return false;
     const inicio = parseInt(localStorage.getItem('cuevacoin_sesion_inicio') || '0', 10);
     if (!inicio) return false;
-    return (Date.now() - inicio) > ms;
+    return (Date.now() - inicio) > maxMs;
 }
 
-// ============================================
-// SPLASH DE ARRANQUE
-// ============================================
-export function ocultarSplashArranque() {
-    const splash = document.getElementById('arranque-splash');
-    if (splash) splash.classList.add('hidden');
-}
-
-// ============================================
-// PANTALLA DE LOGIN (esqueleto de visibilidad)
-// ============================================
 export function showLoginScreen() {
-    ocultarSplashArranque();
+    if (typeof window !== 'undefined' && typeof window.ocultarSplashArranque === 'function') {
+        window.ocultarSplashArranque();
+    }
     if (typeof window !== 'undefined' && typeof window.ocultarCargando === 'function') {
         window.ocultarCargando();
     }
     const login = document.getElementById('login-screen');
-    if (login) login.classList.remove('hidden');
     const admin = document.getElementById('admin-panel');
-    if (admin) admin.classList.add('hidden');
-    const userDash = document.getElementById('user-dashboard');
-    if (userDash) userDash.classList.add('hidden');
+    const user = document.getElementById('user-dashboard');
     const sidebar = document.getElementById('sidebar');
-    if (sidebar) sidebar.classList.add('hidden');
     const topbar = document.getElementById('app-topbar');
+    const google = document.getElementById('google-vinculacion-screen');
+    if (login) login.classList.remove('hidden');
+    if (admin) admin.classList.add('hidden');
+    if (user) user.classList.add('hidden');
+    if (sidebar) sidebar.classList.add('hidden');
     if (topbar) topbar.classList.add('hidden');
-    const googleScreen = document.getElementById('google-vinculacion-screen');
-    if (googleScreen) googleScreen.classList.add('hidden');
-    document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
-    if (typeof window !== 'undefined' && typeof window.closeSidebar === 'function') {
-        window.closeSidebar();
+    if (google) google.classList.add('hidden');
+    if (typeof window !== 'undefined' && typeof window.mostrarVersionApp === 'function') {
+        window.mostrarVersionApp();
     }
 }
 
-// ============================================
-// DETECCIÓN PWA INSTALADA
-// ============================================
-export function corriendoComoAppInstalada() {
-    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-}
-
-// ============================================
-// VERSIÓN DE LA APP (desde Service Worker)
-// ============================================
 export async function mostrarVersionApp() {
     // Fuente única de verdad: CACHE_NAME del Service Worker (GET_VERSION).
     // Actualiza TODOS los elementos .js-app-version y #app-version-text
@@ -88,7 +53,7 @@ export async function mostrarVersionApp() {
     const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
     if (els.length === 0) return;
 
-    const VERSION_FALLBACK = 'V.129';
+    const VERSION_FALLBACK = 'V.130';
     const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
 
     try {
@@ -121,61 +86,45 @@ export async function mostrarVersionApp() {
     }
 }
 
-// ============================================
-// TIMEOUTS DE ARRANQUE
-// ============================================
 export const TIMEOUT_RED_ARRANQUE_MS = 5000;
 
 export function conTimeoutArranque(promesa, ms) {
     let venceTimeout;
     const timeout = new Promise((_, reject) => {
-        venceTimeout = setTimeout(() => reject(new Error('timeout-arranque-app')), ms);
+        venceTimeout = setTimeout(() => reject(new Error('timeout-arranque')), ms || TIMEOUT_RED_ARRANQUE_MS);
     });
     return Promise.race([promesa, timeout]).finally(() => clearTimeout(venceTimeout));
 }
 
-// ============================================
-// MODO OFFLINE CON PERFIL CACHEADO
-// ============================================
 export function entrarModoOfflineConPerfilCacheado() {
-    const perfilCacheado = localStorage.getItem('cuevacoin_perfil_cache');
-    if (!perfilCacheado) return false;
     try {
+        const perfilCacheado = localStorage.getItem('cuevacoin_perfil_cache');
+        if (!perfilCacheado) return false;
         const usuario = JSON.parse(perfilCacheado);
+        if (!usuario || !usuario.id) return false;
         sessionStorage.setItem('cuevacoin_usuario_actual', JSON.stringify(usuario));
-        if (usuario.esAdmin) {
-            if (typeof window !== 'undefined' && typeof window.showAdminPanel === 'function') {
-                window.showAdminPanel(usuario);
-            }
-        } else {
-            if (typeof window !== 'undefined' && typeof window.showUserDashboard === 'function') {
-                window.showUserDashboard(usuario);
-            }
+        if (typeof window.entrarSegunVerificacionGoogle === 'function') {
+            window.entrarSegunVerificacionGoogle(usuario);
+        } else if (usuario.esAdmin && typeof window.showAdminPanel === 'function') {
+            window.showAdminPanel(usuario);
+        } else if (typeof window.showUserDashboard === 'function') {
+            window.showUserDashboard(usuario);
         }
-        if (typeof window !== 'undefined' && typeof window.mostrarConexionStrip === 'function') {
-            window.mostrarConexionStrip('offline', '📴 Sin conexión — mostrando la última información guardada en este dispositivo', null);
-        }
-        if (typeof window !== 'undefined' && typeof window.actualizarIndicadorColaPendiente === 'function') {
-            window.actualizarIndicadorColaPendiente();
+        if (typeof window.mostrarConexionStrip === 'function') {
+            window.mostrarConexionStrip('offline', '📴 Sin conexión — mostrando datos guardados');
         }
         return true;
-    } catch (errCache) {
-        console.error('No se pudo usar el perfil cacheado para entrar sin conexión:', errCache);
+    } catch (err) {
+        console.error('No se pudo entrar en modo offline con perfil cacheado:', err);
         return false;
     }
 }
 
-// ============================================
-// Compatibilidad con el monolito
-// ============================================
 if (typeof window !== 'undefined') {
-    window.DURACION_SESION_MS = DURACION_SESION_MS;
     window.reiniciarRelojSesion = reiniciarRelojSesion;
     window.iniciarRelojSesionSiNoExiste = iniciarRelojSesionSiNoExiste;
     window.sesionExpiradaPorTiempo = sesionExpiradaPorTiempo;
-    window.ocultarSplashArranque = ocultarSplashArranque;
     window.showLoginScreen = showLoginScreen;
-    window.corriendoComoAppInstalada = corriendoComoAppInstalada;
     window.mostrarVersionApp = mostrarVersionApp;
     window.TIMEOUT_RED_ARRANQUE_MS = TIMEOUT_RED_ARRANQUE_MS;
     window.conTimeoutArranque = conTimeoutArranque;

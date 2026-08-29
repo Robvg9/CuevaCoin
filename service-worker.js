@@ -6,7 +6,7 @@
 // nunca a caché, para que la app nunca muestre saldos ni movimientos
 // desactualizados.
 
-const CACHE_NAME = 'cuevacoin-shell-v129';
+const CACHE_NAME = 'cuevacoin-shell-v130';
 const SHELL_FILES = [
   '/',
   '/index.html',
@@ -30,6 +30,9 @@ const EXTERNAL_SHELL_URL_SET = new Set(EXTERNAL_SHELL_FILES);
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'GET_VERSION') {
     event.ports[0]?.postMessage({ version: CACHE_NAME });
+  }
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });
 
