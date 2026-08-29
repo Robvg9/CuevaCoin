@@ -1,0 +1,1 @@
+Historical Revision 4 report preserved in Git history. The report documents the transfer blocker and proposed atomic/idempotent design; no production transfer fix was executed by this consolidation.
