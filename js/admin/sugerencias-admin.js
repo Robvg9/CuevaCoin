@@ -12,7 +12,7 @@ export const RESPUESTAS_RAPIDAS_SUGERENCIAS = [
 ];
 
 
-async function window.loadAdminSugerencias() {
+export async function loadAdminSugerencias() {
     const { data, error } = await window.supabaseClient
         .from('sugerencias')
         .select('id, mensaje, leida, creado_en, usuario_id, respuesta, respuesta_en, perfiles(nombre, usuario)')
@@ -85,7 +85,7 @@ export function respuestasRapidasHtml(sugerenciaId) {
     return `
         <div class="respuestas-rapidas">
             ${RESPUESTAS_RAPIDAS_SUGERENCIAS.map(texto => `
-                <button type="button" class="respuesta-rapida-chip" onclick="aplicarRespuestaRapida('${sugerenciaId}', this)" data-texto="${texto.replace(/"/g, '&quot;')}">${texto}</button>
+                <button type="button" class="respuesta-rapida-chip" onclick="aplicarRespuestaRapida('${sugerenciaId}', this)" data-texto="${texto.replace(/"/g, '"')}">${texto}</button>
             `).join('')}
         </div>
     `;
