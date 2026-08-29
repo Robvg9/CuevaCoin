@@ -1,0 +1,59 @@
+CUEVACOIN_TRANSFER_FORENSIC_DESIGN_MANIFEST
+===============================================
+
+Fecha: 2026-08-29
+Proyecto: CuevaCoin
+Project ID: zqgmjwfvluboiporytcq
+Región: ca-central-1
+PostgreSQL: 17.6.1.155
+Modo: SOLO LECTURA / DISEÑO
+
+OBJETOS INSPECCIONADOS
+- public.perfiles
+- public.transacciones
+- public.solicitudes_retiro
+- public.notificaciones
+- public.auditoria
+- funciones públicas financieras
+- RLS/policies financieras
+- grants/EXECUTE financieros
+- triggers financieros
+- aislamiento PostgreSQL
+
+FUNCIONES
+- admin_pagar_saldo(uuid[],numeric,text,text)
+- admin_resolver_retiro(uuid,boolean)
+- admin_resolver_retiro(uuid,text)
+- solicitar_retiro(numeric,text,text)
+- es_admin()
+- proteger_columnas_sensibles_perfil()
+- avisar_meta_ahorro_alcanzada()
+
+EDGE FUNCTION
+- transferir-saldo
+- versión 8
+- ACTIVE
+- verify_jwt=true
+
+REPOSITORIO DE EVIDENCIA
+- Robvg9/CuevaCoin
+- Revision 3/CUEVACOIN_SERVER_GATE3_REPORT.md
+- Revision 3/CUEVACOIN_SERVER_GATE3_EVIDENCE.md
+
+ARCHIVO CLIENTE RELACIONADO
+- Robvg9/battlecruiser/public/js/transferencias.js
+
+ESTADO
+PRODUCTION DATA MODIFIED: 0
+FINANCIAL OPERATIONS EXECUTED: 0
+SCHEMA MODIFIED: 0
+RPC MODIFIED: 0
+EDGE FUNCTIONS MODIFIED: 0
+RLS MODIFIED: 0
+DEPLOY: 0
+PUSH: 0
+MERGE: 0
+DEVELOPMENT BRANCH CREATED: 0
+COST INCURRED: $0
+
+SQL PROPOSED: NOT EXECUTED
