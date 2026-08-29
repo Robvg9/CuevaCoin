@@ -1,0 +1,59 @@
+CUEVACOIN_SERVER_GATE3_MANIFEST
+===============================
+
+Audit: CuevaCoin — Deep Server-Side Forensic Verification
+Gate: 3
+Date: 2026-08-29
+Mode: READ-ONLY / FORENSIC / ADVERSARIAL
+Supabase Project: CuevaCoin
+Project Ref: zqgmjwfvluboiporytcq
+Region: ca-central-1
+Status: ACTIVE_HEALTHY
+PostgreSQL: 17.6
+Writes performed: NO
+Financial RPCs executed: NO
+Deploy performed: NO
+Push/Merge performed: NO
+Migrations executed: NO
+Real financial data created/altered/deleted: NO
+
+DELIVERABLES
+------------
+CUEVACOIN_SERVER_GATE3_REPORT.md
+CUEVACOIN_SERVER_GATE3_CONTINUIDAD.md
+CUEVACOIN_SERVER_GATE3_MANIFEST.txt
+
+EVIDENCE INCLUDED
+-----------------
+- Supabase project identity
+- PostgreSQL version
+- Public schema inventory
+- Financial table columns/defaults
+- Financial indexes/constraints
+- RLS policy snapshot
+- RLS enabled status
+- Function definitions for financial SECURITY DEFINER RPCs
+- Effective EXECUTE privilege checks
+- Financial trigger definitions
+- Edge Function inventory
+- transferir-saldo v8 source analysis (secrets omitted)
+- Migration history
+- Supabase security advisor findings
+- Adversarial attack matrix
+- Final verdict
+
+SENSITIVE DATA HANDLING
+-----------------------
+No production row contents, user balances, UUID lists, auth tokens,
+service-role keys, VAPID private keys, or other unnecessary secrets are
+included in the evidence package.
+
+FINAL VERDICT
+-------------
+BLOCKER
+
+PRIMARY CONFIRMED ISSUE
+-----------------------
+transferir-saldo is not transactionally atomic, has no server-side
+idempotency, and has a demonstrable concurrent-balance race that can
+create money when one sender transfers concurrently to multiple recipients.
