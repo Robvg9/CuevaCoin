@@ -53,7 +53,7 @@ export async function sincronizarSuscripcionPush(usuarioId) {
     }
 }
 
-async function window.actualizarEstadoBotonPush() {
+export async function actualizarEstadoBotonPush() {
     const btns = document.querySelectorAll('.js-btn-activar-push');
     const msgs = document.querySelectorAll('.js-push-status-msg');
     // Punto 12 (2026-08-08): a diferencia del botón de Configuración
