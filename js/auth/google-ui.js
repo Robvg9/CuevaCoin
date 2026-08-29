@@ -29,7 +29,7 @@ export function entrarSegunVerificacionGoogle(usuario) {
     }
 }
 
-export function window.mostrarBloqueoVerificacionGoogle(usuario) {
+export function mostrarBloqueoVerificacionGoogle(usuario) {
     (window.ocultarSplashArranque && window.ocultarSplashArranque());
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('admin-panel').classList.add('hidden');
