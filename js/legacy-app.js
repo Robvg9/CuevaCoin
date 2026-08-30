@@ -1810,15 +1810,33 @@
                     return;
                 }
 
-                // Actualizar UI con el saldo que devolvió la RPC
-                if (fila.nuevo_saldo != null) {
-                    const nuevoSaldo = Number(fila.nuevo_saldo);
+                // Actualizar UI con el saldo reservado por la RPC.
+                // Fuente de verdad inmediata: nuevo_saldo de la RPC (o camelCase),
+                // con fallback local saldo - cantidad. También actualiza
+                // cuevacoin_perfil_cache para que loadSection / modo offline
+                // no repinten el saldo anterior.
+                {
+                    const bruto = (fila.nuevo_saldo != null) ? fila.nuevo_saldo
+                        : (fila.nuevoSaldo != null ? fila.nuevoSaldo : null);
+                    let nuevoSaldo;
+                    if (bruto != null && !Number.isNaN(Number(bruto))) {
+                        nuevoSaldo = Number(bruto);
+                    } else {
+                        const saldoAntes = Number(usuario.saldo);
+                        nuevoSaldo = (!Number.isNaN(saldoAntes) ? saldoAntes : 0) - Number(cantidad);
+                    }
                     usuario.saldo = nuevoSaldo;
                     sessionStorage.setItem('cuevacoin_usuario_actual', JSON.stringify(usuario));
+                    try {
+                        localStorage.setItem('cuevacoin_perfil_cache', JSON.stringify(usuario));
+                    } catch (eCache) { /* quota / modo privado */ }
                     const saldoSpan = document.getElementById('user-saldo');
-                    if (saldoSpan) saldoSpan.textContent = nuevoSaldo.toFixed(2);
+                    if (saldoSpan) saldoSpan.textContent = Number(nuevoSaldo).toFixed(2);
                     const perfilSaldoSpan = document.getElementById('perfil-saldo');
-                    if (perfilSaldoSpan) perfilSaldoSpan.textContent = nuevoSaldo.toFixed(2);
+                    if (perfilSaldoSpan) perfilSaldoSpan.textContent = Number(nuevoSaldo).toFixed(2);
+                    if (typeof actualizarMetaAhorroInicio === 'function') {
+                        try { actualizarMetaAhorroInicio(usuario); } catch (eMeta) {}
+                    }
                 }
 
                 // Notificar admin (dedup); la RPC ya creó la solicitud
