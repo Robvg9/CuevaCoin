@@ -94,6 +94,7 @@ export async function sincronizarColaPendiente() {
 
             if (permanente) {
                 fallidosPermanentes.push({ item: item, mensaje: mensaje });
+                // no se reencola
             } else if (transitorio) {
                 const intentos = (item.intentos || 0) + 1;
                 if (intentos >= MAX_INTENTOS_COLA) {
@@ -110,6 +111,7 @@ export async function sincronizarColaPendiente() {
                     fallidosTransitorios.push({ item: item, mensaje: mensaje, intentos: intentos });
                 }
             } else {
+                // Error no clasificado: conservar (más seguro que descartar)
                 const intentos = (item.intentos || 0) + 1;
                 if (intentos >= MAX_INTENTOS_COLA) {
                     fallidosPermanentes.push({
@@ -128,6 +130,7 @@ export async function sincronizarColaPendiente() {
         }
     }
 
+    // Éxito y permanentes salen de la cola; transitorios permanecen con intentos++
     window.guardarColaPendiente(colaActualizada);
     sincronizandoColaEnCurso = false;
     window.actualizarIndicadorColaPendiente();
@@ -156,6 +159,8 @@ export async function ejecutarAccionDeCola(item) {
         return;
     }
     if (item.tipo === 'retiro') {
+        // BUG #1: RPC atómica solicitar_retiro (mismo camino online/offline)
+        // Key estable: la de la cola o, en items viejos, una derivada de item.id (nunca Date.now en retry)
         const keyCola = item.datos.idempotency_key || ('cola-item-' + item.id);
         const { data, error } = await window.supabaseClient.rpc('solicitar_retiro', {
             p_cantidad: item.datos.cantidad,
@@ -193,10 +198,12 @@ export async function ejecutarAccionDeCola(item) {
             }
             throw new Error(fila.error);
         }
+        // Éxito solo con solicitud_id real (no marcar sincronizado si el backend no creó nada)
         if (!fila || !fila.solicitud_id) {
             console.error('solicitar_retiro (cola) sin solicitud_id:', { data: data, keyCola: keyCola });
             throw new Error('La solicitud de retiro no se registró en el servidor');
         }
+        // Reflejar saldo reservado en sesión + cache + UI (misma regla que online)
         try {
             const bruto = (fila.nuevo_saldo != null) ? fila.nuevo_saldo
                 : (fila.nuevoSaldo != null ? fila.nuevoSaldo : null);
@@ -205,14 +212,19 @@ export async function ejecutarAccionDeCola(item) {
                 usuarioCola = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual') || 'null');
             } catch (eSes) { usuarioCola = null; }
             if (usuarioCola && usuarioCola.id) {
+                const saldoAntes = Number(usuarioCola.saldo);
+                const cant = Number(item.datos.cantidad) || 0;
+                const esperado = (!Number.isNaN(saldoAntes) ? saldoAntes : 0) - cant;
                 let nuevoSaldo;
                 if (bruto != null && !Number.isNaN(Number(bruto))) {
                     nuevoSaldo = Number(bruto);
+                    if (cant > 0 && nuevoSaldo > esperado + 0.0001) {
+                        nuevoSaldo = esperado;
+                    }
                 } else {
-                    const saldoAntes = Number(usuarioCola.saldo);
-                    const cant = Number(item.datos.cantidad) || 0;
-                    nuevoSaldo = (!Number.isNaN(saldoAntes) ? saldoAntes : 0) - cant;
+                    nuevoSaldo = esperado;
                 }
+                if (nuevoSaldo < 0) nuevoSaldo = 0;
                 usuarioCola.saldo = nuevoSaldo;
                 sessionStorage.setItem('cuevacoin_usuario_actual', JSON.stringify(usuarioCola));
                 try {
@@ -235,6 +247,7 @@ export async function ejecutarAccionDeCola(item) {
             console.error('No se pudo reflejar saldo tras retiro en cola:', eSaldoCola);
         }
 
+        // Notificar admin (dedup por solicitud_id); el saldo ya lo reservó la RPC
         try {
             const { data: adminRetiroCola } = await window.supabaseClient
                 .from('perfiles')
@@ -253,11 +266,16 @@ export async function ejecutarAccionDeCola(item) {
         return;
     }
     if (item.tipo === 'transferir') {
+        // Misma key que se generó al encolar (o fallback estable para ítems viejos)
+        const idempotencyKey = item.datos.idempotencyKey
+            || item.datos.idempotency_key
+            || ('cola-item-' + item.id);
         const { data, error } = await window.supabaseClient.functions.invoke('transferir-saldo', {
             body: {
                 destinatarioCorreo: item.datos.destinatarioCorreo,
                 cantidad: item.datos.cantidad,
-                motivo: item.datos.motivo
+                motivo: item.datos.motivo,
+                idempotencyKey: idempotencyKey
             }
         });
         if (error || data?.error) {
