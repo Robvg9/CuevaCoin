@@ -1712,7 +1712,15 @@
         .user-card .balance {
             font-size: 48px;
             font-weight: 700;
-            margin-bottom: 20px;
+            margin-bottom: 8px;
+        }
+
+        .user-card .retiro-pendiente-line {
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.9;
+            margin: 0 0 16px 0;
+            color: var(--secondary-color, #2563EB);
         }
 
         .quick-actions {
@@ -3019,6 +3027,7 @@
                 </div>
             </span>
             <span id="topbar-user"></span>
+            <span class="js-app-version" style="font-size: 11px; opacity: 0.7; font-family: sans-serif; margin-right: 8px; white-space: nowrap; font-weight: 500; letter-spacing: 0.02em;" title="Versión de CuevaCoin"></span>
             <img src="https://ui-avatars.com/api/?name=Usuario&background=2563EB&color=fff" alt="Usuario" id="topbar-avatar" onclick="loadSection('perfil')" style="cursor: pointer;" title="Ir a Mi Perfil">
         </div>
     </div>
@@ -3059,7 +3068,7 @@
              CACHE_NAME real (quedó en V.67 mientras ya íbamos en v73).
              Ahora se lee del service worker activo (ver mostrarVersionApp
              más abajo), así que nunca más hace falta tocarlo a mano. -->
-        <p id="app-version-text" style="font-size: 10px; opacity: 0.4; margin-top: 4px; font-family: sans-serif;"></p>
+        <p id="app-version-text" class="js-app-version" style="font-size: 10px; opacity: 0.4; margin-top: 4px; font-family: sans-serif;"></p>
         <!-- Tarea de roadmap (v114): botón para forzar limpieza de caché y
              actualización, pensado para el caso en que alguien se quede
              atascado en una versión vieja de la app (el reload automático
@@ -3068,7 +3077,7 @@
              navegador no coopera). Discreto a propósito (mismo estilo que
              el texto de versión, no un botón grande) porque es una
              herramienta de soporte, no una acción de uso diario. -->
-        <button type="button" id="btn-limpiar-cache" onclick="limpiarCacheYActualizar()" style="display: block; margin: 8px auto 0; background: none; border: none; font-size: 10px; opacity: 0.4; text-decoration: underline; font-family: sans-serif; color: var(--text-color); cursor: pointer; padding: 4px;">🔄 Actualizar app / Limpiar caché</button>
+        <button type="button" id="btn-limpiar-cache" onclick="solicitarActualizarApp()" style="display: block; margin: 8px auto 0; background: none; border: none; font-size: 10px; opacity: 0.4; text-decoration: underline; font-family: sans-serif; color: var(--text-color); cursor: pointer; padding: 4px;">🔄 Actualizar app / Limpiar caché</button>
     </div>
 
     <!-- F-GMAIL: pantalla de bloqueo obligatorio para cuentas que todavía
@@ -3383,6 +3392,7 @@
                     <p id="user-frase-personal" class="frase-personal hidden"></p>
                     <p class="account-number">Correo: <span id="user-correo">-</span> <button type="button" class="btn-copiar-correo" onclick="copiarCorreoUsuario()" title="Copiar correo">📋</button></p>
                     <div class="balance">$<span id="user-saldo">0.00</span></div>
+                    <p id="user-retiro-pendiente" class="retiro-pendiente-line hidden">🔒 Retiro pendiente (reservado): $<span id="user-retiro-pendiente-monto">0.00</span></p>
                     <div class="quick-actions">
                         <button class="btn" id="btn-transferir" onclick="abrirModalTransaccional('transferir-modal')">💸 Transferir</button>
                         <button class="btn" id="btn-retiro" onclick="abrirModalTransaccional('retiro-modal')">🏧 Retiro</button>
@@ -3677,6 +3687,12 @@
                 <h2>Sesión</h2>
                 <p style="opacity: 0.8; margin-bottom: 14px;">Cierra tu sesión solo en este dispositivo. Vas a tener que volver a iniciar sesión la próxima vez que abras la app aquí.</p>
                 <button type="button" class="btn btn-danger" onclick="openModal('confirmar-logout-modal')">🚪 Cerrar sesión en este dispositivo</button>
+            </div>
+            <div class="card">
+                <h2>🔄 Actualizar aplicación</h2>
+                <p style="opacity: 0.8; margin-bottom: 14px;">Si la app se ve desactualizada o algo no carga bien, actualiza CuevaCoin desde acá. Se limpia la caché de la app y se recarga la versión más reciente. Tu sesión y tus operaciones pendientes se conservan.</p>
+                <button type="button" id="btn-actualizar-app-config" class="btn btn-secondary" style="width: 100%;" onclick="solicitarActualizarApp()">🔄 Actualizar app / Limpiar caché</button>
+                <p id="actualizar-app-version-hint" class="js-app-version" style="font-size: 11px; opacity: 0.55; margin-top: 10px; text-align: center; font-family: sans-serif;"></p>
             </div>
             <div class="card">
                 <h2>Tiempo de Sesión</h2>
@@ -4385,6 +4401,21 @@
         </div>
     </div>
 
+    <!-- Actualizar app / Limpiar caché (v130): confirmación desde Configuración o login -->
+    <div id="actualizar-app-modal" class="modal">
+        <div class="modal-content" style="max-width: 420px; text-align: center;">
+            <span class="close" onclick="closeModal('actualizar-app-modal')">&times;</span>
+            <div style="font-size: 40px; margin-bottom: 8px;">🔄</div>
+            <h2 style="margin-bottom: 8px;">Actualizar CuevaCoin</h2>
+            <p style="margin-bottom: 20px; opacity: 0.85; line-height: 1.5;">Se actualizará CuevaCoin y se limpiará la caché local. La aplicación se recargará con la versión más reciente.</p>
+            <p style="font-size: 12px; opacity: 0.65; margin-bottom: 18px;">Tu sesión y las operaciones pendientes de sincronizar se conservan.</p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button type="button" class="btn" style="flex: 1;" onclick="closeModal('actualizar-app-modal')">Cancelar</button>
+                <button type="button" id="btn-actualizar-app-confirmar" class="btn btn-primary" style="flex: 1;" onclick="limpiarCacheYActualizar()">Actualizar ahora</button>
+            </div>
+        </div>
+    </div>
+
     <div id="confirmar-logout-modal" class="modal">
         <div class="modal-content" style="max-width: 400px; text-align: center;">
             <span class="close" onclick="closeModal('confirmar-logout-modal')">&times;</span>
@@ -4487,20 +4518,18 @@
             // que sea no contesta (SW recién instalándose, navegador
             // viejo, etc.) usa un fallback directo del código.
             async function mostrarVersionApp() {
+                // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
+                const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
+                if (els.length === 0) return;
+                const VERSION_FALLBACK = 'V.130';
+                const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
-                    const versionEl = document.getElementById('app-version-text');
-                    if (!versionEl) return;
-                    
-                    // Fallback directo por si el SW no responde
-                    const VERSION_FALLBACK = 'V.77';
-                    
                     const sw = navigator.serviceWorker.controller
                         || (await navigator.serviceWorker.ready).active;
                     if (!sw) {
-                        versionEl.textContent = VERSION_FALLBACK;
+                        aplicar(VERSION_FALLBACK);
                         return;
                     }
-                    
                     const version = await new Promise((resolve, reject) => {
                         const canal = new MessageChannel();
                         const timeoutId = setTimeout(() => reject(new Error('timeout')), 3000);
@@ -4510,18 +4539,15 @@
                         };
                         sw.postMessage({ type: 'GET_VERSION' }, [canal.port2]);
                     });
-                    
                     if (version) {
-                        // 'cuevacoin-shell-v76' -> 'V.76'
                         const numero = version.match(/v(\d+)$/i)?.[1];
-                        versionEl.textContent = numero ? `V.${numero}` : version;
+                        aplicar(numero ? `V.${numero}` : version);
                     } else {
-                        versionEl.textContent = VERSION_FALLBACK;
+                        aplicar(VERSION_FALLBACK);
                     }
                 } catch (err) {
                     console.log('No se pudo leer la versión del service worker:', err);
-                    const versionEl = document.getElementById('app-version-text');
-                    if (versionEl) versionEl.textContent = 'V.77';
+                    aplicar(VERSION_FALLBACK);
                 }
             }
         }
@@ -4548,29 +4574,109 @@
         //   3) Recarga la página. Como en ese momento ya no hay ni caché
         //      ni Service Worker viejo de por medio, la recarga trae el
         //      HTML/JS actual directo desde la red.
-        window.limpiarCacheYActualizar = async function() {
-            const boton = document.getElementById('btn-limpiar-cache');
-            if (boton) {
-                boton.disabled = true;
-                boton.textContent = 'Actualizando…';
+        // v130: actualizar app desde login o Configuración.
+        // Solo limpia Cache Storage + Service Worker. NO toca localStorage
+        // (auth Supabase sb-*, cola offline, perfil cache, preferencias) ni
+        // sessionStorage de sesión activa.
+        window.__cuevacoinActualizandoApp = false;
+        window.solicitarActualizarApp = function() {
+            if (window.__cuevacoinActualizandoApp) return;
+            if (typeof window.openModal === 'function') {
+                window.openModal('actualizar-app-modal');
+            } else {
+                const ok = window.confirm('Se actualizará CuevaCoin y se limpiará la caché local. La aplicación se recargará con la versión más reciente.');
+                if (ok) window.limpiarCacheYActualizar();
             }
+        };
+        window.limpiarCacheYActualizar = async function() {
+            if (window.__cuevacoinActualizandoApp) return;
+            window.__cuevacoinActualizandoApp = true;
+
+            const botones = [
+                document.getElementById('btn-limpiar-cache'),
+                document.getElementById('btn-actualizar-app-config'),
+                document.getElementById('btn-actualizar-app-confirmar')
+            ].filter(Boolean);
+            const textosPrevios = botones.map((b) => b.textContent);
+            botones.forEach((b) => {
+                b.disabled = true;
+                b.textContent = 'Actualizando…';
+            });
+
+            if (typeof window.closeModal === 'function') {
+                try { window.closeModal('actualizar-app-modal'); } catch (e) {}
+            }
+            if (typeof window.mostrarCargando === 'function') {
+                try { window.mostrarCargando(); } catch (e) {}
+            }
+
+            const conTimeout = (promesa, ms, etiqueta) => Promise.race([
+                promesa,
+                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout-' + etiqueta)), ms))
+            ]);
+
+            let errorMsg = null;
             try {
+                // 1) Cache Storage de este origen (shell + assets)
                 if (window.caches) {
-                    const nombresCache = await caches.keys();
-                    await Promise.all(nombresCache.map((nombre) => caches.delete(nombre)));
+                    const nombres = await conTimeout(caches.keys(), 8000, 'caches-keys');
+                    await conTimeout(
+                        Promise.all(nombres.map((n) => caches.delete(n).catch(() => false))),
+                        12000,
+                        'caches-delete'
+                    );
                 }
+
+                // 2) Pedir al SW que se actualice; si no, unregister
                 if ('serviceWorker' in navigator) {
-                    const registros = await navigator.serviceWorker.getRegistrations();
-                    await Promise.all(registros.map((registro) => registro.unregister()));
+                    try {
+                        const regs = await conTimeout(navigator.serviceWorker.getRegistrations(), 6000, 'sw-regs');
+                        for (const reg of regs) {
+                            try {
+                                if (reg.waiting) {
+                                    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                                }
+                                await conTimeout(reg.update(), 8000, 'sw-update').catch(() => null);
+                            } catch (e) {}
+                        }
+                        // Unregister para forzar descarga fresca del SW en el reload
+                        await conTimeout(
+                            Promise.all(regs.map((r) => r.unregister().catch(() => false))),
+                            8000,
+                            'sw-unregister'
+                        );
+                    } catch (errSw) {
+                        console.warn('SW update/unregister:', errSw);
+                        errorMsg = (errorMsg ? errorMsg + ' · ' : '') + 'Service Worker: ' + (errSw.message || errSw);
+                    }
                 }
             } catch (err) {
-                // Aunque falle el borrado (navegador raro, permisos, etc.),
-                // igual conviene intentar la recarga: en el peor caso el
-                // usuario queda como estaba antes de tocar el botón.
-                console.log('Error al limpiar caché/Service Worker:', err);
-            } finally {
+                console.warn('Error al limpiar caché/Service Worker:', err);
+                errorMsg = (err && err.message) ? String(err.message) : String(err);
+            }
+
+            // Recarga con cache-busting; la sesión Supabase vive en localStorage
+            // (sb-*-auth-token) y no se tocó.
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.set('_cc', String(Date.now()));
+                window.location.replace(url.toString());
+            } catch (e) {
                 window.location.reload();
             }
+
+            // Si por alguna razón no recarga, restaurar UI (timeout de seguridad)
+            setTimeout(() => {
+                window.__cuevacoinActualizandoApp = false;
+                botones.forEach((b, i) => {
+                    b.disabled = false;
+                    b.textContent = textosPrevios[i] || '🔄 Actualizar app / Limpiar caché';
+                });
+                if (typeof window.ocultarCargando === 'function') window.ocultarCargando();
+                if (errorMsg && typeof window.showToast === 'function') {
+                    window.showToast('No se pudo completar la actualización: ' + errorMsg + '. Intenta de nuevo.', 5000);
+                }
+            }, 12000);
         };
 
         // Check if app is installed
@@ -4642,6 +4748,7 @@
     <script type="module" src="js/ui/notif-panel.js"></script>
     <script type="module" src="js/ui/push.js"></script>
     <script type="module" src="js/auth/google-ui.js"></script>
+    <script defer src="js/auth/login-hardening.js"></script>
     <!-- Fase 2 / Oleada 4: sesión, anuncios, bonos info, sugerencias user, config local -->
     <script type="module" src="js/session/logout.js"></script>
     <script type="module" src="js/ui/anuncios.js"></script>
@@ -4673,6 +4780,7 @@
     <script type="module" src="js/finance/saldo/saldo-realtime.js"></script>
     <script type="module" src="js/finance/saldo/meta-ahorro.js"></script>
     <script type="module" src="js/finance/saldo/mascota-saldo.js"></script>
+    <script type="module" src="js/finance/saldo/retiro-pendiente-ui.js"></script>
     <script type="module" src="js/finance/saldo/inicio-usuario.js"></script>
     <!-- Fase 3 / Oleada 4 — transferencias -->
     <script type="module" src="js/finance/transfers/modal-transfer.js"></script>
