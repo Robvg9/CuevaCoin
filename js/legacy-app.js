@@ -1930,6 +1930,33 @@
                 return;
             }
 
+            // Resolver correo/usuario/nombre vía RPC (no depender de SELECT cliente a perfiles)
+            if (navigator.onLine && typeof resolverDestinatarioTransferencia === 'function') {
+                try {
+                    const destResuelto = await resolverDestinatarioTransferencia(destinatarioCorreo);
+                    if (!destResuelto || !destResuelto.correo) {
+                        showToast('No existe ninguna cuenta con ese correo, usuario o nombre', 4000);
+                        return;
+                    }
+                    try {
+                        const yoT = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual') || 'null');
+                        if (yoT && destResuelto.id && yoT.id === destResuelto.id) {
+                            showToast('No puedes transferirte a ti mismo', 3500);
+                            return;
+                        }
+                    } catch (eYoT) { /* ignore */ }
+                    if (destResuelto.estado && String(destResuelto.estado).toLowerCase() !== 'activo') {
+                        showToast('Esa cuenta no está activa', 3500);
+                        return;
+                    }
+                    destinatarioCorreo = destResuelto.correo;
+                    document.getElementById('transferir-destinatario-correo').value = destinatarioCorreo;
+                } catch (eRes) {
+                    showToast((eRes && eRes.message) ? eRes.message : 'No se pudo verificar el destinatario', 4000);
+                    return;
+                }
+            }
+
             if (!esMontoEnteroValido(valorCantidadTransferir)) {
                 showToast('La cantidad debe ser un número entero mayor a 0, sin decimales', 3500);
                 return;
@@ -2010,32 +2037,46 @@
 
         document.getElementById('buscar-usuario-transferir-form').addEventListener('submit', async function (e) {
             e.preventDefault();
-            const nombreUsuario = document.getElementById('buscar-usuario-transferir-input').value.trim();
+            const textoBusqueda = document.getElementById('buscar-usuario-transferir-input').value.trim();
             const estado = document.getElementById('buscar-usuario-transferir-estado');
-            if (!nombreUsuario) {
-                estado.textContent = 'Escribe un nombre de usuario.';
+            if (!textoBusqueda) {
+                estado.textContent = 'Escribe un correo, usuario o nombre.';
                 return;
             }
             if (!navigator.onLine) {
-                estado.textContent = 'Necesitas conexión para buscar un usuario.';
+                estado.textContent = 'Necesitas conexión para buscar un destinatario.';
                 return;
             }
             estado.textContent = 'Buscando...';
             try {
-                const { data, error } = await supabaseClient.functions.invoke('resolver-cuenta-usuario', {
-                    body: { nombreUsuario }
-                });
-                if (error || !data || data.error) {
-                    estado.textContent = (data && data.error) ? data.error : 'No se pudo buscar ese usuario.';
+                if (typeof resolverDestinatarioTransferencia !== 'function') {
+                    estado.textContent = 'Búsqueda no disponible. Recarga la app.';
                     return;
                 }
-                document.getElementById('transferir-destinatario-correo').value = data.correo;
+                const dest = await resolverDestinatarioTransferencia(textoBusqueda);
+                if (!dest || !dest.correo) {
+                    estado.textContent = 'No existe ninguna cuenta con ese correo, usuario o nombre.';
+                    return;
+                }
+                // Cuenta propia
+                try {
+                    const yo = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual') || 'null');
+                    if (yo && dest.id && yo.id === dest.id) {
+                        estado.textContent = 'No puedes transferirte a ti mismo.';
+                        return;
+                    }
+                } catch (eYo) { /* ignore */ }
+                if (dest.estado && String(dest.estado).toLowerCase() !== 'activo') {
+                    estado.textContent = 'Esa cuenta no está activa.';
+                    return;
+                }
+                document.getElementById('transferir-destinatario-correo').value = dest.correo;
                 cerrarBuscarUsuarioTransferir();
-                const nombreMostrado = [data.nombre, data.apellido].filter(Boolean).join(' ') || data.usuario;
+                const nombreMostrado = dest.nombre || dest.usuario || dest.correo;
                 showToast(`Destinatario cargado: ${nombreMostrado}`, 3000);
             } catch (err) {
-                console.error('Error resolviendo usuario buscado:', err);
-                estado.textContent = 'Error de conexión buscando ese usuario.';
+                console.error('Error resolviendo destinatario:', err);
+                estado.textContent = (err && err.message) ? err.message : 'Error de conexión buscando destinatario.';
             }
         });
 
