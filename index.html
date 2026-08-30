@@ -1716,11 +1716,21 @@
         }
 
         .user-card .retiro-pendiente-line {
-            font-size: 14px;
-            font-weight: 600;
-            opacity: 0.9;
+            font-size: 13px;
+            font-weight: 700;
             margin: 0 0 16px 0;
-            color: var(--secondary-color, #2563EB);
+            padding: 8px 12px;
+            border-radius: 10px;
+            display: inline-block;
+            /* Alto contraste sobre fondos claros/oscuros (no rosa del acento) */
+            color: #0f172a;
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+        }
+        [data-theme="dark"] .user-card .retiro-pendiente-line {
+            color: #fef3c7;
+            background: rgba(245, 158, 11, 0.22);
+            border-color: #fbbf24;
         }
 
         .quick-actions {
@@ -4521,7 +4531,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.130';
+                const VERSION_FALLBACK = 'V.135';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
