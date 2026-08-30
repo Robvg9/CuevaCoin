@@ -60,7 +60,7 @@ export function encolarAccion(tipo, datos) {
 function esErrorPermanenteDeCola(err) {
     const msg = ((err && (err.message || err.name || err.code || '')) + '').toLowerCase();
     if (!msg) return false;
-    return /saldo.?insuficiente|insufficient|retiro_pendiente_existente|ya tienes un retiro pendiente|correo.?inexistente|usuario.?no.?encontrado|destinatario.?no|no.?encontrad|no autorizado|unauthorized|forbidden|permiso|inválid|invalid|tipo de acción encolada desconocido|monto.?inválid/.test(msg);
+    return /saldo.?insuficiente|insufficient|retiro_pendiente_existente|ya tienes un retiro pendiente|idempotency_key_conflict|idempotency_key_replay|correo.?inexistente|usuario.?no.?encontrado|destinatario.?no|no.?encontrad|no autorizado|unauthorized|forbidden|permiso|inválid|invalid|tipo de acción encolada desconocido|monto.?inválid/.test(msg);
 }
 
 /** Límite de reintentos para fallos transitorios (evita loop infinito). */
@@ -173,6 +173,14 @@ export async function ejecutarAccionDeCola(item) {
             if (/retiro_pendiente_existente|ya tienes un retiro pendiente/i.test(msg)) {
                 throw new Error('Ya tienes un retiro pendiente. Espera a que el admin lo resuelva.');
             }
+            if (/idempotency_key_conflict/i.test(msg)) {
+                if (typeof window.limpiarRetiroIdempotencyKey === 'function') window.limpiarRetiroIdempotencyKey();
+                throw new Error('idempotency_key_conflict');
+            }
+            if (/idempotency_key_replay/i.test(msg)) {
+                if (typeof window.limpiarRetiroIdempotencyKey === 'function') window.limpiarRetiroIdempotencyKey();
+                throw new Error('idempotency_key_replay');
+            }
             if (/permission denied|42501|not authorized|JWT|expired|PGRST301/i.test(msg)) {
                 throw new Error('No autorizado para retirar. Vuelve a iniciar sesión.');
             }
@@ -183,6 +191,10 @@ export async function ejecutarAccionDeCola(item) {
             if (fila.error === 'saldo_insuficiente') throw new Error('Saldo insuficiente');
             if (fila.error === 'retiro_pendiente_existente') {
                 throw new Error('Ya tienes un retiro pendiente. Espera a que el admin lo resuelva.');
+            }
+            if (fila.error === 'idempotency_key_conflict' || fila.error === 'idempotency_key_replay') {
+                if (typeof window.limpiarRetiroIdempotencyKey === 'function') window.limpiarRetiroIdempotencyKey();
+                throw new Error(fila.error);
             }
             throw new Error(fila.error);
         }
