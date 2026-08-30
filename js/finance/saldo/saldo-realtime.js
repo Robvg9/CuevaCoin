@@ -25,10 +25,18 @@ export function suscribirRealtimeSaldo(usuarioId) {
             if (usuarioActual && usuarioActual.id === usuarioId) {
                 usuarioActual.saldo = nuevoSaldo;
                 sessionStorage.setItem('cuevacoin_usuario_actual', JSON.stringify(usuarioActual));
+                try {
+                    localStorage.setItem('cuevacoin_perfil_cache', JSON.stringify(usuarioActual));
+                } catch (eCache) { /* quota / privado */ }
                 // Refresca también la barra de progreso de Meta de
                 // Ahorro con el saldo nuevo, si el card está en pantalla.
-                if (document.getElementById('meta-ahorro-card')) {
+                if (document.getElementById('meta-ahorro-card') && typeof window.actualizarMetaAhorroInicio === 'function') {
                     window.actualizarMetaAhorroInicio(usuarioActual);
+                }
+                // Aprobar: pendiente desaparece, saldo igual.
+                // Rechazar: pendiente desaparece, saldo sube (este UPDATE).
+                if (typeof window.actualizarRetiroPendienteUI === 'function') {
+                    window.actualizarRetiroPendienteUI(usuarioId);
                 }
                 // F8 (2026-08-07): si el admin desactiva/reactiva la
                 // cuenta mientras la sesión sigue abierta en otro
@@ -38,7 +46,11 @@ export function suscribirRealtimeSaldo(usuarioId) {
                 if (payload?.new?.estado && payload.new.estado !== usuarioActual.estado) {
                     usuarioActual.estado = payload.new.estado;
                     sessionStorage.setItem('cuevacoin_usuario_actual', JSON.stringify(usuarioActual));
-                    aplicarEstadoCuentaDesactivada(usuarioActual);
+                    if (typeof aplicarEstadoCuentaDesactivada === 'function') {
+                        aplicarEstadoCuentaDesactivada(usuarioActual);
+                    } else if (typeof window.aplicarEstadoCuentaDesactivada === 'function') {
+                        window.aplicarEstadoCuentaDesactivada(usuarioActual);
+                    }
                 }
             }
         })
