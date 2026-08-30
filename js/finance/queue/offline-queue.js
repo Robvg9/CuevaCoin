@@ -94,7 +94,6 @@ export async function sincronizarColaPendiente() {
 
             if (permanente) {
                 fallidosPermanentes.push({ item: item, mensaje: mensaje });
-                // no se reencola
             } else if (transitorio) {
                 const intentos = (item.intentos || 0) + 1;
                 if (intentos >= MAX_INTENTOS_COLA) {
@@ -111,7 +110,6 @@ export async function sincronizarColaPendiente() {
                     fallidosTransitorios.push({ item: item, mensaje: mensaje, intentos: intentos });
                 }
             } else {
-                // Error no clasificado: conservar (más seguro que descartar)
                 const intentos = (item.intentos || 0) + 1;
                 if (intentos >= MAX_INTENTOS_COLA) {
                     fallidosPermanentes.push({
@@ -130,7 +128,6 @@ export async function sincronizarColaPendiente() {
         }
     }
 
-    // Éxito y permanentes salen de la cola; transitorios permanecen con intentos++
     window.guardarColaPendiente(colaActualizada);
     sincronizandoColaEnCurso = false;
     window.actualizarIndicadorColaPendiente();
@@ -159,8 +156,6 @@ export async function ejecutarAccionDeCola(item) {
         return;
     }
     if (item.tipo === 'retiro') {
-        // BUG #1: RPC atómica solicitar_retiro (mismo camino online/offline)
-        // Key estable: la de la cola o, en items viejos, una derivada de item.id (nunca Date.now en retry)
         const keyCola = item.datos.idempotency_key || ('cola-item-' + item.id);
         const { data, error } = await window.supabaseClient.rpc('solicitar_retiro', {
             p_cantidad: item.datos.cantidad,
@@ -198,12 +193,10 @@ export async function ejecutarAccionDeCola(item) {
             }
             throw new Error(fila.error);
         }
-        // Éxito solo con solicitud_id real (no marcar sincronizado si el backend no creó nada)
         if (!fila || !fila.solicitud_id) {
             console.error('solicitar_retiro (cola) sin solicitud_id:', { data: data, keyCola: keyCola });
             throw new Error('La solicitud de retiro no se registró en el servidor');
         }
-        // Reflejar saldo reservado en sesión + cache + UI (misma regla que online)
         try {
             const bruto = (fila.nuevo_saldo != null) ? fila.nuevo_saldo
                 : (fila.nuevoSaldo != null ? fila.nuevoSaldo : null);
@@ -232,12 +225,16 @@ export async function ejecutarAccionDeCola(item) {
                 if (typeof window.actualizarMetaAhorroInicio === 'function') {
                     try { window.actualizarMetaAhorroInicio(usuarioCola); } catch (eMeta) {}
                 }
+                if (typeof window.pintarRetiroPendienteUI === 'function') {
+                    try { window.pintarRetiroPendienteUI(item.datos.cantidad); } catch (ePend) {}
+                } else if (typeof window.actualizarRetiroPendienteUI === 'function') {
+                    try { window.actualizarRetiroPendienteUI(usuarioCola.id); } catch (ePend2) {}
+                }
             }
         } catch (eSaldoCola) {
             console.error('No se pudo reflejar saldo tras retiro en cola:', eSaldoCola);
         }
 
-        // Notificar admin (dedup por solicitud_id); el saldo ya lo reservó la RPC
         try {
             const { data: adminRetiroCola } = await window.supabaseClient
                 .from('perfiles')
