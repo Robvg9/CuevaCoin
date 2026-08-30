@@ -203,6 +203,40 @@ export async function ejecutarAccionDeCola(item) {
             console.error('solicitar_retiro (cola) sin solicitud_id:', { data: data, keyCola: keyCola });
             throw new Error('La solicitud de retiro no se registró en el servidor');
         }
+        // Reflejar saldo reservado en sesión + cache + UI (misma regla que online)
+        try {
+            const bruto = (fila.nuevo_saldo != null) ? fila.nuevo_saldo
+                : (fila.nuevoSaldo != null ? fila.nuevoSaldo : null);
+            let usuarioCola = null;
+            try {
+                usuarioCola = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual') || 'null');
+            } catch (eSes) { usuarioCola = null; }
+            if (usuarioCola && usuarioCola.id) {
+                let nuevoSaldo;
+                if (bruto != null && !Number.isNaN(Number(bruto))) {
+                    nuevoSaldo = Number(bruto);
+                } else {
+                    const saldoAntes = Number(usuarioCola.saldo);
+                    const cant = Number(item.datos.cantidad) || 0;
+                    nuevoSaldo = (!Number.isNaN(saldoAntes) ? saldoAntes : 0) - cant;
+                }
+                usuarioCola.saldo = nuevoSaldo;
+                sessionStorage.setItem('cuevacoin_usuario_actual', JSON.stringify(usuarioCola));
+                try {
+                    localStorage.setItem('cuevacoin_perfil_cache', JSON.stringify(usuarioCola));
+                } catch (eCache) {}
+                const saldoSpan = document.getElementById('user-saldo');
+                if (saldoSpan) saldoSpan.textContent = Number(nuevoSaldo).toFixed(2);
+                const perfilSaldoSpan = document.getElementById('perfil-saldo');
+                if (perfilSaldoSpan) perfilSaldoSpan.textContent = Number(nuevoSaldo).toFixed(2);
+                if (typeof window.actualizarMetaAhorroInicio === 'function') {
+                    try { window.actualizarMetaAhorroInicio(usuarioCola); } catch (eMeta) {}
+                }
+            }
+        } catch (eSaldoCola) {
+            console.error('No se pudo reflejar saldo tras retiro en cola:', eSaldoCola);
+        }
+
         // Notificar admin (dedup por solicitud_id); el saldo ya lo reservó la RPC
         try {
             const { data: adminRetiroCola } = await window.supabaseClient
