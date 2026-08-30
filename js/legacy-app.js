@@ -1837,6 +1837,13 @@
                     if (typeof actualizarMetaAhorroInicio === 'function') {
                         try { actualizarMetaAhorroInicio(usuario); } catch (eMeta) {}
                     }
+                    // El monto queda RESERVADO (pendiente de admin). El saldo
+                    // disponible ya bajó; aquí se muestra la línea de pendiente.
+                    if (typeof pintarRetiroPendienteUI === 'function') {
+                        try { pintarRetiroPendienteUI(cantidad); } catch (ePend) {}
+                    } else if (typeof actualizarRetiroPendienteUI === 'function') {
+                        try { actualizarRetiroPendienteUI(usuario.id); } catch (ePend2) {}
+                    }
                 }
 
                 // Notificar admin (dedup); la RPC ya creó la solicitud
@@ -1857,7 +1864,7 @@
                 }
 
                 limpiarRetiroIdempotencyKey();
-                showToast('Solicitud de retiro enviada al admin', 3000);
+                showToast('Solicitud enviada. El monto quedó reservado (pendiente de admin).', 4000);
                 closeModal('retiro-modal');
                 document.getElementById('retiro-cantidad').value = '';
                 document.getElementById('retiro-motivo').value = '';
