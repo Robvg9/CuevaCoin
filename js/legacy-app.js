@@ -1810,21 +1810,30 @@
                     return;
                 }
 
-                // Actualizar UI con el saldo reservado por la RPC.
-                // Fuente de verdad inmediata: nuevo_saldo de la RPC (o camelCase),
-                // con fallback local saldo - cantidad. También actualiza
-                // cuevacoin_perfil_cache para que loadSection / modo offline
-                // no repinten el saldo anterior.
+                // Reservar en UI: el monto SALE del saldo disponible y pasa a
+                // "pendiente". Si la RPC no trae nuevo_saldo o trae el saldo
+                // sin descontar, se fuerza disponible = saldoAntes - cantidad
+                // para no regalar dinero al rechazar después.
                 {
+                    const saldoAntes = Number(usuario.saldo);
+                    const cantNum = Number(cantidad) || 0;
+                    const esperado = (!Number.isNaN(saldoAntes) ? saldoAntes : 0) - cantNum;
                     const bruto = (fila.nuevo_saldo != null) ? fila.nuevo_saldo
                         : (fila.nuevoSaldo != null ? fila.nuevoSaldo : null);
                     let nuevoSaldo;
                     if (bruto != null && !Number.isNaN(Number(bruto))) {
                         nuevoSaldo = Number(bruto);
+                        // RPC devolvió saldo sin reservar → forzar descuento visual
+                        if (cantNum > 0 && nuevoSaldo > esperado + 0.0001) {
+                            console.warn('solicitar_retiro: nuevo_saldo no refleja reserva; forzando', {
+                                bruto: nuevoSaldo, esperado: esperado, cantidad: cantNum
+                            });
+                            nuevoSaldo = esperado;
+                        }
                     } else {
-                        const saldoAntes = Number(usuario.saldo);
-                        nuevoSaldo = (!Number.isNaN(saldoAntes) ? saldoAntes : 0) - Number(cantidad);
+                        nuevoSaldo = esperado;
                     }
+                    if (nuevoSaldo < 0) nuevoSaldo = 0;
                     usuario.saldo = nuevoSaldo;
                     sessionStorage.setItem('cuevacoin_usuario_actual', JSON.stringify(usuario));
                     try {
@@ -1837,10 +1846,8 @@
                     if (typeof actualizarMetaAhorroInicio === 'function') {
                         try { actualizarMetaAhorroInicio(usuario); } catch (eMeta) {}
                     }
-                    // El monto queda RESERVADO (pendiente de admin). El saldo
-                    // disponible ya bajó; aquí se muestra la línea de pendiente.
                     if (typeof pintarRetiroPendienteUI === 'function') {
-                        try { pintarRetiroPendienteUI(cantidad); } catch (ePend) {}
+                        try { pintarRetiroPendienteUI(cantNum); } catch (ePend) {}
                     } else if (typeof actualizarRetiroPendienteUI === 'function') {
                         try { actualizarRetiroPendienteUI(usuario.id); } catch (ePend2) {}
                     }
