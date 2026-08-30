@@ -42,6 +42,12 @@ export async function loadUserInicio(usuario) {
     window.actualizarEstadoBotonPush();
     // v107: resincronización silenciosa (ver comentario en la función).
     window.sincronizarSuscripcionPush(usuario.id);
+
+    // Retiro pendiente (reservado): el saldo ya se descontó al solicitar;
+    // acá solo se muestra cuánto sigue esperando aprobación del admin.
+    if (typeof window.actualizarRetiroPendienteUI === 'function') {
+        window.actualizarRetiroPendienteUI(usuario.id);
+    }
 }
 
 if (typeof window !== 'undefined') {
