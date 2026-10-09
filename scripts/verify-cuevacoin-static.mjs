@@ -101,5 +101,39 @@ check('PWA cache version and fallback agree', () => {
     assert.match(app, /VERSION_FALLBACK = 'V\.137'/);
 });
 
+check('QR and Chart.js URLs use the corrected matching CDN bundles in HTML and Service Worker', () => {
+    const qr = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+    const chart = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
+    assert.ok(index.includes(qr), 'index.html must use the working jsQR bundle');
+    assert.ok(index.includes(chart), 'index.html must use the working Chart.js bundle');
+    assert.ok(sw.includes(qr), 'Service Worker must precache the same jsQR URL');
+    assert.ok(sw.includes(chart), 'Service Worker must precache the same Chart.js URL');
+    assert.doesNotMatch(index, /cdnjs\.cloudflare\.com\/ajax\/libs\/(?:jsQR|Chart\.js)/i);
+    assert.doesNotMatch(sw, /cdnjs\.cloudflare\.com\/ajax\/libs\/(?:jsQR|Chart\.js)/i);
+});
+
+for (const asset of [
+    { name: 'jsQR', url: 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js' },
+    { name: 'Chart.js', url: 'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js' }
+]) {
+    let response = null;
+    let lastError = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+            response = await fetch(asset.url, { signal: AbortSignal.timeout(12000), cache: 'no-store' });
+            if (response.ok) break;
+            lastError = new Error(`${asset.name} CDN returned HTTP ${response.status}`);
+        } catch (error) {
+            lastError = error;
+        }
+    }
+    assert.ok(response?.ok, `${asset.name} CDN check failed: ${lastError?.message || 'no response'}`);
+    assert.match(response.headers.get('content-type') || '', /javascript|ecmascript/i, `${asset.name} CDN must return JavaScript`);
+    const source = await response.text();
+    assert.ok(source.length > 10000, `${asset.name} CDN returned an unexpectedly short payload`);
+    assert.doesNotMatch(source.slice(0, 500), /<html|404 Not Found/i, `${asset.name} CDN returned an error document`);
+    checks.push(`${asset.name} CDN HTTP and JavaScript payload`);
+}
+
 console.log('PASS: ' + checks.length + ' verification groups');
 for (const label of checks) console.log('PASS — ' + label);
