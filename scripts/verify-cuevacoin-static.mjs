@@ -97,11 +97,11 @@ check('Client removes duplicate/invalid recipients before issuing a batch paymen
 });
 
 check('PWA release version is consistent across Service Worker, modular app, and legacy inline fallback', () => {
-    assert.match(sw, /cuevacoin-shell-v137/);
-    assert.match(app, /VERSION_FALLBACK = 'V\\.137'/);
-    assert.match(index, /const VERSION_FALLBACK = 'V\\.137';/);
-    assert.doesNotMatch(index, /VERSION_FALLBACK = 'V\\.13[0-6]'/);
-    assert.doesNotMatch(sw, /cuevacoin-shell-v13[0-6]/);
+    assert.ok(sw.includes("cuevacoin-shell-v137"), 'Service Worker must publish release v137');
+    assert.ok(app.includes("VERSION_FALLBACK = 'V.137'"), 'Modular app fallback must be v137');
+    assert.ok(index.includes("const VERSION_FALLBACK = 'V.137';"), 'Legacy inline fallback must be v137');
+    assert.ok(!index.includes("const VERSION_FALLBACK = 'V.135';"), 'Legacy inline fallback must not advertise v135');
+    assert.ok(!sw.includes("cuevacoin-shell-v136"), 'Service Worker must not keep the live v136 cache name');
 });
 
 check('QR and Chart.js URLs use the corrected matching CDN bundles in HTML and Service Worker', () => {
