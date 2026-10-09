@@ -10,6 +10,12 @@ Se revisaron los registros relevantes de ChatBending/Notion y el código actual 
 
 **No puede declararse CuevaCoin cerrado al 100%.** El historial RWHT de ChatBending indica que la auditoría física completa no está realizada ni certificada. No fue posible leer el esquema ni las migraciones del proyecto Supabase de CuevaCoin con la conexión actual; el conector rechazó permiso para el proyecto histórico. No se tocaron ni se hicieron transacciones en el proyecto Supabase de ARIA.
 
+## Visión recuperada y límites de alcance
+
+La documentación específica recuperada (`MIGRACIÓN 4/7 — CuevaCoin`) describe CuevaCoin como una PWA financiera/operativa con autenticación, perfiles/cuentas, saldos, historial de transacciones, transferencias, retiros y chat; hay cola offline y notificaciones. No apareció una visión/roadmap técnico único, actual y completo: la misma migración dice que falta recuperar arquitectura/tablas/RPC/RLS/seguridad/roadmap contra el sistema real.
+
+Los reportes **M26** y **Reporte COMPLETO de Pruebas de Robert** con almacenes, inventario, ventas y turnos pertenecen al árbol documental de **BattleCruiser**. No se agregan como pendientes de CuevaCoin sin evidencia en su repo. El árbol actual de CuevaCoin sí contiene módulos de saldo, pagos admin, transacciones, retiros, transferencias, chat, perfiles, auditoría, estadísticas y PWA; la auditoría física debe partir de esas superficies reales y reconciliar cualquier lista RWHT genérica antes de atribuir módulos.
+
 ## Cambios preparados en la rama
 
 - **Historial individual del administrador:** botón en la tarjeta de cada trabajador y modal de solo lectura sobre `transacciones`, paginado por bloques, con filtros por tipo/fecha/texto, motivo, quién registró el movimiento, contraparte y saldos antes/después cuando están guardados.
@@ -34,6 +40,14 @@ No es una transacción atómica. Si el paso 3 falla, el dinero ya cambió pero e
 
 También se deben inspeccionar las funciones `admin_pagar_saldo`, `solicitar_retiro` y `admin_resolver_retiro` para asegurar que todas las rutas de dinero escriben saldo y ledger consistentemente.
 
+### Discrepancia histórica que no debe reabrirse a ciegas — transferencias
+
+Los informes históricos de revision-3/4 describían `transferir-saldo` v8 como no atómica/no idempotente y presentaban el SQL de RPC como **propuesto, no ejecutado**. Un checkpoint posterior de ChatBending (2026-08-30) declara que `transferir_saldo_atomica(uuid,numeric,text,text)` se aplicó y se probaron new/replay, key conflict, locks, ledger y rollback; allí quedaba pendiente el frontend. El archivo actual de `main` `js/finance/transfers/ejecutar-transferencia.js` ya genera/persiste y envía `idempotencyKey` al Edge Function. Por eso los informes anteriores no deben interpretarse, sin más, como prueba de que la misma vulnerabilidad sigue activa. Falta verificar el estado **LIVE actual** de la RPC/Edge Function, tabla idempotency, grants/RLS y replay después de timeout. No ejecutar el SQL propuesto antiguo sin comparar primero con el esquema real.
+
+### Hallazgos de seguridad históricos que requieren revalidación
+
+El Gate 3 también registró históricamente: `anon EXECUTE` en sobrecargas administrativas de `admin_resolver_retiro`, grants amplios en tablas aunque RLS limita filas, protección de contraseñas filtradas deshabilitada en Auth, y ausencia de deduplicación de destinatarios en `admin_pagar_saldo` (un arreglo administrativo con UUID repetidos podía pagar dos veces a una persona). No se ha podido comprobar desde esta conexión si estos puntos siguen presentes. Revisar grants/RLS y la configuración Auth actual; aplicar mínimo privilegio; deduplicar destinatarios tanto en el cliente como, como autoridad definitiva, en el servidor; y probar que usuario anónimo/no admin no puede ejecutar movimientos financieros.
+
 ## Pendientes para declarar 100%
 
 ### P0 — Integridad del libro financiero
@@ -44,7 +58,7 @@ También se deben inspeccionar las funciones `admin_pagar_saldo`, `solicitar_ret
 - Determinar, con evidencia, si hay ajustes anteriores sin transacción. No inventar filas históricas; cualquier conciliación manual debe indicar su origen y fecha.
 
 ### P1 — Pruebas LIVE/E2E
-- Workflow estático de GitHub Actions #3: **SUCCESS** (run ID `37928118885`; sintaxis JS, scripts inline e invariantes estáticas PASS). Esto no sustituye LIVE/E2E.
+- Workflow estático de GitHub Actions: **SUCCESS** también en la revisión más reciente de la rama (run #5, ID `37928225063`; sintaxis JS, scripts inline e invariantes estáticas PASS). [Ver ejecución](https://github.com/Robvg9/CuevaCoin/actions/runs/37928225063). Esto no sustituye LIVE/E2E.
 - Publicar la rama mediante el método de despliegue de CuevaCoin y verificar en producción el shell v137.
 - Probar con cuentas controladas de administrador y trabajador: pago, bono, depósito, descuento por cobro en efectivo, transferencia entrante/saliente y retiro aprobado/rechazado. Verificar que ambas vistas muestren la misma fila persistida, motivo, fecha y saldo antes/después.
 - Simular inserción fallida/timeout y confirmar que una operación financiera no queda aplicada parcialmente.
