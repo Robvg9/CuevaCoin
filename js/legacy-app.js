@@ -1572,7 +1572,15 @@
                     saldo_despues: saldoDespues,
                     motivo: motivo
                 });
-            if (errorTransaccion) console.error(errorTransaccion);
+            if (errorTransaccion) {
+                console.error('[CuevaCoin] El saldo cambió pero falló el registro del historial:', errorTransaccion);
+                showToast('⚠️ El saldo ya cambió, pero NO se guardó su movimiento en el historial. No repitas el ajuste. Comprueba el saldo y registra esta incidencia; hace falta reparar el backend.', 9000);
+                closeModal('ajustar-saldo-modal');
+                document.getElementById('ajustar-saldo-form').reset();
+                loadAdminUsuarios();
+                loadAdminStats();
+                return;
+            }
 
             // 4) Notificar al trabajador
             const mensajeAjusteSaldo = `El admin ajustó tu saldo: ${tipo === 'deposito' ? '+' : ''}$${Math.abs(cantidadFinal).toFixed(2)}. Motivo: ${motivo}`;
