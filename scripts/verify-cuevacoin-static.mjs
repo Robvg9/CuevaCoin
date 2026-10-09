@@ -33,6 +33,7 @@ const legacy = read('js/legacy-app.js');
 const payments = read('js/admin/finance/pagos.js');
 const app = read('js/core/app.js');
 const sw = read('service-worker.js');
+const atomicAdjustmentSql = read('docs/evidence/revision-5/ADMIN_SALDO_ATOMICO_PROPUESTO_NO_EJECUTADO.sql');
 
 for (const path of [...walk('js'), 'js/legacy-app.js']) {
     const result = spawnSync(process.execPath, ['--check', '--input-type=module'], {
@@ -94,6 +95,32 @@ check('Client removes duplicate/invalid recipients before issuing a batch paymen
     assert.match(payments, /const idsVistos = new Set\(\)/);
     assert.match(payments, /idsVistos\.has\(id\)/);
     assert.match(payments, /p_destinatarios: seleccion\.map\(u => u\.id\)/);
+});
+
+check('Admin balance adjustment calls only the atomic idempotent RPC from the client', () => {
+    const start = legacy.indexOf("document.getElementById('ajustar-saldo-form').addEventListener('submit'");
+    const end = legacy.indexOf("        // F7 (fix): antes esta función", start);
+    assert.ok(start >= 0 && end > start, 'Balance adjustment handler must be located for inspection');
+    const handler = legacy.slice(start, end);
+    assert.ok(handler.includes("rpc('admin_ajustar_saldo_atomico'"), 'Client must call the atomic RPC');
+    assert.ok(handler.includes('cuevacoin_admin_ajuste_saldo_pendiente'), 'Client must persist unresolved idempotency state');
+    assert.ok(handler.includes('p_idempotency_key: pending.key'), 'Client must send the same stable key to the backend');
+    assert.ok(!handler.includes(".from('perfiles')"), 'Client must not mutate balance directly');
+    assert.ok(!handler.includes(".from('transacciones')"), 'Client must not insert the ledger separately');
+});
+
+check('Unexecuted atomic adjustment SQL proposal encodes core safety gates', () => {
+    assert.ok(atomicAdjustmentSql.includes('auth.uid()'), 'Server function must identify the caller');
+    assert.ok(atomicAdjustmentSql.includes('v_admin.es_admin IS DISTINCT FROM true'), 'Server must authorize admin');
+    assert.ok(atomicAdjustmentSql.includes('FOR UPDATE'), 'Server must lock the target profile');
+    assert.ok(atomicAdjustmentSql.includes('ON CONFLICT (idempotency_key) DO NOTHING'), 'Server must serialize retries');
+    assert.ok(atomicAdjustmentSql.includes('INSERT INTO public.transacciones'), 'Ledger insert must be in the function');
+    assert.ok(atomicAdjustmentSql.includes('INSERT INTO public.notificaciones'), 'Persisted notification must be in the function');
+    assert.ok(atomicAdjustmentSql.includes('INSERT INTO public.auditoria'), 'Audit write must be in the function');
+    assert.ok(atomicAdjustmentSql.includes('ALTER TABLE public.admin_ajustes_saldo_idempotencia ENABLE ROW LEVEL SECURITY'), 'Idempotency table must enable RLS');
+    assert.ok(atomicAdjustmentSql.includes('FROM PUBLIC, anon'), 'Public and anon must not execute the function');
+    assert.ok(atomicAdjustmentSql.includes('TO authenticated'), 'Authenticated role gets the RPC grant');
+    assert.ok(atomicAdjustmentSql.includes('NO EJECUTADA'), 'Proposal must not be mistaken for an applied migration');
 });
 
 check('PWA release version is consistent across Service Worker, modular app, and legacy inline fallback', () => {
