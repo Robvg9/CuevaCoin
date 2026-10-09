@@ -22,6 +22,27 @@ export function actualizarIndicadorColaPendiente() {
 
     if (cola.length === 0) {
         if (link) link.classList.add('hidden');
+
+        // No dejar fija una franja roja de un intento anterior cuando la
+        // cola está vacía y Supabase ya responde. navigator.onLine por sí
+        // solo no demuestra que haya Internet real, por eso se verifica el
+        // backend antes de retirar el aviso.
+        const strip = document.getElementById('conexion-strip');
+        const mensajeActual = document.getElementById('conexion-strip-texto')?.textContent || '';
+        const pareceAvisoOffline = strip?.classList.contains('conexion-strip--offline')
+            && /sin conexión|no pudimos conectar|no se pudo conectar/i.test(mensajeActual);
+        if (pareceAvisoOffline && typeof window.hayConexionRealAhora === 'function') {
+            window.hayConexionRealAhora().then((confirmada) => {
+                if (!confirmada || window.obtenerColaPendiente().length > 0) return;
+                const stripActual = document.getElementById('conexion-strip');
+                const mensaje = document.getElementById('conexion-strip-texto')?.textContent || '';
+                if (stripActual?.classList.contains('conexion-strip--offline')
+                    && /sin conexión|no pudimos conectar|no se pudo conectar/i.test(mensaje)
+                    && typeof window.ocultarConexionStrip === 'function') {
+                    window.ocultarConexionStrip();
+                }
+            }).catch(() => {});
+        }
         return;
     }
 
