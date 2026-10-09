@@ -24,6 +24,8 @@ Se encontró y corrigió un fallback inline que aún decía `V.135`. Se amplió 
 - Mensajes explícitos cuando un pago por lote tiene fallos parciales; deduplicación preventiva de destinatarios en cliente.
 - Rutas CDN correctas para jsQR y Chart.js, con precarga del Service Worker alineada.
 - Contrato estático de versión compartido por Service Worker, módulo principal y fallback inline.
+- El formulario admin de ajuste de saldo ya no actualiza saldo e historial en dos llamadas separadas desde el navegador: la rama lo dirige a `admin_ajustar_saldo_atomico`, con clave estable de idempotencia conservada ante respuesta incierta.
+- SQL de la RPC y tabla de idempotencia guardado como **propuesta NO EJECUTADA** en `docs/evidence/revision-5/ADMIN_SALDO_ATOMICO_PROPUESTO_NO_EJECUTADO.sql`; el flujo de ajuste en esta rama no debe publicarse hasta validar/aplicar esta función en el proyecto CuevaCoin correcto.
 
 ## Verificaciones ejecutadas
 
@@ -44,6 +46,6 @@ Se encontró y corrigió un fallback inline que aún decía `V.135`. Se amplió 
 
 El conector Supabase disponible solo enumera el proyecto ARIA (`icuqsstxfdbvjytkhlog`) y responde `You do not have permission` para el proyecto CuevaCoin documentado (`zqgmjwfvluboiporytcq`). La máquina RobVG tampoco tiene en esta sesión un checkout Git de CuevaCoin, Supabase CLI ni credenciales de deploy Cloudflare configuradas en variables de entorno.
 
-Por seguridad no se ejecutaron cambios contra ARIA ni se publicó una interfaz que depende de un arreglo financiero no verificado. El ajuste manual de saldo aún hace UPDATE de `perfiles.saldo` e INSERT en `transacciones` por separado; debe pasar a una RPC atómica con autorización administrativa comprobada en el servidor. La transferencia y los grants/RLS de producción deben auditarse contra el estado actual, porque los informes históricos y el checkpoint posterior no coinciden.
+Por seguridad no se ejecutaron cambios contra ARIA ni se publicó nada. La rama ha cambiado el cliente de ajuste manual para usar una RPC atómica con idempotencia; sin embargo, la definición SQL adjunta solo está propuesta y **no está aplicada ni validada contra el esquema LIVE**. Por tanto la nueva ruta de cliente depende de una RPC que aún no está confirmada en producción, y esa rama debe mantenerse fuera de LIVE hasta que el proyecto Supabase correcto sea accesible, se inspeccionen columnas/triggers/grants, la RPC se aplique y pase pruebas controladas. La transferencia y los grants/RLS/Auth de producción también deben auditarse contra el estado actual, porque los informes históricos y el checkpoint posterior no coinciden.
 
 **Regla de cierre:** código + CI verde + versión LIVE comprobada + E2E real + evidencia persistida + base de datos/privilegios verificados. En este estado, CuevaCoin sigue EN CURSO, no 100%.
