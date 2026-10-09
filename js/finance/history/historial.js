@@ -37,7 +37,8 @@ export async function loadUserHistorial(usuarioId) {
     //   - 'deposito_admin'                   -> salario  (amarillo, solo lo paga el admin)
     function categoriaTransaccion(t) {
         const cantidad = Number(t.cantidad);
-        if (t.tipo === 'retiro' || t.tipo === 'retiro_admin') return 'retiro';
+        if (t.tipo === 'retiro_admin') return cantidad < 0 ? 'descuento' : 'ajuste';
+        if (t.tipo === 'retiro') return 'retiro';
         if (t.tipo === 'deposito_admin') return 'salario';
         if (t.tipo === 'transferencia') return cantidad > 0 ? 'recibido' : 'enviado';
         // Respaldo por si aparece un tipo no contemplado: se clasifica por el signo.
@@ -48,7 +49,7 @@ export async function loadUserHistorial(usuarioId) {
     // solo se muestra si pasa TODOS los que estén activos (los vacíos
     // se ignoran, mismo criterio combinable que E13 en Auditoría).
     const transaccionesFiltradas = transacciones.filter(t => {
-        if (tipoFiltro !== '' && window.categoriaTransaccion(t) !== tipoFiltro) return false;
+        if (tipoFiltro !== '' && categoriaTransaccion(t) !== tipoFiltro) return false;
 
         if (fechaDesde || fechaHasta) {
             const fechaTx = t.creado_en.slice(0, 10); // 'YYYY-MM-DD'
@@ -79,7 +80,8 @@ export async function loadUserHistorial(usuarioId) {
         recibido: 'Recibido',
         enviado: 'Enviado',
         retiro: 'Retiro',
-        salario: 'Salario',
+        descuento: 'Descuento admin',
+        salario: 'Pago del admin',
         deposito: 'Depósito',
         ajuste: 'Ajuste',
     };
@@ -93,6 +95,7 @@ export async function loadUserHistorial(usuarioId) {
         recibido: '💰',
         enviado: '📤',
         retiro: '🏧',
+        descuento: '➖',
         salario: '💵',
         deposito: '➕',
         ajuste: '⚖️',
@@ -100,14 +103,15 @@ export async function loadUserHistorial(usuarioId) {
     const explicacionTipo = {
         recibido: 'Dinero que otra persona te transfirió',
         enviado: 'Dinero que tú le transferiste a otra persona',
-        retiro: 'Dinero que sacaste (retiraste) de tu cuenta',
-        salario: 'Pago que el admin te hizo (salario o bono)',
+        retiro: 'Dinero que retiraste de tu cuenta',
+        descuento: 'Dinero que el administrador descontó de tu saldo. Revisa el motivo para identificar si fue un cobro en efectivo u otro ajuste.',
+        salario: 'Dinero que el administrador agregó a tu saldo (salario, bono o depósito)',
         deposito: 'Dinero que el admin agregó a tu cuenta',
         ajuste: 'Corrección de saldo hecha por el admin',
     };
 
     transaccionesFiltradas.forEach(t => {
-        const categoria = window.categoriaTransaccion(t);
+        const categoria = categoriaTransaccion(t);
         const cantidad = Number(t.cantidad);
         const tipo = etiquetas[categoria] || (cantidad > 0 ? 'Recibido' : 'Enviado');
         const cantidadAbs = Math.abs(cantidad);
