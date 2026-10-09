@@ -25,7 +25,7 @@ Los reportes **M26** y **Reporte COMPLETO de Pruebas de Robert** con almacenes, 
 - **Pagos por lote:** el aviso de fallo parcial ya no queda sobrescrito por un segundo toast que afirma éxito total.
 - **Ajuste manual de saldo:** si el saldo se actualiza pero la inserción en `transacciones` falla, la interfaz muestra una advertencia crítica y no confirma éxito. Es una protección temporal, no la solución de integridad definitiva.
 - **Versión PWA:** shell cache y fallback visual alineados en v137 para forzar renovación de recursos al desplegar estos cambios.
-- **Validación automatizada:** el workflow de sintaxis e invariantes estáticas pasó en el run #10. La comprobación estática no sustituye E2E.
+- **Validación automatizada:** el workflow de sintaxis e invariantes estáticas pasó en el run #14. La comprobación estática no sustituye E2E.
 
 ## Hallazgo financiero crítico
 
@@ -58,7 +58,7 @@ El Gate 3 también registró históricamente: `anon EXECUTE` en sobrecargas admi
 - Determinar, con evidencia, si hay ajustes anteriores sin transacción. No inventar filas históricas; cualquier conciliación manual debe indicar su origen y fecha.
 
 ### P1 — Pruebas LIVE/E2E
-- Workflow estático de GitHub Actions: **SUCCESS** para el head probado (run #10, ID `37928738567`; sintaxis JS, scripts inline e invariantes estáticas PASS). [Ver ejecución](https://github.com/Robvg9/CuevaCoin/actions/runs/37928738567). Esto no sustituye LIVE/E2E.
+- Workflow estático de GitHub Actions: **SUCCESS** para el head actual tras distinguir visualmente los descuentos administrativos (run #14, ID `37930482375`; sintaxis JS, scripts inline e invariantes estáticas PASS). [Ver ejecución](https://github.com/Robvg9/CuevaCoin/actions/runs/37930482375). Esto no sustituye LIVE/E2E.
 - Publicar la rama mediante el método de despliegue de CuevaCoin y verificar en producción el shell v137.
 - Probar con cuentas controladas de administrador y trabajador: pago, bono, depósito, descuento por cobro en efectivo, transferencia entrante/saliente y retiro aprobado/rechazado. Verificar que ambas vistas muestren la misma fila persistida, motivo, fecha y saldo antes/después.
 - Simular inserción fallida/timeout y confirmar que una operación financiera no queda aplicada parcialmente.
