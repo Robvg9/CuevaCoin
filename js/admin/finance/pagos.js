@@ -56,7 +56,7 @@ export async function pagarSaldoDesdeAdmin(tipo) {
         
         if (fallidos.length > 0) {
             console.warn('[ADMIN_PAGO_DEBUG] Destinatarios fallidos:', fallidos);
-            window.showToast(`Pago completado con ${fallidos.length} error(es). Ver consola para detalles.`, 6000);
+            window.showToast(`Pago parcial: ${exitosos.length} correcto(s), ${fallidos.length} fallido(s). Revisa el historial antes de repetir la operación.`, 6500);
         } else {
             window.showToast(`${esBono ? 'Bono' : 'Salario'} enviado a ${exitosos.length} destinataria(s)`, 3000);
         }
@@ -69,7 +69,8 @@ export async function pagarSaldoDesdeAdmin(tipo) {
             }
         });
 
-        window.showToast(`${esBono ? 'Bono' : 'Salario'} pagado a ${data.length} trabajadora(s)`, 3000);
+        // No sobrescribir aquí el aviso anterior: puede informar que hubo
+        // resultados parciales y exige revisar qué trabajadoras fallaron.
         window.closeModal(idModal);
         document.getElementById(idForm).reset();
         if (esBono) {
