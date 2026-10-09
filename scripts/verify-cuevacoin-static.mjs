@@ -96,9 +96,12 @@ check('Client removes duplicate/invalid recipients before issuing a batch paymen
     assert.match(payments, /p_destinatarios: seleccion\.map\(u => u\.id\)/);
 });
 
-check('PWA cache version and fallback agree', () => {
+check('PWA release version is consistent across Service Worker, modular app, and legacy inline fallback', () => {
     assert.match(sw, /cuevacoin-shell-v137/);
-    assert.match(app, /VERSION_FALLBACK = 'V\.137'/);
+    assert.match(app, /VERSION_FALLBACK = 'V\\.137'/);
+    assert.match(index, /const VERSION_FALLBACK = 'V\\.137';/);
+    assert.doesNotMatch(index, /VERSION_FALLBACK = 'V\\.13[0-6]'/);
+    assert.doesNotMatch(sw, /cuevacoin-shell-v13[0-6]/);
 });
 
 check('QR and Chart.js URLs use the corrected matching CDN bundles in HTML and Service Worker', () => {
