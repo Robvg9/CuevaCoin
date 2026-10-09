@@ -6,7 +6,19 @@ export async function pagarSaldoDesdeAdmin(tipo) {
     const idForm = esBono ? 'dar-bono-form' : 'pagar-salario-form';
     const monto = parseFloat(document.getElementById(esBono ? 'bono-monto' : 'salario-monto').value);
     const motivo = document.getElementById(esBono ? 'bono-motivo' : 'salario-motivo').value;
-    const seleccion = esBono ? window.seleccionDestinatariosBono : window.seleccionDestinatariosSalario;
+    const seleccionOriginal = esBono ? window.seleccionDestinatariosBono : window.seleccionDestinatariosSalario;
+    // Defensa adicional en el cliente: no enviar el mismo UUID dos veces
+    // a admin_pagar_saldo. El backend también debe deduplicar/validar.
+    const idsVistos = new Set();
+    const seleccion = (Array.isArray(seleccionOriginal) ? seleccionOriginal : []).filter(usuario => {
+        const id = String(usuario?.id || '');
+        if (!id || idsVistos.has(id)) return false;
+        idsVistos.add(id);
+        return true;
+    });
+    if (seleccionOriginal?.length && seleccion.length !== seleccionOriginal.length) {
+        window.showToast('Se quitaron destinatarios repetidos o inválidos para evitar un doble pago.', 4500);
+    }
 
     if (!(monto > 0)) {
         window.showToast('El monto debe ser mayor a 0', 3000);
