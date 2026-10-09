@@ -22,7 +22,9 @@ function obtenerInfoTransaccion(tx) {
         case 'deposito_admin':
             return { categoria: 'salario', icono: '💵', etiqueta: 'Pago / dinero añadido por admin', explicacion: 'El administrador agregó dinero a la cuenta.' };
         case 'retiro_admin':
-            return { categoria: 'ajuste', icono: cantidad < 0 ? '➖' : '⚖️', etiqueta: cantidad < 0 ? 'Descuento administrativo' : 'Ajuste administrativo', explicacion: 'Cambio de saldo registrado por el administrador.' };
+            return cantidad < 0
+                ? { categoria: 'descuento', icono: '➖', etiqueta: 'Descuento administrativo', explicacion: 'Dinero descontado del saldo por el administrador; consulta el motivo para identificar el cobro en efectivo u otro ajuste.' }
+                : { categoria: 'ajuste', icono: '⚖️', etiqueta: 'Ajuste administrativo', explicacion: 'Cambio positivo de saldo registrado por el administrador.' };
         case 'retiro':
             return { categoria: 'retiro', icono: '🏧', etiqueta: 'Retiro', explicacion: 'Retiro solicitado por el trabajador.' };
         case 'transferencia':
