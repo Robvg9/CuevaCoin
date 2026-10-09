@@ -2455,6 +2455,7 @@
         .tx-card-icono-recibido { background: rgba(22, 163, 74, 0.15); }
         .tx-card-icono-enviado { background: rgba(239, 68, 68, 0.15); }
         .tx-card-icono-retiro { background: rgba(239, 68, 68, 0.15); }
+        .tx-card-icono-descuento { background: rgba(220, 38, 38, 0.18); }
         .tx-card-icono-salario { background: rgba(245, 158, 11, 0.15); }
         .tx-card-icono-deposito { background: rgba(37, 99, 235, 0.15); }
         .tx-card-icono-ajuste { background: rgba(107, 114, 128, 0.15); }
@@ -2589,6 +2590,11 @@
         .tx-card-tipo.retiro {
             background: rgba(239, 68, 68, 0.15);
             color: #ef4444;
+        }
+
+        .tx-card-tipo.descuento {
+            background: rgba(220, 38, 38, 0.16);
+            color: #dc2626;
         }
 
         .tx-card-tipo.salario {
@@ -3457,8 +3463,9 @@
                                 <option value="">Todos los tipos</option>
                                 <option value="recibido">Recibidos</option>
                                 <option value="enviado">Enviados</option>
-                                <option value="retiro">Retiros</option>
-                                <option value="salario">Salarios</option>
+                                <option value="retiro">Retiros solicitados</option>
+                                <option value="descuento">Descuentos del admin</option>
+                                <option value="salario">Pagos del admin</option>
                             </select>
                         </div>
                         <div class="hist-filtro-campo">
