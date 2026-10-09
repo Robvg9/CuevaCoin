@@ -90,6 +90,12 @@ check('Partial salary/bonus failures are not overwritten by generic success toas
     assert.doesNotMatch(payments, /pagado a \$\{data\.length\}/);
 });
 
+check('Client removes duplicate/invalid recipients before issuing a batch payment', () => {
+    assert.match(payments, /const idsVistos = new Set\(\)/);
+    assert.match(payments, /idsVistos\.has\(id\)/);
+    assert.match(payments, /p_destinatarios: seleccion\.map\(u => u\.id\)/);
+});
+
 check('PWA cache version and fallback agree', () => {
     assert.match(sw, /cuevacoin-shell-v137/);
     assert.match(app, /VERSION_FALLBACK = 'V\.137'/);
