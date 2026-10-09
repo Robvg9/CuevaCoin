@@ -735,14 +735,135 @@
 
         // Estado real del navegador: ROJO fijo mientras esté offline, VERDE
         // unos segundos al recuperar conexión y después se oculta sola.
+        let cuevacoinRecuperacionEnCurso = false;
+        let cuevacoinUltimaRecuperacion = 0;
+
+        async function revalidarDatosTrasConexion(mostrarConfirmacion = false) {
+            if (!navigator.onLine || cuevacoinRecuperacionEnCurso) return;
+            const ahora = Date.now();
+            // Evita varias consultas cuando online, focus y visibilitychange
+            // se disparan seguidos al volver a la aplicación.
+            if (ahora - cuevacoinUltimaRecuperacion < 15000) return;
+            cuevacoinUltimaRecuperacion = ahora;
+            cuevacoinRecuperacionEnCurso = true;
+
+            try {
+                const conexionConfirmada = await hayConexionRealAhora();
+                if (!conexionConfirmada) return;
+
+                const { data: sesionData, error: errorSesion } = await supabaseClient.auth.getSession();
+                if (errorSesion) throw errorSesion;
+                if (!sesionData?.session) return;
+
+                supabaseClient.realtime.setAuth(sesionData.session.access_token);
+                let usuarioAnterior = null;
+                try {
+                    usuarioAnterior = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual') || 'null');
+                } catch (_errorCache) {}
+
+                if (typeof window.obtenerMiPerfilApp !== 'function') {
+                    throw new Error('No está disponible la carga del perfil desde el servidor.');
+                }
+                // Esta consulta es la fuente real del perfil/saldo; la caché
+                // local solo se usa para permitir navegación sin conexión.
+                const usuarioActualizado = await window.obtenerMiPerfilApp();
+                if (!usuarioActualizado) throw new Error('El servidor no devolvió el perfil de la sesión.');
+                if (usuarioAnterior?.id && usuarioAnterior.id !== usuarioActualizado.id) {
+                    throw new Error('El perfil devuelto no coincide con la sesión abierta.');
+                }
+                sessionStorage.setItem('cuevacoin_usuario_actual', JSON.stringify(usuarioActualizado));
+
+                const mismaIdentidadYRol = usuarioAnterior
+                    && usuarioAnterior.id === usuarioActualizado.id
+                    && usuarioAnterior.esAdmin === usuarioActualizado.esAdmin;
+
+                if (mismaIdentidadYRol) {
+                    const topbarUser = document.getElementById('topbar-user');
+                    if (topbarUser) topbarUser.textContent = usuarioActualizado.nombre || usuarioActualizado.usuario || '';
+                    const topbarAvatar = document.getElementById('topbar-avatar');
+                    if (topbarAvatar) {
+                        topbarAvatar.src = usuarioActualizado.foto
+                            || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(usuarioActualizado.usuario || 'CuevaCoin') + '&background=2563EB&color=fff';
+                    }
+                    ['user-saldo', 'perfil-saldo'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el && usuarioActualizado.saldo != null) el.textContent = Number(usuarioActualizado.saldo).toFixed(2);
+                    });
+
+                    // Reabrir la sección que ya estaba visible fuerza una
+                    // lectura nueva de su contenido, sin exigir logout ni borrar caché.
+                    const secciones = {
+                        'admin-inicio': 'inicio',
+                        'admin-usuarios-seccion': 'usuarios',
+                        'admin-solicitudes-seccion': 'solicitudes',
+                        'admin-auditoria': 'auditoria',
+                        'admin-chat': 'chat',
+                        'admin-bonos': 'bonos',
+                        'admin-anuncios': 'anuncios',
+                        'admin-estadisticas': 'estadisticas',
+                        'user-inicio': 'inicio',
+                        'user-historial': 'historial',
+                        'user-chat': 'chat',
+                        'user-bonos': 'bonos',
+                        'shared-perfil': 'perfil',
+                        'shared-config-cambio-contrasena': 'config-cambio-contrasena',
+                        'shared-config-modo-oscuro': 'config-modo-oscuro',
+                        'shared-config-notificaciones': 'config-notificaciones',
+                        'shared-como-usar': 'como-usar'
+                    };
+                    const seccionVisible = Object.keys(secciones)
+                        .map(id => document.getElementById(id))
+                        .find(el => el && !el.classList.contains('hidden'));
+                    if (seccionVisible && typeof window.loadSection === 'function') {
+                        window.loadSection(secciones[seccionVisible.id]);
+                    } else if (document.getElementById('login-screen')?.classList.contains('hidden') !== true
+                        && typeof window.procesarSesionYMostrarPantalla === 'function') {
+                        await window.procesarSesionYMostrarPantalla();
+                    } else if (typeof window.loadSection === 'function') {
+                        window.loadSection('inicio');
+                    }
+                } else if (typeof window.procesarSesionYMostrarPantalla === 'function') {
+                    // La sesión no tenía perfil local o cambió de identidad/rol:
+                    // dejar que el flujo canónico aplique la pantalla y sus gates.
+                    await window.procesarSesionYMostrarPantalla();
+                }
+
+                if (mostrarConfirmacion && typeof window.mostrarConexionStrip === 'function') {
+                    window.mostrarConexionStrip('online', '✅ Conexión confirmada; datos actualizados desde la base de datos', 2500);
+                } else if (typeof window.ocultarConexionStrip === 'function') {
+                    window.ocultarConexionStrip();
+                }
+
+                const colaPendiente = typeof window.obtenerColaPendiente === 'function'
+                    ? window.obtenerColaPendiente() : [];
+                if (colaPendiente.length > 0 && typeof window.sincronizarColaPendiente === 'function') {
+                    // Las operaciones en cola conservan su estado hasta que el
+                    // backend confirme el resultado; nunca se fuerzan a éxito.
+                    await window.sincronizarColaPendiente();
+                } else if (typeof window.actualizarIndicadorColaPendiente === 'function') {
+                    window.actualizarIndicadorColaPendiente();
+                }
+            } catch (error) {
+                // No mostramos "recuperado" si el perfil real no pudo leerse.
+                console.warn('[CuevaCoin] No se pudieron revalidar los datos tras reconectar:', error);
+            } finally {
+                cuevacoinRecuperacionEnCurso = false;
+            }
+        }
+
         window.addEventListener('offline', function() {
             actualizarIndicadorColaPendiente();
         });
-        window.addEventListener('online', async function() {
-            const conexionConfirmada = await hayConexionRealAhora();
-            if (!conexionConfirmada) return; // evento 'online' falso, se ignora
-            mostrarConexionStrip('online', '✅ Conexión recuperada', 2500);
-            sincronizarColaPendiente();
+        window.addEventListener('online', function() {
+            revalidarDatosTrasConexion(true);
+        });
+        // navigator.onLine puede seguir en true aunque Supabase haya fallado
+        // temporalmente. Al volver a la app también se revalida servidor + sección.
+        window.addEventListener('focus', function() {
+            revalidarDatosTrasConexion(false);
+        });
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') revalidarDatosTrasConexion(false);
         });
         // Si la página se abre ya sin internet (ej. modo avión), mostrar la
         // franja roja de una vez, sin esperar a que dispare el evento.
