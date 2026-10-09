@@ -59,7 +59,7 @@ El Gate 3 también registró históricamente: `anon EXECUTE` en sobrecargas admi
 - Determinar, con evidencia, si hay ajustes anteriores sin transacción. No inventar filas históricas; cualquier conciliación manual debe indicar su origen y fecha.
 
 ### P1 — Pruebas LIVE/E2E
-- GitHub Actions: **SUCCESS** para el head con corrección de CDN (run #21, ID `37931601634`; sintaxis JS, scripts inline, invariantes y disponibilidad/content-type de los dos CDN PASS). [Ver ejecución](https://github.com/Robvg9/CuevaCoin/actions/runs/37931601634). Esto no sustituye LIVE/E2E.
+- GitHub Actions: **SUCCESS** para el head con corrección de CDN y documentación final (run #23, ID `37931693807`; sintaxis JS, scripts inline, invariantes y disponibilidad/content-type/payload de los dos CDN PASS). [Ver ejecución](https://github.com/Robvg9/CuevaCoin/actions/runs/37931693807). Esto no sustituye LIVE/E2E.
 - Publicar la rama mediante el método de despliegue de CuevaCoin y verificar en producción el shell v137.
 - Probar con cuentas controladas de administrador y trabajador: pago, bono, depósito, descuento por cobro en efectivo, transferencia entrante/saliente y retiro aprobado/rechazado. Verificar que ambas vistas muestren la misma fila persistida, motivo, fecha y saldo antes/después.
 - Simular inserción fallida/timeout y confirmar que una operación financiera no queda aplicada parcialmente.
@@ -74,7 +74,7 @@ ChatBending mantiene el RWHT físico como **NO REALIZADO / NO CERTIFICADO**. Com
 ### Comprobación LIVE desde RobVG — 2026-10-09
 - URL pública probada: `https://cuevacoin.robvg9.workers.dev/` → **HTTP 200**, título `CuevaCoin - Banco Digital`, HTML servido (224780 bytes en esa consulta).
 - `/service-worker.js` → **HTTP 200**, cache reportado `cuevacoin-shell-v136`.
-- Las URLs CDN antiguas de jsQR y Chart.js incluidas en el HTML/Service Worker LIVE devuelven **HTTP 404** (`text/html`); esto explica los dos `net::ERR_BLOCKED_BY_ORB` en la prueba headless. Las URLs corregidas de la rama se comprobaron aparte con HTTP 200. La prueba headless completa expiró esperando `networkidle2`, así que **no se declara E2E de navegador PASS**.
+- Las URLs CDN antiguas de jsQR y Chart.js incluidas en el HTML/Service Worker LIVE devuelven **HTTP 404** (`text/html`); esto explica los dos `net::ERR_BLOCKED_BY_ORB` en la prueba headless. Las URLs corregidas de la rama se comprobaron aparte con HTTP 200, `application/javascript` y payload completo. El resto de las 6 URLs externas precargadas del Service Worker respondió HTTP 200 en la verificación desde RobVG. La prueba headless completa expiró esperando `networkidle2`, así que **no se declara E2E de navegador PASS**.
 - La respuesta HTML LIVE no contiene `admin-worker-history-modal`; por tanto, las nuevas mejoras de la rama todavía no están publicadas. No se ejecutó deploy.
 - La comprobación de endpoints Supabase sin API key devolvió HTTP 401. Eso no determina el estado saludable/no saludable del proyecto, ni autoriza lectura de datos. El conector Supabase de esta sesión solo lista el proyecto ARIA y deniega el ID CuevaCoin `zqgmjwfvluboiporytcq`.
 
