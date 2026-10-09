@@ -44,7 +44,7 @@ También se deben inspeccionar las funciones `admin_pagar_saldo`, `solicitar_ret
 - Determinar, con evidencia, si hay ajustes anteriores sin transacción. No inventar filas históricas; cualquier conciliación manual debe indicar su origen y fecha.
 
 ### P1 — Pruebas LIVE/E2E
-- Esperar a que pase el workflow de GitHub Actions.
+- Workflow estático de GitHub Actions #3: **SUCCESS** (run ID `37928118885`; sintaxis JS, scripts inline e invariantes estáticas PASS). Esto no sustituye LIVE/E2E.
 - Publicar la rama mediante el método de despliegue de CuevaCoin y verificar en producción el shell v137.
 - Probar con cuentas controladas de administrador y trabajador: pago, bono, depósito, descuento por cobro en efectivo, transferencia entrante/saliente y retiro aprobado/rechazado. Verificar que ambas vistas muestren la misma fila persistida, motivo, fecha y saldo antes/después.
 - Simular inserción fallida/timeout y confirmar que una operación financiera no queda aplicada parcialmente.
