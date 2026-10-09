@@ -29,7 +29,7 @@ Se encontró y corrigió un fallback inline que aún decía `V.135`. Se amplió 
 
 ## Verificaciones ejecutadas
 
-- CI de GitHub Actions en el HEAD previo al documento: PASS, incluidos chequeos de sintaxis JS y contrato de versión. El commit con este documento debe volver a pasar CI antes de que se considere verificado el HEAD final.
+- GitHub Actions runs #43 and #44 both returned SUCCESS for branch HEAD `76458ccfa2ca5224e6007933e152efaee7def0c4`. They verify JavaScript syntax, inline scripts/invariants, coherent V.137 markers, that the adjustment client invokes the atomic idempotent RPC without direct split writes, the unexecuted SQL proposal's safety markers, and corrected CDN JavaScript payloads. Each later branch commit triggers the same CI and must pass before the release candidate is accepted.
 - Recursos CDN corregidos responden HTTP 200 y sirven JavaScript durante las comprobaciones anteriores.
 - LIVE responde HTTP 200, pero la última comprobación física de `https://cuevacoin.robvg9.workers.dev/` encontró `cuevacoin-shell-v136`, las dos URLs CDN antiguas y ausencia del modal `admin-worker-history-modal`.
 - No se completó E2E autenticado. La prueba de navegador anterior acabó por timeout de `networkidle2`; no se declara PASS.
