@@ -1521,97 +1521,109 @@
         document.getElementById('ajustar-saldo-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (!requiereConexionParaOperar()) return;
+
             const usuarioId = document.getElementById('ajustar-usuario-id').value;
             const valorCantidadAjuste = document.getElementById('ajustar-cantidad').value;
             if (!esMontoEnteroValido(valorCantidadAjuste)) {
                 showToast('La cantidad debe ser un número entero mayor a 0, sin decimales', 3500);
                 return;
             }
+
             const cantidad = parseInt(valorCantidadAjuste, 10);
             const tipo = document.getElementById('ajustar-tipo').value;
             const motivo = document.getElementById('ajustar-motivo').value || 'Ajuste por admin';
-            const admin = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual'));
-            const cantidadFinal = tipo === 'deposito' ? cantidad : -cantidad;
+            const payload = { usuarioId, tipo, cantidad, motivo };
+            const idempotencyStorageKey = 'cuevacoin_admin_ajuste_saldo_pendiente';
 
-            // 1) Leer el saldo real y actual desde Supabase (nunca confiar en el
-            //    valor que ya está pintado en pantalla, puede estar desactualizado)
-            const { data: perfil, error: errorLeer } = await supabaseClient
-                .from('perfiles')
-                .select('saldo, nombre, usuario')
-                .eq('id', usuarioId)
-                .single();
-            if (errorLeer) {
-                console.error(errorLeer);
-                showToast('No se pudo leer el saldo actual', 3000);
+            // Mantener la misma clave tras un timeout: una respuesta perdida no
+            // debe convertir el reintento en un segundo movimiento financiero.
+            let pending = null;
+            try {
+                const pendingRaw = sessionStorage.getItem(idempotencyStorageKey);
+                if (pendingRaw) {
+                    pending = JSON.parse(pendingRaw);
+                    if (!pending?.key || !pending?.payload) {
+                        showToast('Hay un ajuste previo sin estado verificable. No cambies los datos ni repitas otra operación hasta revisar el historial.', 9000);
+                        return;
+                    }
+                    if (JSON.stringify(pending.payload) !== JSON.stringify(payload)) {
+                        showToast('Hay un ajuste anterior cuyo resultado no se confirmó. Reintenta primero con exactamente los mismos datos; no generes otro ajuste todavía.', 9000);
+                        return;
+                    }
+                }
+            } catch (storageError) {
+                console.error('[CuevaCoin] No se pudo leer la clave de idempotencia del ajuste:', storageError);
+                showToast('No se pudo verificar si el ajuste anterior quedó aplicado. No repitas el movimiento; revisa el historial y vuelve a intentarlo cuando la sesión esté disponible.', 9000);
                 return;
             }
 
-            const saldoAntes = Number(perfil.saldo);
-            const saldoDespues = saldoAntes + cantidadFinal;
+            if (!pending) {
+                if (!window.crypto || typeof window.crypto.randomUUID !== 'function') {
+                    showToast('Este navegador no permite generar una clave segura para el ajuste. Actualiza el navegador antes de continuar.', 7000);
+                    return;
+                }
+                pending = { key: window.crypto.randomUUID(), payload };
+                try {
+                    sessionStorage.setItem(idempotencyStorageKey, JSON.stringify(pending));
+                } catch (storageError) {
+                    console.error('[CuevaCoin] No se pudo guardar la clave de idempotencia del ajuste:', storageError);
+                    showToast('No se pudo proteger el ajuste contra reintentos duplicados. No se envió la operación.', 7000);
+                    return;
+                }
+            }
 
-            // 2) Actualizar el saldo en perfiles
-            const { error: errorUpdate } = await supabaseClient
-                .from('perfiles')
-                .update({ saldo: saldoDespues })
-                .eq('id', usuarioId);
-            if (errorUpdate) {
-                console.error(errorUpdate);
-                showToast('No se pudo ajustar el saldo', 3000);
+            let respuesta;
+            try {
+                respuesta = await supabaseClient.rpc('admin_ajustar_saldo_atomico', {
+                    p_usuario_id: usuarioId,
+                    p_tipo: tipo,
+                    p_cantidad: cantidad,
+                    p_motivo: motivo,
+                    p_idempotency_key: pending.key
+                });
+            } catch (errorRed) {
+                console.error('[CuevaCoin] No se pudo confirmar la respuesta del ajuste atómico:', errorRed);
+                showToast('No se confirmó la respuesta del servidor. Reintenta exactamente con los mismos datos; la clave de idempotencia evita aplicar el ajuste dos veces.', 9000);
                 return;
             }
 
-            // 3) Registrar la transacción
-            const { error: errorTransaccion } = await supabaseClient
-                .from('transacciones')
-                .insert({
-                    usuario_id: usuarioId,
-                    admin_id: admin.id,
-                    tipo: tipo === 'deposito' ? 'deposito_admin' : 'retiro_admin',
-                    cantidad: cantidadFinal,
-                    saldo_antes: saldoAntes,
-                    saldo_despues: saldoDespues,
-                    motivo: motivo
-                });
-            if (errorTransaccion) {
-                console.error('[CuevaCoin] El saldo cambió pero falló el registro del historial:', errorTransaccion);
-                showToast('⚠️ El saldo ya cambió, pero NO se guardó su movimiento en el historial. No repitas el ajuste. Comprueba el saldo y registra esta incidencia; hace falta reparar el backend.', 9000);
-                closeModal('ajustar-saldo-modal');
-                document.getElementById('ajustar-saldo-form').reset();
-                loadAdminUsuarios();
-                loadAdminStats();
+            const { data, error } = respuesta || {};
+            if (error) {
+                console.error('[CuevaCoin] La RPC de ajuste atómico devolvió error:', error);
+                // Un SQLSTATE de cinco caracteres indica una respuesta PostgreSQL
+                // rechazada/rollback. Los errores de transporte conservan la clave.
+                if (/^(?!PGRST)[A-Z0-9]{5}$/.test(String(error.code || ''))) {
+                    try { sessionStorage.removeItem(idempotencyStorageKey); } catch (e) {}
+                }
+                showToast('No se pudo aplicar el ajuste: ' + (error.message || 'error del servidor') + '. Si fue un fallo de conexión, reintenta con los mismos datos.', 9000);
                 return;
             }
 
-            // 4) Notificar al trabajador
-            const mensajeAjusteSaldo = `El admin ajustó tu saldo: ${tipo === 'deposito' ? '+' : ''}$${Math.abs(cantidadFinal).toFixed(2)}. Motivo: ${motivo}`;
-            const { error: errorNotificacion } = await supabaseClient
-                .from('notificaciones')
-                .insert({
-                    usuario_id: usuarioId,
-                    mensaje: mensajeAjusteSaldo,
-                    leida: false,
-                    tipo_evento: 'ajuste_saldo'
-                });
-            if (errorNotificacion) console.error(errorNotificacion);
+            const resultado = Array.isArray(data) ? data[0] : data;
+            const saldoDespues = Number(resultado?.saldo_despues);
+            if (!resultado?.transaccion_id || !Number.isFinite(saldoDespues)) {
+                console.error('[CuevaCoin] Respuesta sin evidencia completa del ajuste:', data);
+                showToast('El servidor no devolvió confirmación completa. No hagas otro ajuste; reintenta exactamente con los mismos datos para recuperar el resultado.', 9000);
+                return;
+            }
 
-            // 4b) Mandar push real (punto 13c-1). No bloquea el flujo si falla
-            // (el usuario ya no tiene notificaciones activadas, sin internet
-            // por un momento, etc.) — solo se registra en consola.
-            supabaseClient.functions.invoke('enviar-push', {
-                body: { usuario_id: usuarioId, mensaje: mensajeAjusteSaldo, tipo_evento: 'ajuste_saldo' }
-            }).catch((err) => console.error('Error mandando push de ajuste de saldo:', err));
+            try { sessionStorage.removeItem(idempotencyStorageKey); } catch (e) {}
+            const mensajeAjusteSaldo = resultado.mensaje
+                || ('El admin ajustó tu saldo: ' + (tipo === 'deposito' ? '+' : '')
+                    + '$' + Math.abs(Number(resultado.cantidad)).toFixed(2) + '. Motivo: ' + motivo);
 
-            // 5) Registrar en auditoría
-            const { error: errorAuditoria } = await supabaseClient
-                .from('auditoria')
-                .insert({
-                    usuario_id: admin.id,
-                    usuario_nombre: admin.nombre || admin.usuario,
-                    accion: `Ajustó saldo de ${perfil.nombre || perfil.usuario}: ${tipo === 'deposito' ? '+' : ''}$${Math.abs(cantidadFinal).toFixed(2)} (Motivo: ${motivo})`
-                });
-            if (errorAuditoria) console.error(errorAuditoria);
+            // La notificación persistente y la auditoría ya quedaron dentro de
+            // la misma transacción PostgreSQL. Push es externo y nunca bloquea
+            // ni revierte una operación financiera ya confirmada.
+            if (!resultado.replayed) {
+                supabaseClient.functions.invoke('enviar-push', {
+                    body: { usuario_id: usuarioId, mensaje: mensajeAjusteSaldo, tipo_evento: 'ajuste_saldo' }
+                }).then(({ error: errorPush }) => {
+                    if (errorPush) console.error('Error mandando push de ajuste de saldo:', errorPush);
+                }).catch((err) => console.error('Error mandando push de ajuste de saldo:', err));
+            }
 
-            showToast('Saldo ajustado correctamente', 3000);
+            showToast('Saldo e historial confirmados. Nuevo saldo: $' + saldoDespues.toFixed(2), 4000);
             closeModal('ajustar-saldo-modal');
             document.getElementById('ajustar-saldo-form').reset();
             loadAdminUsuarios();
