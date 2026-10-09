@@ -25,7 +25,7 @@ Los reportes **M26** y **Reporte COMPLETO de Pruebas de Robert** con almacenes, 
 - **Pagos por lote:** el aviso de fallo parcial ya no queda sobrescrito por un segundo toast que afirma éxito total.
 - **Ajuste manual de saldo:** si el saldo se actualiza pero la inserción en `transacciones` falla, la interfaz muestra una advertencia crítica y no confirma éxito. Es una protección temporal, no la solución de integridad definitiva.
 - **Versión PWA:** shell cache y fallback visual alineados en v137 para forzar renovación de recursos al desplegar estos cambios.
-- **Validación automatizada:** se añadió un workflow de sintaxis e invariantes estáticas. Su estado de GitHub Actions debe comprobarse después de abrir el PR; esa comprobación estática no sustituye E2E.
+- **Validación automatizada:** el workflow de sintaxis e invariantes estáticas pasó en el run #10. La comprobación estática no sustituye E2E.
 
 ## Hallazgo financiero crítico
 
@@ -58,7 +58,7 @@ El Gate 3 también registró históricamente: `anon EXECUTE` en sobrecargas admi
 - Determinar, con evidencia, si hay ajustes anteriores sin transacción. No inventar filas históricas; cualquier conciliación manual debe indicar su origen y fecha.
 
 ### P1 — Pruebas LIVE/E2E
-- Workflow estático de GitHub Actions: **SUCCESS** también en la revisión más reciente de la rama (run #5, ID `37928225063`; sintaxis JS, scripts inline e invariantes estáticas PASS). [Ver ejecución](https://github.com/Robvg9/CuevaCoin/actions/runs/37928225063). Esto no sustituye LIVE/E2E.
+- Workflow estático de GitHub Actions: **SUCCESS** para el head probado (run #10, ID `37928738567`; sintaxis JS, scripts inline e invariantes estáticas PASS). [Ver ejecución](https://github.com/Robvg9/CuevaCoin/actions/runs/37928738567). Esto no sustituye LIVE/E2E.
 - Publicar la rama mediante el método de despliegue de CuevaCoin y verificar en producción el shell v137.
 - Probar con cuentas controladas de administrador y trabajador: pago, bono, depósito, descuento por cobro en efectivo, transferencia entrante/saliente y retiro aprobado/rechazado. Verificar que ambas vistas muestren la misma fila persistida, motivo, fecha y saldo antes/después.
 - Simular inserción fallida/timeout y confirmar que una operación financiera no queda aplicada parcialmente.
@@ -68,6 +68,13 @@ El Gate 3 también registró históricamente: `anon EXECUTE` en sobrecargas admi
 
 ### P2 — Auditoría física completa del producto
 ChatBending mantiene el RWHT físico como **NO REALIZADO / NO CERTIFICADO**. Completar la matriz descrita allí para login/sesión, dashboard, navegación, acciones/botones, loading/errores/recuperación, responsive móvil/PC y modelo de permisos. Confirmar cuáles superficies corresponden realmente a la versión actual de CuevaCoin antes de añadir alcance nuevo.
+
+
+### Comprobación LIVE desde RobVG — 2026-10-09
+- URL pública probada: `https://cuevacoin.robvg9.workers.dev/` → **HTTP 200**, título `CuevaCoin - Banco Digital`, HTML servido (224780 bytes en esa consulta).
+- `/service-worker.js` → **HTTP 200**, cache reportado `cuevacoin-shell-v136`.
+- La respuesta HTML LIVE no contiene `admin-worker-history-modal`; por tanto, las nuevas mejoras de la rama todavía no están publicadas. No se ejecutó deploy.
+- La comprobación de endpoints Supabase sin API key devolvió HTTP 401. Eso no determina el estado saludable/no saludable del proyecto, ni autoriza lectura de datos. El conector Supabase de esta sesión solo lista el proyecto ARIA y deniega el ID CuevaCoin `zqgmjwfvluboiporytcq`.
 
 ## Evidencia de continuidad consultada
 
