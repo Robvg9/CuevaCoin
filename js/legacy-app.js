@@ -1595,7 +1595,20 @@
                 if (/^(?!PGRST)[A-Z0-9]{5}$/.test(String(error.code || ''))) {
                     try { sessionStorage.removeItem(idempotencyStorageKey); } catch (e) {}
                 }
-                showToast('No se pudo aplicar el ajuste: ' + (error.message || 'error del servidor') + '. Si fue un fallo de conexión, reintenta con los mismos datos.', 9000);
+                const errorServidor = String(error.message || '').toLowerCase();
+                let mensajeErrorAjuste = 'No se pudo confirmar el ajuste. Revisa el historial antes de iniciar otra operación.';
+                if (errorServidor.includes('saldo insuficiente')) {
+                    mensajeErrorAjuste = 'Saldo insuficiente: el ajuste fue rechazado y no cambió el saldo.';
+                } else if (errorServidor.includes('no autorizado')) {
+                    mensajeErrorAjuste = 'El servidor rechazó el ajuste porque la cuenta no tiene autorización administrativa.';
+                } else if (errorServidor.includes('cantidad') || errorServidor.includes('monto')) {
+                    mensajeErrorAjuste = 'Cantidad inválida. Usa un número entero mayor que cero.';
+                } else if (errorServidor.includes('no encontrado')) {
+                    mensajeErrorAjuste = 'No se encontró el usuario destino. Actualiza la lista de trabajadoras e inténtalo de nuevo.';
+                } else if (!/^(?!PGRST)[A-Z0-9]{5}$/.test(String(error.code || ''))) {
+                    mensajeErrorAjuste = 'La conexión no confirmó el resultado. Reintenta exactamente con los mismos datos; no inicies otro ajuste.';
+                }
+                showToast(mensajeErrorAjuste, 9000);
                 return;
             }
 
