@@ -1,0 +1,117 @@
+name: CuevaCoin governed Worker deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      change_summary:
+        description: "Required summary of the authorized production change"
+        required: true
+        type: string
+      confirm_project_ref:
+        description: "Type the exact CuevaCoin Supabase project ref to confirm target identity"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cuevacoin-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-worker:
+    name: Deploy and verify CuevaCoin Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: cuevacoin-production
+    steps:
+      - name: Checkout the requested main revision only
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate target, config, and credentials without printing them
+        env:
+          CONFIRMED_PROJECT_REF: ${{ inputs.confirm_project_ref }}
+          CHANGE_SUMMARY: ${{ inputs.change_summary }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CUEVACOIN_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CUEVACOIN_CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          import assert from "node:assert/strict";
+
+          const expectedProject = "zqgmjwfvluboiporytcq";
+          assert.equal(process.env.GITHUB_REPOSITORY?.toLowerCase(), "robvg9/cuevacoin", "Wrong GitHub repository");
+          assert.equal(process.env.GITHUB_REF, "refs/heads/main", "Production deployment must run from main");
+          assert.equal(process.env.CONFIRMED_PROJECT_REF, expectedProject, "Project confirmation does not match CuevaCoin");
+          assert.ok((process.env.CHANGE_SUMMARY || "").trim().length >= 12, "A meaningful change summary is required");
+
+          const config = JSON.parse(readFileSync("wrangler.jsonc", "utf8"));
+          assert.equal(config.name, "cuevacoin", "Wrangler Worker name mismatch");
+          assert.equal(config.assets?.directory, "./", "Unexpected Worker assets target");
+          assert.ok(process.env.CLOUDFLARE_API_TOKEN, "Missing repository secret CUEVACOIN_CLOUDFLARE_API_TOKEN");
+          assert.ok(process.env.CLOUDFLARE_ACCOUNT_ID, "Missing repository variable CUEVACOIN_CLOUDFLARE_ACCOUNT_ID");
+
+          console.log("PASS — repository, main ref, project identity, deployment summary and Worker target verified");
+          console.log("PASS — required credential presence verified (secret values are never printed)");
+          NODE
+
+      - name: Validate Worker deployment bundle
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CUEVACOIN_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CUEVACOIN_CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 deploy --dry-run --config wrangler.jsonc
+
+      - name: Deploy CuevaCoin Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CUEVACOIN_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CUEVACOIN_CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 deploy --config wrangler.jsonc
+
+      - name: Verify LIVE frontend exactly matches the deployed source
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          import { createHash } from "node:crypto";
+          import assert from "node:assert/strict";
+
+          const base = "https://cuevacoin.robvg9.workers.dev";
+          const files = [
+            { local: "index.html", remote: "/" },
+            { local: "service-worker.js", remote: "/service-worker.js" },
+          ];
+          const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
+
+          for (const file of files) {
+            const local = readFileSync(file.local);
+            const url = new URL(file.remote, base);
+            url.searchParams.set("aria_release_verify", process.env.RELEASE_SHA || "unknown");
+            const response = await fetch(url, {
+              cache: "no-store",
+              headers: { "cache-control": "no-cache", "pragma": "no-cache" },
+              signal: AbortSignal.timeout(20000),
+            });
+
+            assert.equal(response.status, 200, `LIVE ${file.remote} returned HTTP ${response.status}`);
+            const remote = Buffer.from(await response.arrayBuffer());
+            assert.equal(hash(remote), hash(local), `LIVE hash mismatch for ${file.remote}`);
+            console.log(`PASS — LIVE ${file.remote} SHA256=${hash(remote)}`);
+          }
+
+          console.log(`PASS — CuevaCoin Worker LIVE source parity verified for release ${process.env.RELEASE_SHA}`);
+          NODE
+
+# Supabase Edge Functions are intentionally not deployed from GitHub Actions.
+# ARIA must inspect/deploy them separately through the fixed-project,
+# project-scoped cuevacoin_project_control operation. Never copy the
+# Supabase Management token into GitHub Actions secrets.
