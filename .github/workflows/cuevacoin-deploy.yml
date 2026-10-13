@@ -26,10 +26,10 @@ jobs:
     timeout-minutes: 15
     environment: cuevacoin-production
     steps:
-      - name: Checkout the requested main revision only
+      - name: Checkout the exact dispatched main revision
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Set up Node.js
