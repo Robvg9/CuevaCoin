@@ -3047,10 +3047,11 @@
         <h2>CuevaCoin</h2>
         <p>Banco Digital para La Cueva</p>
         <form id="login-form">
-            <input type="text" id="username" placeholder="Usuario" required>
+            <input type="text" id="username" placeholder="Usuario o correo electrónico" autocomplete="username" required>
             <input type="password" id="password" placeholder="Contraseña" required>
             <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
         </form>
+        <p style="font-size: 12px; margin: 8px 0; opacity: .85;">Usa tu usuario interno o el correo con el que se registró tu acceso. Si tu cuenta se creó con Google, entra con el botón de Google.</p>
         <!-- F-GMAIL: login alternativo con Google real (signInWithOAuth).
              Sirve para cuentas que ya vincularon su Google - no crea
              cuentas nuevas por sí solo, ver iniciarSesionConGoogle(). -->

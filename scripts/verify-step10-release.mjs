@@ -5,6 +5,8 @@ import { join } from 'node:path';
 
 const read = (path) => readFileSync(path, 'utf8');
 const index = read('index.html');
+const utils = read('js/core/utils.js');
+const loginHardening = read('js/auth/login-hardening.js');
 const legacy = read('js/legacy-app.js');
 const sw = read('service-worker.js');
 const app = read('js/core/app.js');
@@ -43,6 +45,13 @@ assert.doesNotMatch(sw, /cuevacoin-shell-v137/);
 assert.match(app, /VERSION_FALLBACK = 'V\.138'/);
 assert.match(index, /const VERSION_FALLBACK = 'V\.138'/);
 assert.ok(index.includes('src="js/finance/history/historial.js?v=138"'), 'Step 11 history module must use a versioned URL to bypass stale edge/browser cache');
+
+assert.ok(utils.includes("return identificador.includes('@')"), 'Login conversion must pass through an explicitly supplied email address');
+assert.ok(utils.includes('cuevacoin.local'), 'Login must preserve internal username-to-email mapping');
+assert.ok(index.includes('placeholder="Usuario o correo electrónico"'), 'Login must communicate that email is accepted');
+assert.ok(index.includes('Si tu cuenta se creó con Google'), 'Login must explain the Google sign-in route');
+assert.ok(loginHardening.includes('utiliza el botón de Google'), 'Invalid-password guidance must direct Google-created users to OAuth');
+console.log('PASS — login accepts internal usernames and explicit emails and explains the Google OAuth path');
 console.log('PASS — PWA release aligned to V.138 and worker-history module cache-busted');
 
 const qr='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';

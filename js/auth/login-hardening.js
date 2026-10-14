@@ -127,7 +127,7 @@
                         window.showToast('No se pudo completar el inicio de sesión. Revisa tu conexión e intenta de nuevo.', 4000);
                     }
                 } else if (typeof window.showToast === 'function') {
-                    window.showToast('Usuario o contraseña incorrectos', 3000);
+                    window.showToast('Usuario/correo o contraseña incorrectos. Si tu cuenta se creó con Google, utiliza el botón de Google.', 4500);
                 }
             } finally {
                 if (typeof ocultar === 'function') ocultar();
