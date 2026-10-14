@@ -16,19 +16,10 @@ FROM PUBLIC, anon, authenticated;
 -- and RPC functions require deliberate, object-specific grants in future migrations.
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   REVOKE ALL ON TABLES FROM PUBLIC, anon, authenticated;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
-  REVOKE ALL ON TABLES FROM PUBLIC, anon, authenticated;
-
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   REVOKE ALL ON SEQUENCES FROM PUBLIC, anon, authenticated;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
-  REVOKE ALL ON SEQUENCES FROM PUBLIC, anon, authenticated;
-
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
-  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
-
 -- 3) Pin search_path on existing privileged functions. All object references in
 -- SECURITY DEFINER bodies must resolve against trusted schemas only.
 ALTER FUNCTION public.admin_pagar_saldo(uuid[], numeric, text, text)
