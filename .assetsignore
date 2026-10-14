@@ -1,0 +1,17 @@
+# Keep repository and deployment internals out of Cloudflare Static Assets.
+# Patterns use .gitignore-style matching, as documented for Wrangler.
+
+.git/
+.git/**
+.wrangler/
+.wrangler/**
+node_modules/
+node_modules/**
+.env
+.env.*
+.dev.vars*
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
