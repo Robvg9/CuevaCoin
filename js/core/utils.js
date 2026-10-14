@@ -85,7 +85,11 @@ export async function extraerMensajeErrorEdgeFunction(error, data) {
 // EMAIL INTERNO (usuario → email local)
 // ============================================
 export function usuarioAEmail(usuario) {
-    return `${usuario.trim().toLowerCase()}@cuevacoin.local`;
+    const identificador = String(usuario ?? '').trim().toLowerCase();
+    if (!identificador) return '';
+    return identificador.includes('@')
+        ? identificador
+        : `${identificador}@cuevacoin.local`;
 }
 
 // ============================================
