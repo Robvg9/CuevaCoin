@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/cuevacoin-deploy.yml"
+      - ".assetsignore"
       - "wrangler.jsonc"
       - "index.html"
       - "service-worker.js"
