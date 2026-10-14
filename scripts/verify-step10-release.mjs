@@ -9,8 +9,8 @@ const legacy = read('js/legacy-app.js');
 const sw = read('service-worker.js');
 const app = read('js/core/app.js');
 const history = read('js/finance/history/historial.js');
-const migration = read('supabase/migrations/20261014161000_step10_p0_security_atomic_balance_adjustment.sql');
-const guardMigration = read('supabase/migrations/20261014162500_step10_require_trusted_balance_write.sql');
+const migration = read('supabase/migrations/20261014161845_step10_p0_security_atomic_balance_adjustment.sql');
+const guardMigration = read('supabase/migrations/20261014162706_step10_require_trusted_balance_write.sql');
 const rollbackTest = read('supabase/tests/step10_atomic_adjustment_rollback.sql');
 
 const start = legacy.indexOf("document.getElementById('ajustar-saldo-form').addEventListener('submit'");
@@ -54,7 +54,7 @@ for (const [name,source] of [['index.html',index],['service-worker.js',sw]]) {
 }
 console.log('PASS — broken jsQR/Chart.js CDN references removed from PWA and service worker');
 
-const migrationPath='supabase/migrations/20261014161000_step10_p0_security_atomic_balance_adjustment.sql';
+const migrationPath='supabase/migrations/20261014161845_step10_p0_security_atomic_balance_adjustment.sql';
 assert.ok(migration.includes('admin_ajustar_saldo_atomico'), 'Step 10 RPC migration must exist');
 assert.ok(migration.includes('REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM PUBLIC, anon'));
 assert.match(guardMigration, /saldo_update_requires_atomic_rpc/);
