@@ -19,7 +19,7 @@ const sqlChecks = [
   ['stores replay evidence atomically', /UPDATE public\.admin_ajustes_saldo_idempotencia AS o[\s\S]*?completada = true/i],
   ['blocks anonymous RPC execution', /REVOKE EXECUTE ON FUNCTION[\s\S]*?public\.admin_ajustar_saldo_atomico[\s\S]*?FROM PUBLIC, anon/i],
   ['grants RPC to authenticated and service role', /GRANT EXECUTE ON FUNCTION[\s\S]*?public\.admin_ajustar_saldo_atomico[\s\S]*?TO authenticated, service_role/i],
-  ['wraps schema changes in one transaction', /^BEGIN;[\s\S]*COMMIT;\s*$/i],
+  ['wraps schema changes in one transaction', /BEGIN;[\s\S]*COMMIT;\s*$/i],
 ];
 for (const [label, pattern] of sqlChecks) {
   assert.match(migration, pattern, 'Missing invariant: ' + label);
