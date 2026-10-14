@@ -38,11 +38,12 @@ assert.ok(history.includes("const categoria = categoriaTransaccion(t);"),
   'History rendering must use the same locally scoped category classifier');
 console.log('PASS — worker history embeds profiles through valid foreign-key relations and uses its scoped classifier');
 
-assert.match(sw, /cuevacoin-shell-v137/);
-assert.doesNotMatch(sw, /cuevacoin-shell-v136/);
-assert.match(app, /VERSION_FALLBACK = 'V\.137'/);
-assert.match(index, /const VERSION_FALLBACK = 'V\.137'/);
-console.log('PASS — PWA release version aligned to V.137');
+assert.match(sw, /cuevacoin-shell-v138/);
+assert.doesNotMatch(sw, /cuevacoin-shell-v137/);
+assert.match(app, /VERSION_FALLBACK = 'V\.138'/);
+assert.match(index, /const VERSION_FALLBACK = 'V\.138'/);
+assert.ok(index.includes('src="js/finance/history/historial.js?v=138"'), 'Step 11 history module must use a versioned URL to bypass stale edge/browser cache');
+console.log('PASS — PWA release aligned to V.138 and worker-history module cache-busted');
 
 const qr='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 const chart='https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
