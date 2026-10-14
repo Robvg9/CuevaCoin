@@ -58,29 +58,108 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys();
-      await Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)));
-      await self.clients.claim();
+      await Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      );
+      const cache = await caches.open(CACHE_NAME);
+      const cachedRequests = await cache.keys();
+      const shellPaths = new Set(
+        SHELL_FILES.map((f) => new URL(f, self.location.origin).pathname)
+      );
+      await Promise.all(
+        cachedRequests
+          .filter((req) => !shellPaths.has(new URL(req.url).pathname) && !EXTERNAL_SHELL_URL_SET.has(req.url))
+          .map((req) => cache.delete(req))
+      );
     })()
   );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return;
-  if (event.request.method !== 'GET') return;
-  if (url.pathname.startsWith('/rest/') || url.pathname.startsWith('/auth/')) return;
-  event.respondWith((async () => {
-    const cache = await caches.open(CACHE_NAME);
-    const cached = await cache.match(event.request);
-    if (cached) return cached;
-    try {
-      const response = await fetch(event.request);
-      if (response.ok && (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/manifest.json' || url.pathname === '/icon.png' || url.pathname === '/badge.png')) {
-        await cache.put(event.request, response.clone());
+
+  if (url.hostname.endsWith('supabase.co')) return;
+
+  if (event.request.method === 'GET' && EXTERNAL_SHELL_URL_SET.has(event.request.url)) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((response) => {
+          if (response && (response.ok || response.type === 'opaque')) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
+
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      const network = fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(async () => {
+          if (cached) return cached;
+          if (event.request.mode === 'navigate') {
+            const shell = await caches.match('/index.html');
+            if (shell) return shell;
+          }
+          return new Response('Sin conexión y sin datos guardados en este dispositivo.', {
+            status: 503,
+            statusText: 'Offline',
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+          });
+        });
+      return cached || network;
+    })
+  );
+});
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { title: 'CuevaCoin', body: event.data ? event.data.text() : '' };
+  }
+
+  const title = data.title || 'CuevaCoin';
+  const options = {
+    body: data.body || '',
+    icon: '/icon.png',
+    badge: '/badge.png',
+    tag: data.tag || `cuevacoin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    renotify: true,
+    data: { url: data.url || '/' },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          if ('navigate' in client) client.navigate(url);
+          return client.focus();
+        }
       }
-      return response;
-    } catch (err) {
-      return cached || Response.error();
-    }
-  })());
+      if (clients.openWindow) return clients.openWindow(url);
+    })
+  );
 });
