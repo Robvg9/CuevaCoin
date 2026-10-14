@@ -1,6 +1,13 @@
 name: CuevaCoin governed Worker deployment
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/cuevacoin-deploy.yml"
+      - "wrangler.jsonc"
+      - "index.html"
+      - "service-worker.js"
   workflow_dispatch:
     inputs:
       change_summary:
@@ -20,8 +27,40 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate-only:
+    name: Validate deploy path (no production writes)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout pull request for validation only
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check exact Worker identity and asset target
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          import assert from "node:assert/strict";
+
+          const config = JSON.parse(readFileSync("wrangler.jsonc", "utf8"));
+          assert.equal(config.name, "cuevacoin", "Wrangler Worker name mismatch");
+          assert.equal(config.assets?.directory, "./", "Unexpected Worker assets target");
+          console.log("PASS — Worker name and assets target match CuevaCoin");
+          NODE
+
+      - name: Validate bundle without production credentials
+        run: npx --yes wrangler@4 deploy --dry-run --config wrangler.jsonc
+
   deploy-worker:
     name: Deploy and verify CuevaCoin Worker
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: cuevacoin-production
