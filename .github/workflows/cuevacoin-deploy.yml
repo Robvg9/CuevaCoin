@@ -59,35 +59,31 @@ jobs:
       - name: Validate bundle without production credentials
         run: npx --yes wrangler@4 deploy --dry-run --config wrangler.jsonc
 
-      - name: Verify LIVE frontend parity and reject leaked internal assets
+      - name: Verify LIVE route health and reject leaked internal assets (release parity is checked after deploy)
         run: |
           node --input-type=module <<'NODE'
-          import { readFileSync } from "node:fs";
           import { createHash } from "node:crypto";
           import assert from "node:assert/strict";
 
           const base = "https://cuevacoin.robvg9.workers.dev";
           const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
-          const sourceFiles = [
-            { local: "index.html", path: "/" },
-            { local: "service-worker.js", path: "/service-worker.js" },
-          ];
+          const live = new Map();
 
-          for (const file of sourceFiles) {
-            const url = new URL(file.path, base);
+          for (const path of ["/", "/service-worker.js"]) {
+            const url = new URL(path, base);
             url.searchParams.set("aria_asset_e2e", process.env.GITHUB_SHA || "pull-request");
             const response = await fetch(url, {
               cache: "no-store",
               headers: { "cache-control": "no-cache", "pragma": "no-cache" },
               signal: AbortSignal.timeout(20000),
             });
-            assert.equal(response.status, 200, `LIVE ${file.path} returned HTTP ${response.status}`);
-            const live = Buffer.from(await response.arrayBuffer());
-            assert.equal(hash(live), hash(readFileSync(file.local)), `LIVE hash mismatch for ${file.path}`);
-            console.log(`PASS — LIVE ${file.path} matches checked-out source SHA256=${hash(live)}`);
+            assert.equal(response.status, 200, `LIVE ${path} returned HTTP ${response.status}`);
+            const bytes = Buffer.from(await response.arrayBuffer());
+            assert.ok(bytes.length > 100, `LIVE ${path} returned an empty or unexpectedly short response`);
+            live.set(path, bytes);
+            console.log(`PASS — LIVE ${path} is available (HTTP 200, SHA256=${hash(bytes)})`);
           }
 
-          const indexHash = hash(readFileSync("index.html"));
           const forbidden = [
             "/.git/config",
             "/.git/index",
@@ -97,6 +93,7 @@ jobs:
             "/.assetsignore",
           ];
 
+          const liveIndexHash = hash(live.get("/"));
           for (const path of forbidden) {
             const url = new URL(path, base);
             url.searchParams.set("aria_asset_e2e", process.env.GITHUB_SHA || "pull-request");
@@ -107,7 +104,7 @@ jobs:
               signal: AbortSignal.timeout(20000),
             });
             const body = Buffer.from(await response.arrayBuffer());
-            const isSpaFallback = response.status === 200 && hash(body) === indexHash;
+            const isSpaFallback = response.status === 200 && hash(body) === liveIndexHash;
             assert.ok(
               response.status === 403 || response.status === 404 || response.status === 410 || isSpaFallback,
               `Potential internal asset exposure: ${path} returned HTTP ${response.status} and SHA256=${hash(body)}`
@@ -115,7 +112,6 @@ jobs:
             console.log(`PASS — ${path} is not served as an internal file (HTTP ${response.status}${isSpaFallback ? ", SPA fallback only" : ""})`);
           }
           NODE
-
   deploy-worker:
     name: Deploy and verify CuevaCoin Worker
     if: github.event_name == 'workflow_dispatch'
