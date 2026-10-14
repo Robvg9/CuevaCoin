@@ -32,7 +32,7 @@ assert.match(testSql, /admin_ajustar_saldo_atomico/);
 console.log('PASS — live SQL verification script includes privilege and RPC assertions');
 const rollbackTest = readFileSync('supabase/tests/step10_atomic_adjustment_rollback.sql', 'utf8');
 assert.match(rollbackTest, /BEGIN;[\\s\\S]*ROLLBACK;\\s*$/i);
-assert.match(rollbackTest, /idempotent replay/i);
+assert.match(rollbackTest, /v_replay/);
 assert.match(rollbackTest, /non-admin/i);
 assert.match(rollbackTest, /STEP10_FORCE_ATOMIC_ROLLBACK_TEST/);
 console.log('PASS — transactional test covers replay, authorization, and rollback without persistence');
