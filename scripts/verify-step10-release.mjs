@@ -40,11 +40,11 @@ assert.ok(history.includes("const categoria = categoriaTransaccion(t);"),
   'History rendering must use the same locally scoped category classifier');
 console.log('PASS — worker history embeds profiles through valid foreign-key relations and uses its scoped classifier');
 
-assert.match(sw, /cuevacoin-shell-v138/);
-assert.doesNotMatch(sw, /cuevacoin-shell-v137/);
-assert.match(app, /VERSION_FALLBACK = 'V\.138'/);
-assert.match(index, /const VERSION_FALLBACK = 'V\.138'/);
-assert.ok(index.includes('src="js/finance/history/historial.js?v=138"'), 'Step 11 history module must use a versioned URL to bypass stale edge/browser cache');
+assert.match(sw, /cuevacoin-shell-v139/);
+assert.doesNotMatch(sw, /cuevacoin-shell-v138/);
+assert.match(app, /VERSION_FALLBACK = 'V\.139'/);
+assert.match(index, /const VERSION_FALLBACK = 'V\.139'/);
+assert.ok(index.includes('src="js/finance/history/historial.js?v=139"'), 'Step 11 history module must use a versioned URL to bypass stale edge/browser cache');
 
 assert.ok(utils.includes("return identificador.includes('@')"), 'Login conversion must pass through an explicitly supplied email address');
 assert.ok(utils.includes('cuevacoin.local'), 'Login must preserve internal username-to-email mapping');
@@ -52,7 +52,7 @@ assert.ok(index.includes('placeholder="Usuario o correo electrónico"'), 'Login 
 assert.ok(index.includes('Si tu cuenta se creó con Google'), 'Login must explain the Google sign-in route');
 assert.ok(loginHardening.includes('utiliza el botón de Google'), 'Invalid-password guidance must direct Google-created users to OAuth');
 console.log('PASS — login accepts internal usernames and explicit emails and explains the Google OAuth path');
-console.log('PASS — PWA release aligned to V.138 and worker-history module cache-busted');
+console.log('PASS — PWA release aligned to V.139 and worker-history module cache-busted');
 
 const qr='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 const chart='https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
