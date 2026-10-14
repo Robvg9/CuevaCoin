@@ -14,7 +14,7 @@ export async function loadUserHistorial(usuarioId) {
     // poder ofrecer el botón de favorito en transferencias enviadas/recibidas.
     const { data: transacciones, error } = await window.supabaseClient
         .from('transacciones')
-        .select('*, admin:admin_id(nombre, usuario), contraparte:contraparte_id(nombre, usuario)')
+        .select('*, admin:perfiles!transacciones_admin_id_fkey(nombre, usuario), contraparte:perfiles!transacciones_contraparte_id_fkey(nombre, usuario)')
         .eq('usuario_id', usuarioId)
         .order('creado_en', { ascending: false });
 
@@ -48,7 +48,7 @@ export async function loadUserHistorial(usuarioId) {
     // solo se muestra si pasa TODOS los que estén activos (los vacíos
     // se ignoran, mismo criterio combinable que E13 en Auditoría).
     const transaccionesFiltradas = transacciones.filter(t => {
-        if (tipoFiltro !== '' && window.categoriaTransaccion(t) !== tipoFiltro) return false;
+        if (tipoFiltro !== '' && categoriaTransaccion(t) !== tipoFiltro) return false;
 
         if (fechaDesde || fechaHasta) {
             const fechaTx = t.creado_en.slice(0, 10); // 'YYYY-MM-DD'
@@ -107,7 +107,7 @@ export async function loadUserHistorial(usuarioId) {
     };
 
     transaccionesFiltradas.forEach(t => {
-        const categoria = window.categoriaTransaccion(t);
+        const categoria = categoriaTransaccion(t);
         const cantidad = Number(t.cantidad);
         const tipo = etiquetas[categoria] || (cantidad > 0 ? 'Recibido' : 'Enviado');
         const cantidadAbs = Math.abs(cantidad);

@@ -8,6 +8,7 @@ const index = read('index.html');
 const legacy = read('js/legacy-app.js');
 const sw = read('service-worker.js');
 const app = read('js/core/app.js');
+const history = read('js/finance/history/historial.js');
 const migration = read('supabase/migrations/20261014161000_step10_p0_security_atomic_balance_adjustment.sql');
 const guardMigration = read('supabase/migrations/20261014162500_step10_require_trusted_balance_write.sql');
 const rollbackTest = read('supabase/tests/step10_atomic_adjustment_rollback.sql');
@@ -24,6 +25,18 @@ assert.doesNotMatch(handler, /\.from\('transacciones'\)\s*\.insert\s*\(/, 'Clien
 assert.doesNotMatch(handler, /\.from\('notificaciones'\)\s*\.insert\s*\(/, 'Client must not create financial notification separately');
 assert.doesNotMatch(handler, /\.from\('auditoria'\)\s*\.insert\s*\(/, 'Client must not create financial audit separately');
 console.log('PASS — balance adjustment uses server-side atomic idempotent RPC only');
+
+assert.ok(history.includes("admin:perfiles!transacciones_admin_id_fkey(nombre, usuario)"),
+  'Worker history must embed the administrator through the real perfiles FK');
+assert.ok(history.includes("contraparte:perfiles!transacciones_contraparte_id_fkey(nombre, usuario)"),
+  'Worker history must embed counterparties through the real perfiles FK');
+assert.ok(!history.includes("admin:admin_id") && !history.includes("contraparte:contraparte_id"),
+  'Foreign-key column names must not be used as relation names in PostgREST embeds');
+assert.ok(history.includes("if (tipoFiltro !== '' && categoriaTransaccion(t) !== tipoFiltro)"),
+  'The history type filter must use its locally scoped category classifier');
+assert.ok(history.includes("const categoria = categoriaTransaccion(t);"),
+  'History rendering must use the same locally scoped category classifier');
+console.log('PASS — worker history embeds profiles through valid foreign-key relations and uses its scoped classifier');
 
 assert.match(sw, /cuevacoin-shell-v137/);
 assert.doesNotMatch(sw, /cuevacoin-shell-v136/);
