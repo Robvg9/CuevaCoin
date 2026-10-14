@@ -9,6 +9,8 @@ const legacy = read('js/legacy-app.js');
 const sw = read('service-worker.js');
 const app = read('js/core/app.js');
 const migration = read('supabase/migrations/20261014161000_step10_p0_security_atomic_balance_adjustment.sql');
+const guardMigration = read('supabase/migrations/20261014162500_step10_require_trusted_balance_write.sql');
+const rollbackTest = read('supabase/tests/step10_atomic_adjustment_rollback.sql');
 
 const start = legacy.indexOf("document.getElementById('ajustar-saldo-form').addEventListener('submit'");
 const end = legacy.indexOf('// F7 (fix): antes esta función', start);
@@ -41,6 +43,12 @@ console.log('PASS — broken jsQR/Chart.js CDN references removed from PWA and s
 const migrationPath='supabase/migrations/20261014161000_step10_p0_security_atomic_balance_adjustment.sql';
 assert.ok(migration.includes('admin_ajustar_saldo_atomico'), 'Step 10 RPC migration must exist');
 assert.ok(migration.includes('REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM PUBLIC, anon'));
+assert.match(guardMigration, /saldo_update_requires_atomic_rpc/);
+assert.match(guardMigration, /set_config\('cuevacoin\.trusted_balance_write', '1', true\)/);
+assert.match(guardMigration, /CREATE OR REPLACE FUNCTION public\.admin_resolver_retiro\([\s\S]*?set_config\('cuevacoin\.trusted_balance_write'/);
+assert.match(rollbackTest, /Direct client-style balance writes must fail/);
+assert.match(rollbackTest, /saldo_update_requires_atomic_rpc/);
+console.log('PASS — direct balance writes blocked; protected RPC paths retain trusted write context');
 console.log('PASS — Step 10 security migration present');
 
 // Parse and syntax-check shipped local JavaScript, matching the application's module/script modes.
