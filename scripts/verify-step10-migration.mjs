@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const migrationPath = 'supabase/migrations/20261014161000_step10_p0_security_atomic_balance_adjustment.sql';
+const migrationPath = 'supabase/migrations/20261014161845_step10_p0_security_atomic_balance_adjustment.sql';
 const migration = readFileSync(migrationPath, 'utf8');
 const sqlChecks = [
   ['closes anonymous direct table grants', /REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM PUBLIC, anon/i],
