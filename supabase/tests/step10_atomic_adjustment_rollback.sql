@@ -55,6 +55,17 @@ BEGIN
     -- Use a real admin JWT subject for auth.uid() but keep all changes in this transaction.
     PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
 
+    -- Direct client-style balance writes must fail even for a real admin subject.
+    BEGIN
+        UPDATE public.perfiles SET saldo = saldo + 1 WHERE id = v_worker;
+        RAISE EXCEPTION 'FAIL: direct profile balance update was accepted';
+    EXCEPTION WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS v_mismatch_message = MESSAGE_TEXT;
+        IF v_mismatch_message NOT LIKE '%saldo_update_requires_atomic_rpc%' THEN
+            RAISE;
+        END IF;
+    END;
+
     SELECT * INTO v_first
       FROM public.admin_ajustar_saldo_atomico(
         v_worker, 'deposito', 1, 'STEP10_SUCCESS_REPLAY_TEST', v_key
