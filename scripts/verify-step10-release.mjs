@@ -11,6 +11,10 @@ const legacy = read('js/legacy-app.js');
 const sw = read('service-worker.js');
 const app = read('js/core/app.js');
 const history = read('js/finance/history/historial.js');
+const userCards = read('js/admin/finance/usuarios.js');
+const adminHistory = read('js/admin/finance/historial-trabajadora.js');
+const payments = read('js/admin/finance/pagos.js');
+const syncQueue = read('js/finance/queue/offline-queue.js');
 const migration = read('supabase/migrations/20261014161845_step10_p0_security_atomic_balance_adjustment.sql');
 const guardMigration = read('supabase/migrations/20261014162706_step10_require_trusted_balance_write.sql');
 const rollbackTest = read('supabase/tests/step10_atomic_adjustment_rollback.sql');
@@ -40,11 +44,29 @@ assert.ok(history.includes("const categoria = categoriaTransaccion(t);"),
   'History rendering must use the same locally scoped category classifier');
 console.log('PASS — worker history embeds profiles through valid foreign-key relations and uses its scoped classifier');
 
-assert.match(sw, /cuevacoin-shell-v139/);
-assert.doesNotMatch(sw, /cuevacoin-shell-v138/);
-assert.match(app, /VERSION_FALLBACK = 'V\.139'/);
-assert.match(index, /const VERSION_FALLBACK = 'V\.139'/);
-assert.ok(index.includes('src="js/finance/history/historial.js?v=139"'), 'Step 11 history module must use a versioned URL to bypass stale edge/browser cache');
+assert.match(sw, /cuevacoin-shell-v140/);
+assert.doesNotMatch(sw, /cuevacoin-shell-v139/);
+assert.match(app, /VERSION_FALLBACK = 'V\.140'/);
+assert.match(index, /const VERSION_FALLBACK = 'V\.140'/);
+assert.ok(index.includes('src="js/finance/history/historial.js?v=140"'), 'Worker history module must use a versioned URL to bypass stale edge/browser cache');
+assert.ok(index.includes('src="js/admin/finance/historial-trabajadora.js?v=140"'), 'Admin worker-history module must use a versioned URL');
+assert.ok(index.includes('id="admin-worker-history-modal"'), 'Admin worker-history modal must exist');
+assert.ok(userCards.includes('abrirHistorialTrabajadoraAdmin'), 'Admin worker cards must expose the read-only history action');
+assert.ok(adminHistory.includes("admin:perfiles!transacciones_admin_id_fkey(nombre, usuario)"), 'Admin history must use the real admin foreign-key relation');
+assert.ok(adminHistory.includes("contraparte:perfiles!transacciones_contraparte_id_fkey(nombre, usuario)"), 'Admin history must use the real counterparty foreign-key relation');
+assert.ok(adminHistory.includes(".eq('usuario_id', usuarioId)"), 'Admin history must stay scoped to the selected worker');
+assert.doesNotMatch(adminHistory, /\.(insert|update|upsert|delete)\s*\(/, 'Admin history module must be read-only');
+assert.match(legacy, /revalidarDatosTrasConexion/);
+assert.match(legacy, /window\.obtenerMiPerfilApp\(\)/);
+assert.match(legacy, /addEventListener\('focus'/);
+assert.match(legacy, /addEventListener\('visibilitychange'/);
+assert.match(syncQueue, /window\.hayConexionRealAhora\(\)/);
+assert.match(syncQueue, /window\.ocultarConexionStrip\(\)/);
+assert.match(payments, /const idsVistos = new Set\(\)/);
+assert.match(payments, /Pago parcial:/);
+assert.ok(!payments.includes('pagado a '), 'Partial payment warning must not be overwritten by a generic success toast');
+assert.match(history, /return cantidad < 0 \? 'descuento' : 'ajuste'/);
+assert.ok(index.includes('option value="descuento">Descuentos del admin</option>'), 'Worker history must offer the admin-discount filter');
 
 assert.ok(utils.includes("return identificador.includes('@')"), 'Login conversion must pass through an explicitly supplied email address');
 assert.ok(utils.includes('cuevacoin.local'), 'Login must preserve internal username-to-email mapping');
@@ -52,7 +74,7 @@ assert.ok(index.includes('placeholder="Usuario o correo electrónico"'), 'Login 
 assert.ok(index.includes('Si tu cuenta se creó con Google'), 'Login must explain the Google sign-in route');
 assert.ok(loginHardening.includes('utiliza el botón de Google'), 'Invalid-password guidance must direct Google-created users to OAuth');
 console.log('PASS — login accepts internal usernames and explicit emails and explains the Google OAuth path');
-console.log('PASS — PWA release aligned to V.139 and worker-history module cache-busted');
+console.log('PASS — PWA release aligned to V.140 and worker-history modules cache-busted');
 
 const qr='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 const chart='https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
