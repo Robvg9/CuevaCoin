@@ -6,7 +6,19 @@ export async function pagarSaldoDesdeAdmin(tipo) {
     const idForm = esBono ? 'dar-bono-form' : 'pagar-salario-form';
     const monto = parseFloat(document.getElementById(esBono ? 'bono-monto' : 'salario-monto').value);
     const motivo = document.getElementById(esBono ? 'bono-motivo' : 'salario-motivo').value;
-    const seleccion = esBono ? window.seleccionDestinatariosBono : window.seleccionDestinatariosSalario;
+    const seleccionOriginal = esBono ? window.seleccionDestinatariosBono : window.seleccionDestinatariosSalario;
+    // Defensa adicional en el cliente: no enviar el mismo UUID dos veces
+    // a admin_pagar_saldo. El backend también debe deduplicar/validar.
+    const idsVistos = new Set();
+    const seleccion = (Array.isArray(seleccionOriginal) ? seleccionOriginal : []).filter(usuario => {
+        const id = String(usuario?.id || '');
+        if (!id || idsVistos.has(id)) return false;
+        idsVistos.add(id);
+        return true;
+    });
+    if (seleccionOriginal?.length && seleccion.length !== seleccionOriginal.length) {
+        window.showToast('Se quitaron destinatarios repetidos o inválidos para evitar un doble pago.', 4500);
+    }
 
     if (!(monto > 0)) {
         window.showToast('El monto debe ser mayor a 0', 3000);
@@ -56,7 +68,7 @@ export async function pagarSaldoDesdeAdmin(tipo) {
         
         if (fallidos.length > 0) {
             console.warn('[ADMIN_PAGO_DEBUG] Destinatarios fallidos:', fallidos);
-            window.showToast(`Pago completado con ${fallidos.length} error(es). Ver consola para detalles.`, 6000);
+            window.showToast(`Pago parcial: ${exitosos.length} correcto(s), ${fallidos.length} fallido(s). Revisa el historial antes de repetir la operación.`, 6500);
         } else {
             window.showToast(`${esBono ? 'Bono' : 'Salario'} enviado a ${exitosos.length} destinataria(s)`, 3000);
         }
@@ -69,7 +81,8 @@ export async function pagarSaldoDesdeAdmin(tipo) {
             }
         });
 
-        window.showToast(`${esBono ? 'Bono' : 'Salario'} pagado a ${data.length} trabajadora(s)`, 3000);
+        // No sobrescribir aquí el aviso anterior: puede informar que hubo
+        // resultados parciales y exige revisar qué trabajadoras fallaron.
         window.closeModal(idModal);
         document.getElementById(idForm).reset();
         if (esBono) {
