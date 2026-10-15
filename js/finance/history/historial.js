@@ -33,11 +33,14 @@ export async function loadUserHistorial(usuarioId) {
     // lo que promete y nunca se mezclen (ej. un retiro no debe salir como "Enviado").
     //   - 'transferencia' con cantidad > 0  -> recibido (verde)
     //   - 'transferencia' con cantidad < 0  -> enviado  (rojo)
-    //   - 'retiro' o 'retiro_admin'          -> retiro   (rojo)
-    //   - 'deposito_admin'                   -> salario  (amarillo, solo lo paga el admin)
+    //   - 'retiro'                        -> retiro   (rojo)
+    //   - 'retiro_admin' negativo          -> descuento (rojo)
+    //   - 'retiro_admin' positivo          -> ajuste   (gris)
+    //   - 'deposito_admin'                 -> salario  (amarillo)
     function categoriaTransaccion(t) {
         const cantidad = Number(t.cantidad);
-        if (t.tipo === 'retiro' || t.tipo === 'retiro_admin') return 'retiro';
+        if (t.tipo === 'retiro_admin') return cantidad < 0 ? 'descuento' : 'ajuste';
+        if (t.tipo === 'retiro') return 'retiro';
         if (t.tipo === 'deposito_admin') return 'salario';
         if (t.tipo === 'transferencia') return cantidad > 0 ? 'recibido' : 'enviado';
         // Respaldo por si aparece un tipo no contemplado: se clasifica por el signo.
