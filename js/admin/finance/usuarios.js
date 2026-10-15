@@ -43,6 +43,7 @@ export async function loadAdminUsuarios() {
                 <span>Meta de ahorro: ${u.metaAhorro ? '$' + Number(u.metaAhorro).toFixed(2) : 'Sin fijar'}</span>
             </div>
             <div class="usuario-card-acciones">
+                <button class="btn btn-secondary" title="Consultar todos los movimientos financieros de este trabajador" onclick="window.abrirHistorialTrabajadoraAdmin('${u.id}')">📜 Historial</button>
                 <button class="btn btn-primary" onclick="window.openAjustarSaldoModal('${u.id}')">Ajustar</button>
                 <button class="btn ${u.estado === 'activo' ? 'btn-danger' : 'btn-secondary'}" onclick="eliminarUsuario('${u.id}')">${u.estado === 'activo' ? 'Desactivar' : 'Activar'}</button>
             </div>
