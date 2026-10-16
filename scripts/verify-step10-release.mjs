@@ -18,6 +18,46 @@ const syncQueue = read('js/finance/queue/offline-queue.js');
 const migration = read('supabase/migrations/20261014161845_step10_p0_security_atomic_balance_adjustment.sql');
 const guardMigration = read('supabase/migrations/20261014162706_step10_require_trusted_balance_write.sql');
 const rollbackTest = read('supabase/tests/step10_atomic_adjustment_rollback.sql');
+const frontendWorkflow = read('.github/workflows/step10-frontend.yml');
+const sqlSafetyWorkflow = read('.github/workflows/step10-sql-safety.yml');
+const workflowPushSection = (source) => {
+  const start = source.indexOf('  push:');
+  const end = source.indexOf('\npermissions:', start);
+  assert.ok(start >= 0 && end > start, 'Workflow must define a push trigger');
+  return source.slice(start, end);
+};
+const frontendPush = workflowPushSection(frontendWorkflow);
+const sqlSafetyPush = workflowPushSection(sqlSafetyWorkflow);
+assert.match(frontendPush, /branches:\\s*\\n\\s*- "main"/, 'Step 10 frontend verification must run on main pushes');
+assert.match(sqlSafetyPush, /branches:\\s*\\n\\s*- "main"/, 'Step 10 SQL safety verification must run on main pushes');
+for (const path of [
+  'index.html',
+  'js/legacy-app.js',
+  'js/core/app.js',
+  'js/core/utils.js',
+  'js/auth/login-hardening.js',
+  'js/finance/history/historial.js',
+  'js/finance/queue/offline-queue.js',
+  'js/admin/finance/historial-trabajadora.js',
+  'js/admin/finance/pagos.js',
+  'js/admin/finance/usuarios.js',
+  'service-worker.js',
+  'supabase/migrations/**',
+  'supabase/tests/**',
+  'scripts/verify-step10-release.mjs',
+  '.github/workflows/step10-frontend.yml',
+]) {
+  assert.ok(frontendPush.includes('"' + path + '"'), 'Step 10 frontend push filter must include ' + path);
+}
+for (const path of [
+  'supabase/migrations/**',
+  'supabase/tests/**',
+  'scripts/verify-step10-migration.mjs',
+  '.github/workflows/step10-sql-safety.yml',
+]) {
+  assert.ok(sqlSafetyPush.includes('"' + path + '"'), 'Step 10 SQL safety push filter must include ' + path);
+}
+console.log('PASS — Step 10 frontend and SQL safety checks cover main releases and all governed dependencies');
 
 const start = legacy.indexOf("document.getElementById('ajustar-saldo-form').addEventListener('submit'");
 const end = legacy.indexOf('// F7 (fix): antes esta función', start);
