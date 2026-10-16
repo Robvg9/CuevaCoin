@@ -14,14 +14,22 @@ on:
       - ".github/workflows/step10-frontend.yml"
   push:
     branches:
+      - "main"
       - "fix/**"
     paths:
       - "index.html"
       - "js/legacy-app.js"
       - "js/core/app.js"
+      - "js/core/utils.js"
+      - "js/auth/login-hardening.js"
       - "js/finance/history/historial.js"
+      - "js/finance/queue/offline-queue.js"
+      - "js/admin/finance/historial-trabajadora.js"
+      - "js/admin/finance/pagos.js"
+      - "js/admin/finance/usuarios.js"
       - "service-worker.js"
       - "supabase/migrations/**"
+      - "supabase/tests/**"
       - "scripts/verify-step10-release.mjs"
       - ".github/workflows/step10-frontend.yml"
 
