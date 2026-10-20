@@ -26,7 +26,7 @@ export async function procesarSesionYMostrarPantalla() {
         session = resultado.data.session;
     } catch (err) {
         console.error('getSession() falló al arrancar la app:', err);
-        if (window.esErrorDeConexion(err) && window.entrarModoOfflineConPerfilCacheado()) {
+        if (await window.esFalloDeConexionConfirmado(err) && window.entrarModoOfflineConPerfilCacheado()) {
             return;
         }
         limpiarOverlays();
@@ -56,13 +56,13 @@ export async function procesarSesionYMostrarPantalla() {
         try {
             window.supabaseClient.realtime.setAuth(session.access_token);
             let usuario = await window.conTimeoutArranque(
-                window.obtenerMiPerfilApp(),
+                window.obtenerMiPerfilApp(session.user),
                 window.TIMEOUT_RED_ARRANQUE_MS
             );
             if (!usuario) {
                 await new Promise(resolve => setTimeout(resolve, 700));
                 usuario = await window.conTimeoutArranque(
-                    window.obtenerMiPerfilApp(),
+                    window.obtenerMiPerfilApp(session.user),
                     window.TIMEOUT_RED_ARRANQUE_MS
                 );
             }
@@ -142,7 +142,7 @@ export async function procesarSesionYMostrarPantalla() {
                 window.showLoginScreen();
                 return;
             }
-            if (window.esErrorDeConexion(err) && window.entrarModoOfflineConPerfilCacheado()) {
+            if (await window.esFalloDeConexionConfirmado(err) && window.entrarModoOfflineConPerfilCacheado()) {
                 return;
             }
             console.error('DIAGNÓSTICO LOGIN:', err?.message || err, err?.code);

@@ -3061,6 +3061,24 @@
             <input type="password" id="password" placeholder="Contraseña" required>
             <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
         </form>
+        <button type="button" id="btn-olvido-contrasena" class="btn btn-secondary" style="width:100%; margin-top:8px;">¿Olvidaste tu contraseña?</button>
+        <div id="recuperar-contrasena-panel" class="hidden" style="margin-top:12px; padding:12px; border:1px solid var(--border-color, #ddd); border-radius:12px; text-align:left;">
+            <form id="form-solicitar-recuperacion">
+                <p style="font-size:13px; line-height:1.5;">Recupera tu acceso con un código enviado al correo asociado a tu cuenta activa. El campo Usuario o correo de arriba indica qué cuenta quieres recuperar.</p>
+                <button type="submit" id="btn-enviar-codigo-recuperacion" class="btn btn-primary" style="width:100%;">Enviar código de recuperación</button>
+            </form>
+            <form id="form-confirmar-recuperacion" class="hidden" style="margin-top:12px;">
+                <label for="recuperar-codigo" style="display:block; margin-top:8px;">Código de seis dígitos</label>
+                <input type="text" id="recuperar-codigo" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="Código recibido por correo" required>
+                <label for="recuperar-nueva-contrasena" style="display:block; margin-top:8px;">Nueva contraseña</label>
+                <input type="password" id="recuperar-nueva-contrasena" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Mínimo 8 caracteres" required>
+                <label for="recuperar-confirmar-contrasena" style="display:block; margin-top:8px;">Confirmar nueva contraseña</label>
+                <input type="password" id="recuperar-confirmar-contrasena" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Repite la nueva contraseña" required>
+                <button type="submit" id="btn-confirmar-recuperacion" class="btn btn-primary" style="width:100%; margin-top:10px;">Restablecer contraseña</button>
+            </form>
+            <p id="recuperar-contrasena-mensaje" aria-live="polite" style="font-size:13px; line-height:1.5; margin:10px 0;"></p>
+            <button type="button" id="btn-cancelar-recuperacion" class="btn btn-secondary" style="width:100%;">Volver al inicio de sesión</button>
+        </div>
         <p style="font-size: 12px; margin: 8px 0; opacity: .85;">Usa tu usuario interno o el correo con el que se registró tu acceso. Si tu cuenta se creó con Google, entra con el botón de Google.</p>
         <!-- F-GMAIL: login alternativo con Google real (signInWithOAuth).
              Sirve para cuentas que ya vincularon su Google - no crea
@@ -4585,7 +4603,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.141';
+                const VERSION_FALLBACK = 'V.142';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -4791,9 +4809,9 @@
     <script type="module" src="js/core/utils.js"></script>
     <script type="module" src="js/data/supabase.js"></script>
     <script type="module" src="js/core/state.js"></script>
-    <script type="module" src="js/data/profiles.js?v=141"></script>
+    <script type="module" src="js/data/profiles.js?v=142"></script>
     <script type="module" src="js/data/notifications.js"></script>
-    <script type="module" src="js/core/app.js?v=141"></script>
+    <script type="module" src="js/core/app.js?v=142"></script>
     <!-- Fase 3 / Oleada 2: UI general (ES modules, diferidos, tras core+data) -->
     <script type="module" src="js/ui/modals.js"></script>
     <script type="module" src="js/ui/sidebar.js"></script>
@@ -4813,6 +4831,7 @@
     <script type="module" src="js/ui/push.js"></script>
     <script type="module" src="js/auth/google-ui.js"></script>
     <script defer src="js/auth/login-hardening.js?v=141"></script>
+    <script defer src="js/auth/password-recovery.js?v=142"></script>
     <!-- Fase 2 / Oleada 4: sesión, anuncios, bonos info, sugerencias user, config local -->
     <script type="module" src="js/session/logout.js"></script>
     <script type="module" src="js/ui/anuncios.js"></script>
@@ -4881,7 +4900,7 @@
     <!-- Fase 3 / Oleada 9 — orquestación (última) -->
     <script type="module" src="js/finance/orchestration/show-admin-panel.js"></script>
     <script type="module" src="js/finance/orchestration/show-user-dashboard.js"></script>
-    <script type="module" src="js/finance/orchestration/procesar-sesion.js?v=141"></script>
+    <script type="module" src="js/finance/orchestration/procesar-sesion.js?v=142"></script>
     <!-- Fase 4 — helpers residuales seguros (chat DOM, stats range, auditoría categoría) -->
     <script type="module" src="js/chat/chat-dom.js"></script>
     <script type="module" src="js/admin/finance/stats-helpers.js"></script>

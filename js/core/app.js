@@ -88,7 +88,7 @@ export async function mostrarVersionApp() {
     const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
     if (els.length === 0) return;
 
-    const VERSION_FALLBACK = 'V.141';
+    const VERSION_FALLBACK = 'V.142';
     const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
 
     try {
@@ -132,6 +132,26 @@ export function conTimeoutArranque(promesa, ms) {
         venceTimeout = setTimeout(() => reject(new Error('timeout-arranque-app')), ms);
     });
     return Promise.race([promesa, timeout]).finally(() => clearTimeout(venceTimeout));
+}
+
+// Solo permitir modo offline cuando hay una caída de red confirmada.
+// Un timeout aislado puede ser una respuesta lenta de Supabase y NO significa offline.
+export async function esFalloDeConexionConfirmado(err) {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+
+    const mensaje = String(err && (err.message || err.name || err.code || err) || '');
+    if (/timeout|abort|timed out/i.test(mensaje)) return false;
+
+    const esErrorRed = typeof window !== 'undefined'
+        && typeof window.esErrorDeConexion === 'function'
+        && window.esErrorDeConexion(err);
+    if (!esErrorRed || typeof window.hayConexionRealAhora !== 'function') return false;
+
+    try {
+        return !(await window.hayConexionRealAhora());
+    } catch (_errorConexion) {
+        return false;
+    }
 }
 
 // ============================================
@@ -326,6 +346,7 @@ if (typeof window !== 'undefined') {
     window.mostrarVersionApp = mostrarVersionApp;
     window.TIMEOUT_RED_ARRANQUE_MS = TIMEOUT_RED_ARRANQUE_MS;
     window.conTimeoutArranque = conTimeoutArranque;
+    window.esFalloDeConexionConfirmado = esFalloDeConexionConfirmado;
     window.entrarModoOfflineConPerfilCacheado = entrarModoOfflineConPerfilCacheado;
     window.asegurarUiVersionYActualizar = asegurarUiVersionYActualizar;
     window.solicitarActualizarApp = solicitarActualizarApp;
