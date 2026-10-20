@@ -43,6 +43,7 @@ const frontendRequiredPaths = [
   'js/auth/login-hardening.js',
   'js/auth/password-recovery.js',
   'supabase/functions/recuperar-contrasena/**',
+  'supabase/functions/cuevacoin-login/**',
   'scripts/verify-password-recovery.mjs',
   'js/finance/history/historial.js',
   'js/finance/queue/offline-queue.js',
@@ -99,7 +100,7 @@ assert.ok(history.includes("const categoria = categoriaTransaccion(t);"),
   'History rendering must use the same locally scoped category classifier');
 console.log('PASS — worker history embeds profiles through valid foreign-key relations and uses its scoped classifier');
 
-assert.match(sw, /cuevacoin-shell-v142/);
+assert.match(sw, /cuevacoin-shell-v143/);
 assert.doesNotMatch(sw, /cuevacoin-shell-v140/);
 assert.match(app, /VERSION_FALLBACK = 'V\.142'/);
 assert.match(index, /const VERSION_FALLBACK = 'V\.142'/);
@@ -145,7 +146,7 @@ assert.match(loginHardening, /usuario\.estado === 'archivado'/, 'Password login 
 assert.match(sessionRestore, /usuario\.estado === 'archivado'/, 'Persisted/OAuth sessions must block archived accounts on reload/reconnect');
 assert.ok(index.includes('option value="archivado">Archivados</option>'), 'The UI must expose the Archived filter');
 console.log('PASS — archived accounts hidden from normal lists, reversible admin actions, and login/session guards');
-console.log('PASS — PWA release aligned to V.142 and worker-history modules cache-busted');
+console.log('PASS — PWA release aligned to V.143 and worker-history modules cache-busted');
 
 const qr='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 const chart='https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
