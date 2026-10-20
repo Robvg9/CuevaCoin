@@ -145,7 +145,7 @@ assert.match(loginHardening, /usuario\.estado === 'archivado'/, 'Password login 
 assert.match(sessionRestore, /usuario\.estado === 'archivado'/, 'Persisted/OAuth sessions must block archived accounts on reload/reconnect');
 assert.ok(index.includes('option value="archivado">Archivados</option>'), 'The UI must expose the Archived filter');
 console.log('PASS — archived accounts hidden from normal lists, reversible admin actions, and login/session guards');
-console.log('PASS — PWA release aligned to V.141 and worker-history modules cache-busted');
+console.log('PASS — PWA release aligned to V.142 and worker-history modules cache-busted');
 
 const qr='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 const chart='https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
