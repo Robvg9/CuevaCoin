@@ -11,7 +11,7 @@ const loginHardening = read("js/auth/login-hardening.js");
 const loginEdge = read("supabase/functions/cuevacoin-login/index.ts");
 const recoveryUi = read("js/auth/password-recovery.js");
 const recoveryEdge = read("supabase/functions/recuperar-contrasena/index.ts");
-const recoveryMigration = read("supabase/migrations/20261020230000_password_recovery_request_tokens.sql");
+const recoveryMigration = read("supabase/migrations/20261020222631_password_recovery_request_tokens.sql");
 const frontendWorkflow = read(".github/workflows/step10-frontend.yml");
 const serviceWorker = read("service-worker.js");
 
