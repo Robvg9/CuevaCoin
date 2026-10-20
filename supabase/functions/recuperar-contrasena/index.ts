@@ -58,33 +58,60 @@ function validContactEmail(value: unknown): value is string {
     !/@cuevacoin\.local$/i.test(value.trim());
 }
 
-async function findAuthUserByEmail(admin: ReturnType<typeof createClient>, email: string) {
-  const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  if (error) throw new Error("AUTH_EMAIL_LOOKUP_FAILED");
-  const users = data?.users || [];
-  const match = users.find((user: { email?: string | null }) =>
-    String(user.email || "").trim().toLowerCase() === email.trim().toLowerCase()
-  );
-  // Don't create a second identity if a large project response might hide an existing user.
-  if (!match && users.length >= 1000) throw new Error("AUTH_EMAIL_LOOKUP_INCOMPLETE");
-  return match || null;
+function escapeHtml(value: string): string {
+  const entities: Record<string, string> = {
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  };
+  return value.replace(/[&<>"']/g, (char) => entities[char]);
 }
 
-async function deleteOrphanRecoveryAuthUser(
-  admin: ReturnType<typeof createClient>,
-  profileId: string,
-  authUserId: string | null | undefined,
-  createdByRecovery: boolean
-) {
-  if (!createdByRecovery || !authUserId || authUserId === profileId) return;
-  const { count, error } = await admin.from("perfiles")
-    .select("id", { count: "exact", head: true }).eq("id", authUserId);
-  if (error || (count || 0) > 0) {
-    console.warn("[recuperar-contrasena] temporary auth identity retained because profile linkage could not be ruled out");
-    return;
+function createRecoveryMailTransport() {
+  const username = Deno.env.get("SMTP_USERNAME")?.trim();
+  const password = Deno.env.get("SMTP_PASSWORD");
+  if (!username || !password) throw new Error("RECOVERY_EMAIL_PROVIDER_NOT_CONFIGURED");
+  const host = Deno.env.get("SMTP_HOSTNAME")?.trim() || "smtp.gmail.com";
+  const port = Number(Deno.env.get("SMTP_PORT") || "465");
+  const secureSetting = Deno.env.get("SMTP_SECURE");
+  const secure = secureSetting ? secureSetting.trim().toLowerCase() === "true" : port === 465;
+  const from = Deno.env.get("SMTP_FROM")?.trim() || username;
+  if (!Number.isInteger(port) || port < 1 || port > 65535 || (port === 465 && !secure)) {
+    throw new Error("RECOVERY_SMTP_CONFIGURATION_INVALID");
   }
-  const { error: deleteError } = await admin.auth.admin.deleteUser(authUserId);
-  if (deleteError) console.warn("[recuperar-contrasena] temporary auth identity cleanup failed");
+  const transport = nodemailer.createTransport({
+    host, port, secure, auth: { user: username, pass: password },
+    connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 20000,
+  });
+  return { transport, from };
+}
+
+async function sendRecoveryEmail(to: string, actionLink: string, otp: string) {
+  const { transport, from } = createRecoveryMailTransport();
+  const safeLink = escapeHtml(actionLink);
+  const safeOtp = escapeHtml(otp);
+  const text = [
+    "Se solicitó restablecer la contraseña de CuevaCoin.", "",
+    "Abre este enlace seguro para elegir una contraseña nueva:", actionLink, "",
+    `También puedes introducir este código de recuperación: ${otp}`,
+    "El enlace y el código son de un solo uso y caducan en 15 minutos.", "",
+    "Si no solicitaste esta recuperación, ignora este mensaje.",
+  ].join("\n");
+  const html = `<!doctype html>
+<html lang="es"><body style="font-family:Arial,sans-serif;line-height:1.5;color:#202124">
+<h2>Recuperación de contraseña — CuevaCoin</h2>
+<p>Se solicitó restablecer la contraseña de tu cuenta.</p>
+<p><a href="${safeLink}" style="display:inline-block;padding:12px 18px;background:#2457c5;color:#fff;text-decoration:none;border-radius:6px">Restablecer contraseña</a></p>
+<p>Si el botón no funciona, copia este enlace en tu navegador:</p>
+<p style="overflow-wrap:anywhere"><a href="${safeLink}">${safeLink}</a></p>
+<p>También puedes escribir este código de recuperación:</p>
+<p style="font-size:24px;font-weight:bold;letter-spacing:4px">${safeOtp}</p>
+<p>El enlace y el código son de un solo uso y caducan en 15 minutos.</p>
+<p>Si no solicitaste esta recuperación, ignora este mensaje.</p>
+</body></html>`;
+  try {
+    await transport.sendMail({ from, to, subject: "Recuperación de contraseña — CuevaCoin", text, html });
+  } finally {
+    transport.close();
+  }
 }
 
 async function findActiveProfile(admin: ReturnType<typeof createClient>, identifier: string) {
@@ -176,6 +203,8 @@ Deno.serve(async (req: Request) => {
         token_hash: hash,
         profile_id: profile.id,
         contact_email: profile.correo,
+        mail_auth_user_id: profile.id,
+        shadow_user_created_by_recovery: false,
         expires_at: expiresAt,
       });
       if (insertError) {
@@ -183,67 +212,58 @@ Deno.serve(async (req: Request) => {
         return reply({ error: "RECOVERY_SERVICE_UNAVAILABLE" }, 503);
       }
 
-      // Use a mailbox identity for delivery, while retaining the original CuevaCoin profile UUID.
-      // BattleCruiser uses resetPasswordForEmail (the Recovery template), not signInWithOtp (Magic Link template).
-      let transportAuthUser = await findAuthUserByEmail(admin, profile.correo);
-      let shadowUserCreated = false;
-
-      if (!transportAuthUser) {
-        const { data: createdAuthUser, error: createAuthUserError } =
-          await admin.auth.admin.createUser({
-            email: profile.correo,
-            email_confirm: true,
-          });
-        if (createAuthUserError || !createdAuthUser?.user) {
-          // Handle a concurrent request that registered the mailbox between lookup and creation.
-          transportAuthUser = await findAuthUserByEmail(admin, profile.correo).catch(() => null);
-          if (!transportAuthUser) {
-            await admin.from("password_recovery_requests")
-              .update({ consumed_at: new Date().toISOString() }).eq("id", rid);
-            console.error("[recuperar-contrasena] recovery transport identity could not be prepared", {
-              code: createAuthUserError?.code || "UNKNOWN",
-              status: createAuthUserError?.status || 0,
-            });
-            return reply({ error: "RECOVERY_EMAIL_UNAVAILABLE" }, 502);
-          }
-        } else {
-          transportAuthUser = createdAuthUser.user;
-          shadowUserCreated = true;
-        }
+      // Generate the Recovery link for the original Auth UUID, then deliver it to perfiles.correo.
+      // The contact mailbox may be a linked Google identity while auth.users.email is internal.
+      const { data: originalAuth, error: originalAuthError } = await admin.auth.admin.getUserById(profile.id);
+      const originalAuthEmail = originalAuth?.user?.email?.trim();
+      if (originalAuthError || !originalAuthEmail) {
+        await admin.from("password_recovery_requests")
+          .update({ consumed_at: new Date().toISOString() }).eq("id", rid);
+        console.error("[recuperar-contrasena] original Auth account lookup failed");
+        return reply({ error: "RECOVERY_SERVICE_UNAVAILABLE" }, 503);
       }
 
-      // Reuse the BattleCruiser recovery API and its dedicated Supabase Auth email template.
       const redirect = new URL("/", APP_ORIGIN);
       redirect.searchParams.set("cc_recovery", "1");
       redirect.searchParams.set("rid", rid);
       redirect.searchParams.set("rt", rawToken);
-      const { error: sendError } = await publicAuth.auth.resetPasswordForEmail(profile.correo, {
-        redirectTo: redirect.toString(),
+      const { data: generatedLink, error: generateLinkError } = await admin.auth.admin.generateLink({
+        type: "recovery",
+        email: originalAuthEmail,
+        options: { redirectTo: redirect.toString() },
       });
-      if (sendError) {
+      const actionLink = generatedLink?.properties?.action_link || "";
+      const emailOtp = generatedLink?.properties?.email_otp || "";
+      if (generateLinkError || !actionLink || !emailOtp) {
         await admin.from("password_recovery_requests")
           .update({ consumed_at: new Date().toISOString() }).eq("id", rid);
-        await deleteOrphanRecoveryAuthUser(
-          admin, profile.id, transportAuthUser?.id, shadowUserCreated
-        );
-        console.error("[recuperar-contrasena] recovery email request rejected", {
-          code: sendError.code || "UNKNOWN",
-          status: sendError.status || 0,
+        console.error("[recuperar-contrasena] Recovery link generation failed", {
+          code: generateLinkError?.code || "UNKNOWN",
+          status: generateLinkError?.status || 0,
         });
-        if (sendError.status === 429 || /rate.?limit/i.test(sendError.message || "")) {
-          return reply({ error: "RECOVERY_RATE_LIMIT" }, 429);
-        }
-        return reply({ error: "RECOVERY_EMAIL_UNAVAILABLE" }, 502);
+        return reply({ error: "RECOVERY_SERVICE_UNAVAILABLE" }, 503);
       }
 
-      const { error: tokenUpdateError } = await admin.from("password_recovery_requests")
-        .update({
-          mail_auth_user_id: transportAuthUser?.id || null,
-          shadow_user_created_by_recovery: shadowUserCreated,
-        }).eq("id", rid);
-      if (tokenUpdateError) {
-        console.error("[recuperar-contrasena] recovery token state update failed");
-        return reply({ error: "RECOVERY_SERVICE_UNAVAILABLE" }, 503);
+      try {
+        await sendRecoveryEmail(profile.correo, actionLink, emailOtp);
+      } catch (sendError) {
+        await admin.from("password_recovery_requests")
+          .update({ consumed_at: new Date().toISOString() }).eq("id", rid);
+        const providerNotConfigured = sendError instanceof Error &&
+          sendError.message === "RECOVERY_EMAIL_PROVIDER_NOT_CONFIGURED";
+        const smtpConfigurationInvalid = sendError instanceof Error &&
+          sendError.message === "RECOVERY_SMTP_CONFIGURATION_INVALID";
+        console.error("[recuperar-contrasena] SMTP delivery failed", {
+          reason: providerNotConfigured ? "NOT_CONFIGURED" :
+            smtpConfigurationInvalid ? "INVALID_CONFIGURATION" : "SMTP_REJECTED",
+        });
+        if (providerNotConfigured) {
+          return reply({ error: "RECOVERY_EMAIL_PROVIDER_NOT_CONFIGURED" }, 503);
+        }
+        if (smtpConfigurationInvalid) {
+          return reply({ error: "RECOVERY_SMTP_CONFIGURATION_INVALID" }, 503);
+        }
+        return reply({ error: "RECOVERY_EMAIL_UNAVAILABLE" }, 502);
       }
       return reply({ accepted: true }, 202);
     }
@@ -254,11 +274,14 @@ Deno.serve(async (req: Request) => {
       const profile = await findActiveProfile(admin, identifier);
       if (!profile) return invalidRecovery();
 
+      const { data: originalAuth, error: originalAuthError } = await admin.auth.admin.getUserById(profile.id);
+      const originalAuthEmail = originalAuth?.user?.email?.trim();
+      if (originalAuthError || !originalAuthEmail) return invalidRecovery();
+
       const { data: verified, error: verifyError } = await publicAuth.auth.verifyOtp({
-        email: profile.correo, token: code, type: "recovery",
+        email: originalAuthEmail, token: code, type: "recovery",
       });
-      if (verifyError || !verified.user ||
-          verified.user.email?.trim().toLowerCase() !== profile.correo.toLowerCase()) {
+      if (verifyError || !verified.user || verified.user.id !== profile.id) {
         return invalidRecovery();
       }
       const { data: recoveryRequest } = await admin.from("password_recovery_requests")
@@ -277,12 +300,6 @@ Deno.serve(async (req: Request) => {
       await admin.from("password_recovery_requests")
         .update({ consumed_at: new Date().toISOString() })
         .eq("profile_id", profile.id).is("consumed_at", null);
-      if (recoveryRequest) {
-        await deleteOrphanRecoveryAuthUser(
-          admin, profile.id, recoveryRequest.mail_auth_user_id,
-          recoveryRequest.shadow_user_created_by_recovery
-        );
-      }
       return reply({ success: true }, 200);
     }
 
@@ -299,7 +316,7 @@ Deno.serve(async (req: Request) => {
         global: { headers: { Authorization: authorization } },
       });
       const { data: userData, error: userError } = await scopedAuth.auth.getUser();
-      if (userError || !userData.user?.email) return invalidRecovery();
+      if (userError || !userData.user?.id) return invalidRecovery();
 
       const { data: request, error: requestError } = await admin
         .from("password_recovery_requests")
@@ -308,7 +325,7 @@ Deno.serve(async (req: Request) => {
       if (requestError || !request || request.consumed_at ||
           new Date(request.expires_at).getTime() <= Date.now()) return invalidRecovery();
       if (await tokenHash(rawToken) !== request.token_hash ||
-          userData.user.email.trim().toLowerCase() !== String(request.contact_email).trim().toLowerCase() ||
+          userData.user.id !== request.profile_id ||
           (request.mail_auth_user_id && request.mail_auth_user_id !== userData.user.id)) {
         return invalidRecovery();
       }
@@ -335,10 +352,6 @@ Deno.serve(async (req: Request) => {
       }
       await admin.from("password_recovery_requests")
         .update({ consumed_at: new Date().toISOString() }).eq("id", rid);
-      await deleteOrphanRecoveryAuthUser(
-        admin, profile.id, request.mail_auth_user_id,
-        request.shadow_user_created_by_recovery
-      );
       return reply({ success: true }, 200);
     }
 
