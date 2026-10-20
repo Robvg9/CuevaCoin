@@ -40,7 +40,7 @@
       headers,
       body: JSON.stringify(payload),
       cache: "no-store",
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(30000),
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -154,8 +154,12 @@
       } catch (error) {
         if (error.status === 429) {
           setMessage("Demasiados intentos. Espera unos minutos antes de solicitar otra recuperación.", true);
+        } else if (error.message === "RECOVERY_EMAIL_PROVIDER_NOT_CONFIGURED") {
+          setMessage("Falta configurar el remitente SMTP del servidor. No se cambió ninguna contraseña.", true);
+        } else if (error.message === "RECOVERY_SMTP_CONFIGURATION_INVALID") {
+          setMessage("La configuración SMTP del servidor es inválida. No se cambió ninguna contraseña.", true);
         } else if (error.status === 502) {
-          setMessage("El servicio de correo no confirmó el envío. Puede que el SMTP del proyecto no esté habilitado para ese destinatario. No se cambió ninguna contraseña.", true);
+          setMessage("El servidor SMTP rechazó el envío. No se cambió ninguna contraseña; revisa la configuración del remitente.", true);
         } else {
           setMessage("No se pudo iniciar la recuperación. Comprueba la conexión e inténtalo de nuevo.", true);
         }
