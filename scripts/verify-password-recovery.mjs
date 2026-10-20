@@ -18,7 +18,7 @@ assert.match(index, /id="btn-olvido-contrasena"/, "Login must expose forgotten-p
 assert.match(index, /id="form-solicitar-recuperacion"/, "Recovery request form must exist");
 assert.match(index, /id="form-confirmar-recuperacion"/, "Recovery completion form must exist");
 assert.match(index, /password-recovery\.js\?v=143/, "Recovery JS must be cache-busted");
-assert.match(index, /cuevacoin-login/, "Login UI must use the server-side resolver");
+assert.match(loginHardening, /cuevacoin-login/, "Login UI must use the server-side resolver");
 assert.match(loginHardening, /functions\/v1\/cuevacoin-login/, "Login must call the governed Edge Function");
 assert.match(loginHardening, /auth\.setSession/, "Login response session must be set in the regular Supabase client");
 assert.doesNotMatch(loginHardening, /auth\.signInWithPassword\s*\(/, "The browser must not directly assume that contact email is Auth email");
@@ -38,7 +38,7 @@ assert.match(recoveryEdge, /auth\.verifyOtp/, "OTP must be consumed before passw
 assert.match(recoveryEdge, /auth\.admin\.updateUserById/, "Password update must target the original account UUID");
 assert.match(recoveryEdge, /RECOVERY_EMAIL_UNAVAILABLE/, "Failed email initiation must no longer be reported as sent");
 assert.match(recoveryEdge, /data\.estado !== "activo"/, "Inactive and archived profiles must not be recoverable");
-assert.match(recoveryEdge, /@cuevacoin\\\.local/, "Internal fake Auth addresses cannot be mail destinations");
+assert.match(recoveryEdge, /@cuevacoin\.local/, "Internal fake Auth addresses cannot be mail destinations");
 assert.match(recoveryMigration, /CREATE TABLE IF NOT EXISTS public\.password_recovery_requests/);
 assert.match(recoveryMigration, /ENABLE ROW LEVEL SECURITY/);
 assert.match(recoveryMigration, /REVOKE ALL ON TABLE public\.password_recovery_requests FROM PUBLIC, anon, authenticated/);
