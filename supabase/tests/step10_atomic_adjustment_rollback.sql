@@ -123,6 +123,36 @@ BEGIN
     END;
     PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
 
+    -- Archived accounts must be blocked from both administrative financial paths.
+    -- All of this remains inside BEGIN/ROLLBACK and is never persisted.
+    UPDATE public.perfiles SET estado = 'archivado' WHERE id = v_worker;
+
+    BEGIN
+        PERFORM * FROM public.admin_ajustar_saldo_atomico(
+            v_worker, 'deposito', 1, 'STEP10_ARCHIVED_ADJUSTMENT_TEST', gen_random_uuid()
+        );
+        RAISE EXCEPTION 'FAIL: archived profile accepted an admin balance adjustment';
+    EXCEPTION WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS v_mismatch_message = MESSAGE_TEXT;
+        IF v_mismatch_message NOT LIKE '%Cuenta destino no activa%' THEN
+            RAISE;
+        END IF;
+    END;
+
+    BEGIN
+        PERFORM * FROM public.admin_pagar_saldo(
+            ARRAY[v_worker], 1, 'STEP10_ARCHIVED_PAYOUT_TEST', 'salario'
+        );
+        RAISE EXCEPTION 'FAIL: archived profile accepted an admin salary payout';
+    EXCEPTION WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS v_mismatch_message = MESSAGE_TEXT;
+        IF v_mismatch_message NOT LIKE '%No se puede pagar a una cuenta no activa%' THEN
+            RAISE;
+        END IF;
+    END;
+
+    UPDATE public.perfiles SET estado = 'activo' WHERE id = v_worker;
+
     -- An oversized withdrawal must be rejected without changing balance.
     BEGIN
         PERFORM * FROM public.admin_ajustar_saldo_atomico(
