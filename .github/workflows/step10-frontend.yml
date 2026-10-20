@@ -9,6 +9,9 @@ on:
       - "js/core/app.js"
       - "js/core/utils.js"
       - "js/auth/login-hardening.js"
+      - "js/auth/password-recovery.js"
+      - "supabase/functions/recuperar-contrasena/**"
+      - "scripts/verify-password-recovery.mjs"
       - "js/finance/history/historial.js"
       - "js/finance/queue/offline-queue.js"
       - "js/admin/finance/historial-trabajadora.js"
@@ -33,6 +36,9 @@ on:
       - "js/core/app.js"
       - "js/core/utils.js"
       - "js/auth/login-hardening.js"
+      - "js/auth/password-recovery.js"
+      - "supabase/functions/recuperar-contrasena/**"
+      - "scripts/verify-password-recovery.mjs"
       - "js/finance/history/historial.js"
       - "js/finance/queue/offline-queue.js"
       - "js/admin/finance/historial-trabajadora.js"
@@ -59,5 +65,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      - name: Verify password recovery and startup connectivity regression
+        run: node scripts/verify-password-recovery.mjs
       - name: Verify atomic financial UI and release assets
         run: node scripts/verify-step10-release.mjs
