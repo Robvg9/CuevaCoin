@@ -53,8 +53,37 @@ async function tokenHash(value: string): Promise<string> {
 }
 function validContactEmail(value: unknown): value is string {
   return typeof value === "string" &&
-    /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(value.trim()) &&
+    /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim()) &&
     !/@cuevacoin\.local$/i.test(value.trim());
+}
+
+async function findAuthUserByEmail(admin: ReturnType<typeof createClient>, email: string) {
+  const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  if (error) throw new Error("AUTH_EMAIL_LOOKUP_FAILED");
+  const users = data?.users || [];
+  const match = users.find((user: { email?: string | null }) =>
+    String(user.email || "").trim().toLowerCase() === email.trim().toLowerCase()
+  );
+  // Don't create a second identity if a large project response might hide an existing user.
+  if (!match && users.length >= 1000) throw new Error("AUTH_EMAIL_LOOKUP_INCOMPLETE");
+  return match || null;
+}
+
+async function deleteOrphanRecoveryAuthUser(
+  admin: ReturnType<typeof createClient>,
+  profileId: string,
+  authUserId: string | null | undefined,
+  createdByRecovery: boolean
+) {
+  if (!createdByRecovery || !authUserId || authUserId === profileId) return;
+  const { count, error } = await admin.from("perfiles")
+    .select("id", { count: "exact", head: true }).eq("id", authUserId);
+  if (error || (count || 0) > 0) {
+    console.warn("[recuperar-contrasena] temporary auth identity retained because profile linkage could not be ruled out");
+    return;
+  }
+  const { error: deleteError } = await admin.auth.admin.deleteUser(authUserId);
+  if (deleteError) console.warn("[recuperar-contrasena] temporary auth identity cleanup failed");
 }
 
 async function findActiveProfile(admin: ReturnType<typeof createClient>, identifier: string) {
@@ -153,6 +182,7 @@ Deno.serve(async (req: Request) => {
         return reply({ error: "RECOVERY_SERVICE_UNAVAILABLE" }, 503);
       }
 
+      const authUserBefore = await findAuthUserByEmail(admin, profile.correo);
       const redirect = new URL("/", APP_ORIGIN);
       redirect.searchParams.set("cc_recovery", "1");
       redirect.searchParams.set("rid", rid);
@@ -164,6 +194,11 @@ Deno.serve(async (req: Request) => {
       if (sendError) {
         await admin.from("password_recovery_requests")
           .update({ consumed_at: new Date().toISOString() }).eq("id", rid);
+        // Supabase may have created a mailbox-auth user before its mailer rejected delivery.
+        if (!authUserBefore) {
+          const possibleShadow = await findAuthUserByEmail(admin, profile.correo).catch(() => null);
+          if (possibleShadow?.id) await deleteOrphanRecoveryAuthUser(admin, profile.id, possibleShadow.id, true);
+        }
         console.error("[recuperar-contrasena] mail request rejected", {
           code: sendError.code || "UNKNOWN",
           status: sendError.status || 0,
@@ -174,11 +209,22 @@ Deno.serve(async (req: Request) => {
         // The previous implementation swallowed this error and falsely told the user mail was sent.
         return reply({ error: "RECOVERY_EMAIL_UNAVAILABLE" }, 502);
       }
+      const authUserAfter = await findAuthUserByEmail(admin, profile.correo);
+      const shadowUserCreated = !authUserBefore && !!authUserAfter?.id;
+      const { error: tokenUpdateError } = await admin.from("password_recovery_requests")
+        .update({
+          mail_auth_user_id: authUserAfter?.id || null,
+          shadow_user_created_by_recovery: shadowUserCreated,
+        }).eq("id", rid);
+      if (tokenUpdateError) {
+        console.error("[recuperar-contrasena] recovery token state update failed");
+        return reply({ error: "RECOVERY_SERVICE_UNAVAILABLE" }, 503);
+      }
       return reply({ accepted: true }, 202);
     }
 
     if (mode === "complete") {
-      if (!identifier || identifier.length > 120 || !/^\\d{6}$/.test(code) ||
+      if (!identifier || identifier.length > 120 || !/^\d{6}$/.test(code) ||
           newPassword.length < 8 || newPassword.length > 128) return invalidRecovery();
       const profile = await findActiveProfile(admin, identifier);
       if (!profile) return invalidRecovery();
@@ -190,6 +236,14 @@ Deno.serve(async (req: Request) => {
           verified.user.email?.trim().toLowerCase() !== profile.correo.toLowerCase()) {
         return invalidRecovery();
       }
+      const { data: recoveryRequest } = await admin.from("password_recovery_requests")
+        .select("id, mail_auth_user_id, shadow_user_created_by_recovery")
+        .eq("profile_id", profile.id).is("consumed_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (recoveryRequest?.mail_auth_user_id && recoveryRequest.mail_auth_user_id !== verified.user.id) {
+        return invalidRecovery();
+      }
       const { error: updateError } = await admin.auth.admin.updateUserById(profile.id, { password: newPassword });
       if (updateError) {
         console.error("[recuperar-contrasena] password update failed");
@@ -198,6 +252,12 @@ Deno.serve(async (req: Request) => {
       await admin.from("password_recovery_requests")
         .update({ consumed_at: new Date().toISOString() })
         .eq("profile_id", profile.id).is("consumed_at", null);
+      if (recoveryRequest) {
+        await deleteOrphanRecoveryAuthUser(
+          admin, profile.id, recoveryRequest.mail_auth_user_id,
+          recoveryRequest.shadow_user_created_by_recovery
+        );
+      }
       return reply({ success: true }, 200);
     }
 
@@ -218,12 +278,13 @@ Deno.serve(async (req: Request) => {
 
       const { data: request, error: requestError } = await admin
         .from("password_recovery_requests")
-        .select("id, token_hash, profile_id, contact_email, expires_at, consumed_at")
+        .select("id, token_hash, profile_id, contact_email, expires_at, consumed_at, mail_auth_user_id, shadow_user_created_by_recovery")
         .eq("id", rid).maybeSingle();
       if (requestError || !request || request.consumed_at ||
           new Date(request.expires_at).getTime() <= Date.now()) return invalidRecovery();
       if (await tokenHash(rawToken) !== request.token_hash ||
-          userData.user.email.trim().toLowerCase() !== String(request.contact_email).trim().toLowerCase()) {
+          userData.user.email.trim().toLowerCase() !== String(request.contact_email).trim().toLowerCase() ||
+          (request.mail_auth_user_id && request.mail_auth_user_id !== userData.user.id)) {
         return invalidRecovery();
       }
 
@@ -249,6 +310,10 @@ Deno.serve(async (req: Request) => {
       }
       await admin.from("password_recovery_requests")
         .update({ consumed_at: new Date().toISOString() }).eq("id", rid);
+      await deleteOrphanRecoveryAuthUser(
+        admin, profile.id, request.mail_auth_user_id,
+        request.shadow_user_created_by_recovery
+      );
       return reply({ success: true }, 200);
     }
 
