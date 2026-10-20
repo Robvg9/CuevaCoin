@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import nodemailer from "npm:nodemailer@9.0.6";
 
 const APP_ORIGIN = "https://cuevacoin.robvg9.workers.dev";
 const WINDOW_MS = 15 * 60 * 1000;
