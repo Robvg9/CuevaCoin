@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS public.password_recovery_requests (
     token_hash text NOT NULL UNIQUE,
     profile_id uuid NOT NULL REFERENCES public.perfiles(id) ON DELETE CASCADE,
     contact_email text NOT NULL,
+    mail_auth_user_id uuid,
+    shadow_user_created_by_recovery boolean NOT NULL DEFAULT false,
     created_at timestamptz NOT NULL DEFAULT now(),
     expires_at timestamptz NOT NULL,
     consumed_at timestamptz
