@@ -26,7 +26,7 @@ assert.doesNotMatch(recoveryEdge, /return reply\(\{\s*(?:email|correo|userEmail)
 assert.match(profiles, /obtenerMiPerfilApp\(usuarioAuth = null\)/, 'Profile lookup should accept a previously loaded session user');
 assert.match(session, /obtenerMiPerfilApp\(session\.user\)/, 'Boot must reuse the session user instead of another Auth network round trip');
 assert.match(app, /esFalloDeConexionConfirmado/, 'Offline fallback must require a confirmed connectivity failure');
-assert.match(app, /\/timeout\|abort\//, 'A timeout alone must not be treated as true offline state');
+assert.ok(app.includes('/timeout|abort|timed out/i'), 'A timeout alone must not be treated as true offline state');
 assert.match(session, /await window\.esFalloDeConexionConfirmado\(err\)/, 'Session boot catches must verify offline state before showing cached data');
 assert.match(recoveryEdge, /accepted: true/, 'Recovery initiation must use a generic anti-enumeration response');
 assert.ok(frontendWorkflow.includes('node scripts/verify-password-recovery.mjs'), 'CI must run recovery and startup regression tests');
