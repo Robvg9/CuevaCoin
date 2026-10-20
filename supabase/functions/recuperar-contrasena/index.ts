@@ -289,7 +289,8 @@ Deno.serve(async (req: Request) => {
         .eq("profile_id", profile.id).is("consumed_at", null)
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (recoveryRequest?.mail_auth_user_id && recoveryRequest.mail_auth_user_id !== verified.user.id) {
+      if (!recoveryRequest || recoveryRequest.mail_auth_user_id !== profile.id ||
+          recoveryRequest.mail_auth_user_id !== verified.user.id) {
         return invalidRecovery();
       }
       const { error: updateError } = await admin.auth.admin.updateUserById(profile.id, { password: newPassword });
