@@ -71,6 +71,24 @@ export async function procesarSesionYMostrarPantalla() {
                 window.showLoginScreen();
                 return;
             }
+            if (!usuario.esAdmin && usuario.estado === 'archivado') {
+                try {
+                    const { error: signOutError } = await window.supabaseClient.auth.signOut();
+                    if (signOutError) console.error('No se pudo cerrar la sesión archivada:', signOutError);
+                } catch (signOutError) {
+                    console.error('No se pudo cerrar la sesión archivada:', signOutError);
+                }
+                localStorage.removeItem('cuevacoin_perfil_cache');
+                localStorage.removeItem('cuevacoin_sesion_inicio');
+                sessionStorage.removeItem('cuevacoin_usuario_actual');
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Esta cuenta está archivada y no puede acceder a CuevaCoin. Contacta al administrador.', 5000);
+                }
+                limpiarOverlays();
+                window.showLoginScreen();
+                return;
+            }
+
             if (typeof window.sincronizarVinculacionGoogleSiCorresponde === 'function') {
                 usuario = await window.conTimeoutArranque(
                     window.sincronizarVinculacionGoogleSiCorresponde(usuario),
