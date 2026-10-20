@@ -263,7 +263,7 @@ BEGIN
         );
 
         v_mensaje_notif := 'Admin te ha enviado $'
-            || pg_catalog.trim(pg_catalog.to_char(p_monto, 'FM999999990.00'))
+            || trim(to_char(p_monto, 'FM999999990.00'))
             || CASE WHEN p_tipo = 'bono' THEN ' de bono' ELSE ' de salario' END
             || CASE WHEN p_motivo IS NOT NULL AND p_motivo <> ''
                 THEN ' - Motivo: ' || p_motivo ELSE '' END;
