@@ -15,3 +15,7 @@ node_modules/**
 *.key
 *.p12
 *.pfx
+
+# SQL migrations and project configuration are source/control artifacts, not public static assets.
+supabase/
+supabase/**

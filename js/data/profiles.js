@@ -23,6 +23,7 @@ export function perfilAUsuarioApp(perfil) {
         numeroCuenta: perfil.numero_cuenta,
         foto: perfil.foto_url,
         estado: perfil.estado,
+        archivado: perfil.estado === 'archivado',
         ultimaConexion: perfil.ultima_conexion,
         apellido: perfil.apellido,
         numeroCarnet: perfil.numero_carnet,

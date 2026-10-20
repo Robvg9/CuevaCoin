@@ -9,6 +9,8 @@ on:
       - "wrangler.jsonc"
       - "index.html"
       - "service-worker.js"
+      - "js/**"
+      - "supabase/migrations/**"
   workflow_dispatch:
     inputs:
       change_summary:

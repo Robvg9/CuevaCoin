@@ -12,6 +12,9 @@ const sw = read('service-worker.js');
 const app = read('js/core/app.js');
 const history = read('js/finance/history/historial.js');
 const userCards = read('js/admin/finance/usuarios.js');
+const workerReader = read('js/admin/trabajadoras.js');
+const userState = read('js/admin/usuarios-estado.js');
+const sessionRestore = read('js/finance/orchestration/procesar-sesion.js');
 const adminHistory = read('js/admin/finance/historial-trabajadora.js');
 const payments = read('js/admin/finance/pagos.js');
 const syncQueue = read('js/finance/queue/offline-queue.js');
@@ -43,6 +46,10 @@ const frontendRequiredPaths = [
   'js/admin/finance/historial-trabajadora.js',
   'js/admin/finance/pagos.js',
   'js/admin/finance/usuarios.js',
+  'js/admin/trabajadoras.js',
+  'js/admin/usuarios-estado.js',
+  'js/data/profiles.js',
+  'js/finance/orchestration/procesar-sesion.js',
   'service-worker.js',
   'supabase/migrations/**',
   'supabase/tests/**',
@@ -89,12 +96,12 @@ assert.ok(history.includes("const categoria = categoriaTransaccion(t);"),
   'History rendering must use the same locally scoped category classifier');
 console.log('PASS — worker history embeds profiles through valid foreign-key relations and uses its scoped classifier');
 
-assert.match(sw, /cuevacoin-shell-v140/);
-assert.doesNotMatch(sw, /cuevacoin-shell-v139/);
-assert.match(app, /VERSION_FALLBACK = 'V\.140'/);
-assert.match(index, /const VERSION_FALLBACK = 'V\.140'/);
-assert.ok(index.includes('src="js/finance/history/historial.js?v=140"'), 'Worker history module must use a versioned URL to bypass stale edge/browser cache');
-assert.ok(index.includes('src="js/admin/finance/historial-trabajadora.js?v=140"'), 'Admin worker-history module must use a versioned URL');
+assert.match(sw, /cuevacoin-shell-v141/);
+assert.doesNotMatch(sw, /cuevacoin-shell-v140/);
+assert.match(app, /VERSION_FALLBACK = 'V\.141'/);
+assert.match(index, /const VERSION_FALLBACK = 'V\.141'/);
+assert.ok(index.includes('src="js/finance/history/historial.js?v=141"'), 'Worker history module must use a versioned URL to bypass stale edge/browser cache');
+assert.ok(index.includes('src="js/admin/finance/historial-trabajadora.js?v=141"'), 'Admin worker-history module must use a versioned URL');
 assert.ok(index.includes('id="admin-worker-history-modal"'), 'Admin worker-history modal must exist');
 assert.ok(userCards.includes('abrirHistorialTrabajadoraAdmin'), 'Admin worker cards must expose the read-only history action');
 assert.ok(adminHistory.includes("admin:perfiles!transacciones_admin_id_fkey(nombre, usuario)"), 'Admin history must use the real admin foreign-key relation');
@@ -119,7 +126,23 @@ assert.ok(index.includes('placeholder="Usuario o correo electrónico"'), 'Login 
 assert.ok(index.includes('Si tu cuenta se creó con Google'), 'Login must explain the Google sign-in route');
 assert.ok(loginHardening.includes('utiliza el botón de Google'), 'Invalid-password guidance must direct Google-created users to OAuth');
 console.log('PASS — login accepts internal usernames and explicit emails and explains the Google OAuth path');
-console.log('PASS — PWA release aligned to V.140 and worker-history modules cache-busted');
+
+assert.match(workerReader, /incluirArchivadas = false/, 'Ordinary worker lists must exclude archived accounts by default');
+assert.match(workerReader, /perfil\.estado !== 'archivado'/, 'Archived accounts must be absent from normal recipient/worker lists');
+assert.match(userState, /export async function archivarUsuario/, 'Admin must have an explicit archive action');
+assert.match(userState, /update\(\{ estado: 'archivado' \}\)/, 'Archive action must use the existing status field without hard deleting data');
+assert.match(userState, /export async function restaurarUsuario/, 'Admin must be able to restore archived accounts');
+assert.match(userState, /update\(\{ estado: 'inactivo' \}\)/, 'Restoring an account must not silently reactivate access');
+assert.match(userState, /No se puede archivar una cuenta administradora/, 'Admin accounts must not be archivable from this flow');
+assert.doesNotMatch(userState, /\.delete\(/, 'Archive flow must not hard-delete profile or historical data');
+assert.match(userCards, /filterEstado === 'archivado'/, 'The user view must provide a dedicated archived filter');
+assert.match(userCards, /archivarUsuario\(/, 'Non-archived user cards must expose Archive');
+assert.match(userCards, /restaurarUsuario\(/, 'Archived user cards must expose Restore');
+assert.match(loginHardening, /usuario\.estado === 'archivado'/, 'Password login must block archived accounts');
+assert.match(sessionRestore, /usuario\.estado === 'archivado'/, 'Persisted/OAuth sessions must block archived accounts on reload/reconnect');
+assert.ok(index.includes('option value="archivado">Archivados</option>'), 'The UI must expose the Archived filter');
+console.log('PASS — archived accounts hidden from normal lists, reversible admin actions, and login/session guards');
+console.log('PASS — PWA release aligned to V.141 and worker-history modules cache-busted');
 
 const qr='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 const chart='https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
