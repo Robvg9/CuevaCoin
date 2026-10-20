@@ -18,7 +18,7 @@ const serviceWorker = read("service-worker.js");
 assert.match(index, /id="btn-olvido-contrasena"/, "Login must expose forgotten-password");
 assert.match(index, /id="form-solicitar-recuperacion"/, "Recovery request form must exist");
 assert.match(index, /id="form-confirmar-recuperacion"/, "Recovery completion form must exist");
-assert.match(index, /password-recovery\.js\?v=143/, "Recovery JS must be cache-busted");
+assert.match(index, /password-recovery\.js\?v=144/, "Recovery JS must be cache-busted for the current release");
 assert.match(loginHardening, /cuevacoin-login/, "Login UI must use the server-side resolver");
 assert.match(loginHardening, /functions\/v1\/cuevacoin-login/, "Login must call the governed Edge Function");
 assert.match(loginHardening, /auth\.setSession/, "Login response session must be set in the regular Supabase client");
