@@ -58,7 +58,7 @@ assert.match(recoveryMigration, /ENABLE ROW LEVEL SECURITY/);
 assert.match(recoveryMigration, /REVOKE ALL ON TABLE public\.password_recovery_requests FROM PUBLIC, anon, authenticated/);
 assert.match(recoveryUi, /cc_recovery/);
 assert.match(recoveryUi, /complete-link/);
-assert.match(recoveryUi, /El servicio de correo no confirmó el envío/);
+assert.match(recoveryUi, /El servidor SMTP rechazó el envío/);
 assert.match(recoveryUi, /Falta configurar el remitente SMTP/);
 assert.match(recoveryUi, /RECOVERY_EMAIL_PROVIDER_NOT_CONFIGURED/);
 assert.match(recoveryUi, /AbortSignal\.timeout\(30000\)/);
