@@ -182,38 +182,62 @@ Deno.serve(async (req: Request) => {
         return reply({ error: "RECOVERY_SERVICE_UNAVAILABLE" }, 503);
       }
 
-      const authUserBefore = await findAuthUserByEmail(admin, profile.correo);
+      // Use a mailbox identity for delivery, while retaining the original CuevaCoin profile UUID.
+      // BattleCruiser uses resetPasswordForEmail (the Recovery template), not signInWithOtp (Magic Link template).
+      let transportAuthUser = await findAuthUserByEmail(admin, profile.correo);
+      let shadowUserCreated = false;
+
+      if (!transportAuthUser) {
+        const { data: createdAuthUser, error: createAuthUserError } =
+          await admin.auth.admin.createUser({
+            email: profile.correo,
+            email_confirm: true,
+          });
+        if (createAuthUserError || !createdAuthUser?.user) {
+          // Handle a concurrent request that registered the mailbox between lookup and creation.
+          transportAuthUser = await findAuthUserByEmail(admin, profile.correo).catch(() => null);
+          if (!transportAuthUser) {
+            await admin.from("password_recovery_requests")
+              .update({ consumed_at: new Date().toISOString() }).eq("id", rid);
+            console.error("[recuperar-contrasena] recovery transport identity could not be prepared", {
+              code: createAuthUserError?.code || "UNKNOWN",
+              status: createAuthUserError?.status || 0,
+            });
+            return reply({ error: "RECOVERY_EMAIL_UNAVAILABLE" }, 502);
+          }
+        } else {
+          transportAuthUser = createdAuthUser.user;
+          shadowUserCreated = true;
+        }
+      }
+
+      // Reuse the BattleCruiser recovery API and its dedicated Supabase Auth email template.
       const redirect = new URL("/", APP_ORIGIN);
       redirect.searchParams.set("cc_recovery", "1");
       redirect.searchParams.set("rid", rid);
       redirect.searchParams.set("rt", rawToken);
-      const { error: sendError } = await publicAuth.auth.signInWithOtp({
-        email: profile.correo,
-        options: { shouldCreateUser: true, emailRedirectTo: redirect.toString() },
+      const { error: sendError } = await publicAuth.auth.resetPasswordForEmail(profile.correo, {
+        redirectTo: redirect.toString(),
       });
       if (sendError) {
         await admin.from("password_recovery_requests")
           .update({ consumed_at: new Date().toISOString() }).eq("id", rid);
-        // Supabase may have created a mailbox-auth user before its mailer rejected delivery.
-        if (!authUserBefore) {
-          const possibleShadow = await findAuthUserByEmail(admin, profile.correo).catch(() => null);
-          if (possibleShadow?.id) await deleteOrphanRecoveryAuthUser(admin, profile.id, possibleShadow.id, true);
-        }
-        console.error("[recuperar-contrasena] mail request rejected", {
+        await deleteOrphanRecoveryAuthUser(
+          admin, profile.id, transportAuthUser?.id, shadowUserCreated
+        );
+        console.error("[recuperar-contrasena] recovery email request rejected", {
           code: sendError.code || "UNKNOWN",
           status: sendError.status || 0,
         });
         if (sendError.status === 429 || /rate.?limit/i.test(sendError.message || "")) {
           return reply({ error: "RECOVERY_RATE_LIMIT" }, 429);
         }
-        // The previous implementation swallowed this error and falsely told the user mail was sent.
         return reply({ error: "RECOVERY_EMAIL_UNAVAILABLE" }, 502);
       }
-      const authUserAfter = await findAuthUserByEmail(admin, profile.correo);
-      const shadowUserCreated = !authUserBefore && !!authUserAfter?.id;
+
       const { error: tokenUpdateError } = await admin.from("password_recovery_requests")
         .update({
-          mail_auth_user_id: authUserAfter?.id || null,
+          mail_auth_user_id: transportAuthUser?.id || null,
           shadow_user_created_by_recovery: shadowUserCreated,
         }).eq("id", rid);
       if (tokenUpdateError) {
@@ -230,7 +254,7 @@ Deno.serve(async (req: Request) => {
       if (!profile) return invalidRecovery();
 
       const { data: verified, error: verifyError } = await publicAuth.auth.verifyOtp({
-        email: profile.correo, token: code, type: "email",
+        email: profile.correo, token: code, type: "recovery",
       });
       if (verifyError || !verified.user ||
           verified.user.email?.trim().toLowerCase() !== profile.correo.toLowerCase()) {
