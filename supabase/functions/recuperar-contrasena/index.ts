@@ -227,11 +227,20 @@ Deno.serve(async (req: Request) => {
         return invalidRecovery();
       }
 
-      const profile = await findActiveProfile(admin, request.profile_id);
-      if (!profile || profile.id !== request.profile_id ||
-          profile.correo.toLowerCase() !== String(request.contact_email).toLowerCase()) {
+      const { data: profileRow, error: profileError } = await admin.from("perfiles")
+        .select("id, usuario, correo, estado")
+        .eq("id", request.profile_id)
+        .maybeSingle();
+      if (profileError || !profileRow || profileRow.estado !== "activo" ||
+          !validContactEmail(profileRow.correo) ||
+          profileRow.correo.trim().toLowerCase() !== String(request.contact_email).trim().toLowerCase()) {
         return invalidRecovery();
       }
+      const { count: duplicateEmailCount, error: duplicateError } = await admin.from("perfiles")
+        .select("id", { count: "exact", head: true })
+        .ilike("correo", escapeLike(profileRow.correo.trim()));
+      if (duplicateError || (duplicateEmailCount || 0) !== 1) return invalidRecovery();
+      const profile = { id: profileRow.id as string, correo: profileRow.correo.trim() as string };
 
       const { error: updateError } = await admin.auth.admin.updateUserById(profile.id, { password: newPassword });
       if (updateError) {
