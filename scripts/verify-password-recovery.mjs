@@ -47,6 +47,7 @@ assert.match(recoveryEdge, /auth\.verifyOtp/, "A recovery OTP must be verified b
 assert.match(recoveryEdge, /type: "recovery"/, "Recovery-template OTP must use Supabase Auth recovery verification type");
 assert.match(recoveryEdge, /auth\.admin\.updateUserById/, "Password update must target the original account UUID");
 assert.match(recoveryEdge, /verified\.user\.id !== profile\.id/, "OTP verification must prove the original Auth identity");
+assert.match(recoveryEdge, /!recoveryRequest \|\| recoveryRequest\.mail_auth_user_id !== profile\.id/, "OTP completion must require a live request bound to the original Auth UUID");
 assert.match(recoveryEdge, /userData\.user\.id !== request\.profile_id/, "Recovery link must prove ownership of the original Auth UUID");
 assert.match(recoveryEdge, /RECOVERY_EMAIL_UNAVAILABLE/, "Failed email initiation must no longer be reported as sent");
 assert.match(recoveryEdge, /RECOVERY_EMAIL_PROVIDER_NOT_CONFIGURED/, "Missing SMTP credentials must be detected explicitly");
