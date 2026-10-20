@@ -33,15 +33,24 @@ console.log("PASS — username-or-email login is server-resolved, password verif
 
 assert.match(recoveryEdge, /mode === "request"/, "Recovery request route must exist");
 assert.match(recoveryEdge, /redirectTo: redirect\.toString\(\)/, "Recovery redirect must route back to the secure password-reset UI");
-assert.match(recoveryEdge, /publicAuth\.auth\.resetPasswordForEmail/, "Recovery must use Supabase's dedicated Recovery email template, matching BattleCruiser");
-assert.match(recoveryEdge, /admin\.auth\.admin\.createUser/, "A mailbox-only Auth identity must be created when contact email differs from the app's internal Auth email");
-assert.doesNotMatch(recoveryEdge, /publicAuth\.auth\.signInWithOtp/, "Recovery must not use the Magic Link/OTP request path");
+assert.match(recoveryEdge, /admin\.auth\.admin\.generateLink/, "Recovery must generate a Supabase Recovery link for the original Auth identity");
+assert.match(recoveryEdge, /sendRecoveryEmail\(profile\.correo, actionLink, emailOtp\)/, "Recovery link and OTP must be sent to the profile contact email using SMTP");
+assert.match(recoveryEdge, /SMTP_USERNAME/);
+assert.match(recoveryEdge, /SMTP_PASSWORD/);
+assert.doesNotMatch(recoveryEdge, /admin\.auth\.admin\.createUser/, "Recovery must not create duplicate Auth identities for the contact email");
+assert.doesNotMatch(recoveryEdge, /findAuthUserByEmail/, "Recovery must not look up OAuth contact mail as a primary Auth email");
+assert.doesNotMatch(recoveryEdge, /resetPasswordForEmail/, "Recovery mail must be sent by the configured SMTP provider");
+assert.doesNotMatch(recoveryEdge, /publicAuth\.auth\.signInWithOtp/, "Recovery must not use the old request path");
 assert.match(recoveryEdge, /mode === "complete-link"/, "Recovery link completion must exist");
 assert.match(recoveryEdge, /mode === "complete"/, "Recovery OTP completion must remain supported");
 assert.match(recoveryEdge, /auth\.verifyOtp/, "A recovery OTP must be verified before password update");
 assert.match(recoveryEdge, /type: "recovery"/, "Recovery-template OTP must use Supabase Auth recovery verification type");
 assert.match(recoveryEdge, /auth\.admin\.updateUserById/, "Password update must target the original account UUID");
+assert.match(recoveryEdge, /verified\.user\.id !== profile\.id/, "OTP verification must prove the original Auth identity");
+assert.match(recoveryEdge, /userData\.user\.id !== request\.profile_id/, "Recovery link must prove ownership of the original Auth UUID");
 assert.match(recoveryEdge, /RECOVERY_EMAIL_UNAVAILABLE/, "Failed email initiation must no longer be reported as sent");
+assert.match(recoveryEdge, /RECOVERY_EMAIL_PROVIDER_NOT_CONFIGURED/, "Missing SMTP credentials must be detected explicitly");
+assert.match(recoveryEdge, /RECOVERY_SMTP_CONFIGURATION_INVALID/, "Invalid SMTP settings must be detected explicitly");
 assert.match(recoveryEdge, /data\.estado !== "activo"/, "Inactive and archived profiles must not be recoverable");
 assert.ok(recoveryEdge.includes(String.raw`@cuevacoin\.local`), "Internal fake Auth addresses cannot be mail destinations");
 assert.match(recoveryMigration, /CREATE TABLE IF NOT EXISTS public\.password_recovery_requests/);
@@ -50,6 +59,8 @@ assert.match(recoveryMigration, /REVOKE ALL ON TABLE public\.password_recovery_r
 assert.match(recoveryUi, /cc_recovery/);
 assert.match(recoveryUi, /complete-link/);
 assert.match(recoveryUi, /El servicio de correo no confirmó el envío/);
+assert.match(recoveryUi, /Falta configurar el remitente SMTP/);
+assert.match(recoveryUi, /SMTP_USERNAME/);
 assert.match(session, /cc_recovery/);
 assert.match(profiles, /obtenerMiPerfilApp\(usuarioAuth = null\)/);
 assert.match(app, /esFalloDeConexionConfirmado/);
