@@ -127,7 +127,8 @@ assert.ok(index.includes('option value="descuento">Descuentos del admin</option>
 assert.ok(utils.includes("return identificador.includes('@')"), 'Login conversion must pass through an explicitly supplied email address');
 assert.ok(utils.includes('cuevacoin.local'), 'Login must preserve internal username-to-email mapping');
 assert.ok(index.includes('placeholder="Usuario o correo electrónico"'), 'Login must communicate that email is accepted');
-assert.ok(index.includes('Si tu cuenta se creó con Google'), 'Login must explain the Google sign-in route');
+assert.ok(index.includes('onclick="iniciarSesionConGoogle()"'), 'Login must retain the explicit Google sign-in action');
+assert.ok(index.includes('onclick="crearCuentaConGoogle()"'), 'Login must retain the Google account creation action');
 assert.ok(loginHardening.includes('utiliza el botón de Google'), 'Invalid-password guidance must direct Google-created users to OAuth');
 console.log('PASS — login accepts internal usernames and explicit emails and explains the Google OAuth path');
 
