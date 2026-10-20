@@ -38,7 +38,7 @@ assert.match(rollbackTest, /STEP10_FORCE_ATOMIC_ROLLBACK_TEST/);
 console.log('PASS — transactional test covers replay, authorization, and rollback without persistence');
 
 const inactiveFinanceMigration = readFileSync(
-  'supabase/migrations/20261020171600_block_admin_finance_on_inactive_profiles.sql',
+  'supabase/migrations/20261020172209_block_admin_finance_on_inactive_profiles.sql',
   'utf8',
 );
 assert.match(
