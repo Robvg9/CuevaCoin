@@ -1264,16 +1264,23 @@
             transform: translateY(0);
         }
 
-        /* Login Screen */
+        /* Login Screen — safe-area aware, scrollable on short/compact viewports. */
         .login-container {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            max-width: 400px;
-            width: 90%;
+            width: min(92vw, 400px);
+            max-width: calc(100vw - 16px);
+            max-height: calc(100vh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom)));
+            max-height: calc(100dvh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom)));
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            box-sizing: border-box;
             background: var(--card-bg);
-            padding: 40px;
+            padding: clamp(14px, 4vw, 26px);
             border-radius: 12px;
             box-shadow: var(--shadow-lg);
             text-align: center;
@@ -1281,25 +1288,29 @@
             z-index: 50;
         }
 
-        .login-container.hidden {
-            display: none;
-        }
+        .login-container *,
+        .login-container *::before,
+        .login-container *::after { box-sizing: border-box; }
+
+        .login-container.hidden { display: none; }
 
         .login-container h2 {
-            margin-bottom: 10px;
+            margin: 0 0 6px;
             color: var(--secondary-color);
-            font-size: 28px;
+            font-size: clamp(22px, 5vw, 28px);
         }
 
         .login-container p {
-            margin-bottom: 20px;
+            margin: 0 0 12px;
             color: var(--text-color);
         }
 
         .login-container input {
+            display: block;
             width: 100%;
-            padding: 12px;
-            margin: 10px 0;
+            min-width: 0;
+            padding: 10px 12px;
+            margin: 6px 0;
             border: 1px solid var(--border-color);
             border-radius: 8px;
             font-size: 16px;
@@ -1310,8 +1321,32 @@
 
         .login-container button {
             width: 100%;
-            padding: 12px;
-            margin-top: 10px;
+            padding: 10px 12px;
+            margin-top: 7px;
+        }
+
+        #login-screen { padding: clamp(12px, 4vw, 24px); }
+        #login-screen > p:first-of-type { font-size: 13px; margin-bottom: 10px; }
+        #login-screen #login-form input { margin: 5px 0; }
+        #login-screen #btn-olvido-contrasena { margin-top: 6px; }
+        #login-screen #recuperar-contrasena-panel { margin-top: 8px !important; padding: 10px !important; }
+        #login-screen #recuperar-contrasena-panel p { margin-bottom: 8px; }
+        #login-screen #app-version-text { margin: 8px 0 0 !important; }
+        #login-screen #btn-limpiar-cache { margin: 3px auto 0 !important; padding: 3px !important; }
+
+        @media (max-width: 420px), (max-height: 650px) {
+            .login-container {
+                width: calc(100vw - 16px);
+                padding: 12px;
+                border-radius: 10px;
+                max-height: calc(100vh - max(8px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
+                max-height: calc(100dvh - max(8px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
+            }
+            #login-screen h2 { font-size: 23px; margin-bottom: 3px; }
+            #login-screen > p:first-of-type { font-size: 12px; margin-bottom: 8px; }
+            #login-screen button { padding: 9px 10px; margin-top: 5px; }
+            #login-screen .btn-google { margin-top: 5px !important; }
+            #login-screen #app-version-text { font-size: 9px !important; }
         }
 
         /* Dashboard Stats */
@@ -3068,8 +3103,10 @@
                 <button type="submit" id="btn-enviar-codigo-recuperacion" class="btn btn-primary" style="width:100%;">Enviar código de recuperación</button>
             </form>
             <form id="form-confirmar-recuperacion" class="hidden" style="margin-top:12px;">
-                <label for="recuperar-codigo" style="display:block; margin-top:8px;">Código de seis dígitos</label>
-                <input type="text" id="recuperar-codigo" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="Código recibido por correo" required>
+                <div id="recuperar-codigo-wrap">
+                    <label for="recuperar-codigo" style="display:block; margin-top:8px;">Código de seis dígitos (si el correo incluye uno)</label>
+                    <input type="text" id="recuperar-codigo" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="Código recibido por correo" required>
+                </div>
                 <label for="recuperar-nueva-contrasena" style="display:block; margin-top:8px;">Nueva contraseña</label>
                 <input type="password" id="recuperar-nueva-contrasena" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Mínimo 8 caracteres" required>
                 <label for="recuperar-confirmar-contrasena" style="display:block; margin-top:8px;">Confirmar nueva contraseña</label>
@@ -3079,12 +3116,10 @@
             <p id="recuperar-contrasena-mensaje" aria-live="polite" style="font-size:13px; line-height:1.5; margin:10px 0;"></p>
             <button type="button" id="btn-cancelar-recuperacion" class="btn btn-secondary" style="width:100%;">Volver al inicio de sesión</button>
         </div>
-        <p style="font-size: 12px; margin: 8px 0; opacity: .85;">Usa tu usuario interno o el correo con el que se registró tu acceso. Si tu cuenta se creó con Google, entra con el botón de Google.</p>
         <!-- F-GMAIL: login alternativo con Google real (signInWithOAuth).
              Sirve para cuentas que ya vincularon su Google - no crea
              cuentas nuevas por sí solo, ver iniciarSesionConGoogle(). -->
         <button type="button" class="btn btn-secondary btn-google" style="width: 100%; margin-top: 10px;" onclick="iniciarSesionConGoogle()"><svg width="18" height="18" viewBox="0 0 18 18" style="vertical-align:middle;margin-right:8px;"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.68 9c0-.593.102-1.17.284-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.581C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.167 6.656 3.58 9 3.58z"/></svg>Iniciar sesión con Google</button>
-        <p style="font-size: 14px; margin-top: 16px;">¿Quieres crear una cuenta nueva?</p>
         <!-- CREACIÓN DE CUENTA SOLO CON GOOGLE (2026-08-07): antes existía
              también un botón "Crear cuenta" con usuario/contraseña
              (abrirCrearCuenta(), modal crear-cuenta-modal + Edge Function
@@ -3096,12 +3131,6 @@
              HTML/JS de ese flujo viejo se quitó por completo, no solo el
              botón - no queda ningún otro punto de entrada a él. -->
         <button type="button" class="btn btn-secondary btn-google" style="width: 100%; margin-top: 6px;" onclick="crearCuentaConGoogle()"><svg width="18" height="18" viewBox="0 0 18 18" style="vertical-align:middle;margin-right:8px;"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.68 9c0-.593.102-1.17.284-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.581C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.167 6.656 3.58 9 3.58z"/></svg>Crear cuenta con Google</button>
-        <p style="font-size: 11px; opacity: 0.5; margin-top: 20px;">Design By Robert</p>
-        <p style="font-size: 11px; margin-top: 4px;">
-            <a href="#" onclick="openModal('promo-robert-modal'); return false;" style="color: var(--primary-color); text-decoration: underline;">
-                Si usted desea tener su propia Aplicación/Sitio Web, contáctenos
-            </a>
-        </p>
         <!-- Número de versión visible en el login. FIX (v74, 2026-08-07):
              antes era texto fijo escrito a mano y se desincronizaba del
              CACHE_NAME real (quedó en V.67 mientras ya íbamos en v73).
@@ -4603,7 +4632,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.142';
+                const VERSION_FALLBACK = 'V.143';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -4809,9 +4838,9 @@
     <script type="module" src="js/core/utils.js"></script>
     <script type="module" src="js/data/supabase.js"></script>
     <script type="module" src="js/core/state.js"></script>
-    <script type="module" src="js/data/profiles.js?v=142"></script>
+    <script type="module" src="js/data/profiles.js?v=143"></script>
     <script type="module" src="js/data/notifications.js"></script>
-    <script type="module" src="js/core/app.js?v=142"></script>
+    <script type="module" src="js/core/app.js?v=143"></script>
     <!-- Fase 3 / Oleada 2: UI general (ES modules, diferidos, tras core+data) -->
     <script type="module" src="js/ui/modals.js"></script>
     <script type="module" src="js/ui/sidebar.js"></script>
@@ -4830,8 +4859,8 @@
     <script type="module" src="js/ui/notif-panel.js"></script>
     <script type="module" src="js/ui/push.js"></script>
     <script type="module" src="js/auth/google-ui.js"></script>
-    <script defer src="js/auth/login-hardening.js?v=141"></script>
-    <script defer src="js/auth/password-recovery.js?v=142"></script>
+    <script defer src="js/auth/login-hardening.js?v=143"></script>
+    <script defer src="js/auth/password-recovery.js?v=143"></script>
     <!-- Fase 2 / Oleada 4: sesión, anuncios, bonos info, sugerencias user, config local -->
     <script type="module" src="js/session/logout.js"></script>
     <script type="module" src="js/ui/anuncios.js"></script>
@@ -4900,7 +4929,7 @@
     <!-- Fase 3 / Oleada 9 — orquestación (última) -->
     <script type="module" src="js/finance/orchestration/show-admin-panel.js"></script>
     <script type="module" src="js/finance/orchestration/show-user-dashboard.js"></script>
-    <script type="module" src="js/finance/orchestration/procesar-sesion.js?v=142"></script>
+    <script type="module" src="js/finance/orchestration/procesar-sesion.js?v=143"></script>
     <!-- Fase 4 — helpers residuales seguros (chat DOM, stats range, auditoría categoría) -->
     <script type="module" src="js/chat/chat-dom.js"></script>
     <script type="module" src="js/admin/finance/stats-helpers.js"></script>
