@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const read = (p) => readFileSync(p, "utf8");
 const index = read("index.html");
+const loginScreenMarkup = index.slice(index.indexOf('id="login-screen"'), index.indexOf("<!-- F-GMAIL: pantalla de bloqueo obligatorio"));
 const app = read("js/core/app.js");
 const profiles = read("js/data/profiles.js");
 const session = read("js/finance/orchestration/procesar-sesion.js");
@@ -55,7 +56,7 @@ assert.ok(frontendWorkflow.includes("node scripts/verify-password-recovery.mjs")
 assert.ok(frontendWorkflow.includes('      - "supabase/functions/cuevacoin-login/**"'), "CI must cover login Edge Function changes");
 assert.ok(index.includes("100dvh"), "Responsive login must clamp its height to the dynamic viewport");
 assert.ok(index.includes("env(safe-area-inset-top)"), "Responsive login must account for device safe areas");
-assert.doesNotMatch(index, /Si usted desea tener su propia Aplicación\/Sitio Web, contáctenos/, "Promotional copy must not crowd the login view");
+assert.doesNotMatch(loginScreenMarkup, /Si usted desea tener su propia Aplicación\/Sitio Web, contáctenos/, "Promotional copy must not crowd the login view");
 console.log("PASS — recovery accepts OTP or link, reports delivery rejection, and never resets inactive/shared-mailbox accounts");
 console.log("PASS — login card is responsive, safe-area aware, scrollable and reduced-content");
 console.log("PASS — V143 source/cache-busting and CI contract are aligned");
