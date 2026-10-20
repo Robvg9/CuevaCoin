@@ -2633,9 +2633,12 @@
         // pase lo que pase (incluido que se cuelgue sin fallar), como último
         // recurso se entra con el perfil cacheado si hay uno (modo offline)
         // o se manda al login - nunca se deja el spinner girando sin salida.
-        conTimeoutArranque(procesarSesionYMostrarPantalla(), 12000).catch((err) => {
+        conTimeoutArranque(procesarSesionYMostrarPantalla(), 12000).catch(async (err) => {
             console.error('Error inesperado (o timeout) al iniciar la app:', err);
-            if (!(esErrorDeConexion(err) && entrarModoOfflineConPerfilCacheado())) {
+            const offlineConfirmado = typeof window.esFalloDeConexionConfirmado === 'function'
+                ? await window.esFalloDeConexionConfirmado(err)
+                : navigator.onLine === false;
+            if (!(offlineConfirmado && entrarModoOfflineConPerfilCacheado())) {
                 showLoginScreen();
             }
         });
