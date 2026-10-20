@@ -4,7 +4,7 @@
  * Solo lista/mapeo; no modifica saldo ni aprueba retiros.
  */
 
-export async function obtenerTrabajadoras() {
+export async function obtenerTrabajadoras({ incluirArchivadas = false } = {}) {
     const client = (typeof window !== 'undefined') ? window.supabaseClient : null;
     const map = (typeof window !== 'undefined' && window.perfilAUsuarioApp)
         ? window.perfilAUsuarioApp : (p) => p;
@@ -18,7 +18,8 @@ export async function obtenerTrabajadoras() {
         console.error(error);
         return [];
     }
-    return data.map(map);
+    const visibles = incluirArchivadas ? data : data.filter(perfil => perfil.estado !== 'archivado');
+    return visibles.map(map);
 }
 
 export function debounceFiltroUsuariosAdmin() {
