@@ -57,12 +57,19 @@ export function campoVisiblePorPrivacidad(perfilFila, campo) {
 // ============================================
 // PERFIL PROPIO (sesión actual)
 // ============================================
-export async function obtenerMiPerfilApp() {
+export async function obtenerMiPerfilApp(usuarioAuth = null) {
     const client = (typeof window !== 'undefined' && window.supabaseClient) ? window.supabaseClient : null;
     if (!client) throw new Error('supabaseClient no disponible');
 
-    const { data: { user } } = await client.auth.getUser();
-    if (!user) return null;
+    // During session bootstrap, reuse the user already returned by getSession().
+    // The following perfiles query is still authorized and validated by Supabase/RLS.
+    let user = usuarioAuth;
+    if (!user) {
+        const { data: { user: authUser }, error: authError } = await client.auth.getUser();
+        if (authError) throw authError;
+        user = authUser;
+    }
+    if (!user || !user.id) return null;
     const { data, error } = await client
         .from('perfiles')
         .select('*')
