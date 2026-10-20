@@ -4632,7 +4632,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.143';
+                const VERSION_FALLBACK = 'V.144';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -4840,7 +4840,7 @@
     <script type="module" src="js/core/state.js"></script>
     <script type="module" src="js/data/profiles.js?v=143"></script>
     <script type="module" src="js/data/notifications.js"></script>
-    <script type="module" src="js/core/app.js?v=143"></script>
+    <script type="module" src="js/core/app.js?v=144"></script>
     <!-- Fase 3 / Oleada 2: UI general (ES modules, diferidos, tras core+data) -->
     <script type="module" src="js/ui/modals.js"></script>
     <script type="module" src="js/ui/sidebar.js"></script>
@@ -4860,7 +4860,7 @@
     <script type="module" src="js/ui/push.js"></script>
     <script type="module" src="js/auth/google-ui.js"></script>
     <script defer src="js/auth/login-hardening.js?v=143"></script>
-    <script defer src="js/auth/password-recovery.js?v=143"></script>
+    <script defer src="js/auth/password-recovery.js?v=144"></script>
     <!-- Fase 2 / Oleada 4: sesión, anuncios, bonos info, sugerencias user, config local -->
     <script type="module" src="js/session/logout.js"></script>
     <script type="module" src="js/ui/anuncios.js"></script>
