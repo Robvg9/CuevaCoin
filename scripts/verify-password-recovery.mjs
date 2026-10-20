@@ -38,7 +38,7 @@ assert.match(recoveryEdge, /auth\.verifyOtp/, "OTP must be consumed before passw
 assert.match(recoveryEdge, /auth\.admin\.updateUserById/, "Password update must target the original account UUID");
 assert.match(recoveryEdge, /RECOVERY_EMAIL_UNAVAILABLE/, "Failed email initiation must no longer be reported as sent");
 assert.match(recoveryEdge, /data\.estado !== "activo"/, "Inactive and archived profiles must not be recoverable");
-assert.match(recoveryEdge, /@cuevacoin\.local/, "Internal fake Auth addresses cannot be mail destinations");
+assert.ok(recoveryEdge.includes(String.raw`@cuevacoin\.local`), "Internal fake Auth addresses cannot be mail destinations");
 assert.match(recoveryMigration, /CREATE TABLE IF NOT EXISTS public\.password_recovery_requests/);
 assert.match(recoveryMigration, /ENABLE ROW LEVEL SECURITY/);
 assert.match(recoveryMigration, /REVOKE ALL ON TABLE public\.password_recovery_requests FROM PUBLIC, anon, authenticated/);
