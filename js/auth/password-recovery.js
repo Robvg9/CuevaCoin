@@ -47,6 +47,7 @@
 
     openButton.addEventListener("click", () => {
       panel.classList.remove("hidden");
+      requestForm.classList.remove("hidden");
       setMessage("");
       const requestButton = byId("btn-enviar-codigo-recuperacion");
       const completeButton = byId("btn-confirmar-recuperacion");
