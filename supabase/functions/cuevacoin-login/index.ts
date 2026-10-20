@@ -77,7 +77,7 @@ Deno.serve(async (req: Request) => {
   const options = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
   const admin = createClient(url, serviceRole, options);
   const auth = createClient(url, anonKey, options);
-  const dummyEmail = "no-such-cuevacoin-user@cuevacoin.local";
+  const dummyEmail = "__rejected_login__@invalid.invalid";
 
   try {
     // Public login identifier is either perfiles.usuario or the contact email in perfiles.correo.
