@@ -41,6 +41,9 @@ const frontendRequiredPaths = [
   'js/core/app.js',
   'js/core/utils.js',
   'js/auth/login-hardening.js',
+  'js/auth/password-recovery.js',
+  'supabase/functions/recuperar-contrasena/**',
+  'scripts/verify-password-recovery.mjs',
   'js/finance/history/historial.js',
   'js/finance/queue/offline-queue.js',
   'js/admin/finance/historial-trabajadora.js',
@@ -96,10 +99,10 @@ assert.ok(history.includes("const categoria = categoriaTransaccion(t);"),
   'History rendering must use the same locally scoped category classifier');
 console.log('PASS — worker history embeds profiles through valid foreign-key relations and uses its scoped classifier');
 
-assert.match(sw, /cuevacoin-shell-v141/);
+assert.match(sw, /cuevacoin-shell-v142/);
 assert.doesNotMatch(sw, /cuevacoin-shell-v140/);
-assert.match(app, /VERSION_FALLBACK = 'V\.141'/);
-assert.match(index, /const VERSION_FALLBACK = 'V\.141'/);
+assert.match(app, /VERSION_FALLBACK = 'V\.142'/);
+assert.match(index, /const VERSION_FALLBACK = 'V\.142'/);
 assert.ok(index.includes('src="js/finance/history/historial.js?v=141"'), 'Worker history module must use a versioned URL to bypass stale edge/browser cache');
 assert.ok(index.includes('src="js/admin/finance/historial-trabajadora.js?v=141"'), 'Admin worker-history module must use a versioned URL');
 assert.ok(index.includes('id="admin-worker-history-modal"'), 'Admin worker-history modal must exist');
