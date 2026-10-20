@@ -32,10 +32,14 @@ assert.match(loginEdge, /Origin/, "Login must enforce its PWA origin");
 console.log("PASS — username-or-email login is server-resolved, password verified by Auth, session returned without exposing the mapping");
 
 assert.match(recoveryEdge, /mode === "request"/, "Recovery request route must exist");
-assert.match(recoveryEdge, /emailRedirectTo: redirect\.toString\(\)/, "Recovery supports direct secure email links");
+assert.match(recoveryEdge, /redirectTo: redirect\.toString\(\)/, "Recovery redirect must route back to the secure password-reset UI");
+assert.match(recoveryEdge, /publicAuth\.auth\.resetPasswordForEmail/, "Recovery must use Supabase's dedicated Recovery email template, matching BattleCruiser");
+assert.match(recoveryEdge, /admin\.auth\.admin\.createUser/, "A mailbox-only Auth identity must be created when contact email differs from the app's internal Auth email");
+assert.doesNotMatch(recoveryEdge, /publicAuth\.auth\.signInWithOtp/, "Recovery must not use the Magic Link/OTP request path");
 assert.match(recoveryEdge, /mode === "complete-link"/, "Recovery link completion must exist");
 assert.match(recoveryEdge, /mode === "complete"/, "Recovery OTP completion must remain supported");
-assert.match(recoveryEdge, /auth\.verifyOtp/, "OTP must be consumed before password update");
+assert.match(recoveryEdge, /auth\.verifyOtp/, "A recovery OTP must be verified before password update");
+assert.match(recoveryEdge, /type: "recovery"/, "Recovery-template OTP must use Supabase Auth recovery verification type");
 assert.match(recoveryEdge, /auth\.admin\.updateUserById/, "Password update must target the original account UUID");
 assert.match(recoveryEdge, /RECOVERY_EMAIL_UNAVAILABLE/, "Failed email initiation must no longer be reported as sent");
 assert.match(recoveryEdge, /data\.estado !== "activo"/, "Inactive and archived profiles must not be recoverable");
