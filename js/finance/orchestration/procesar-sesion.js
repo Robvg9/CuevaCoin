@@ -9,6 +9,18 @@ export async function procesarSesionYMostrarPantalla() {
         if (typeof window.ocultarSplashArranque === 'function') window.ocultarSplashArranque();
     };
 
+    // Recovery magic links create an Auth session for the verified contact mailbox.
+    // Never route that temporary session through the normal profile/dashboard bootstrap.
+    const recoveryParams = new URLSearchParams(window.location.search || '');
+    if (recoveryParams.get('cc_recovery') === '1') {
+        limpiarOverlays();
+        if (typeof window.showLoginScreen === 'function') window.showLoginScreen();
+        if (typeof window.abrirRecuperacionPorEnlace === 'function') {
+            window.abrirRecuperacionPorEnlace();
+        }
+        return;
+    }
+
     if (!navigator.onLine) {
         const haySesionGuardadaEnDispositivo = Object.keys(localStorage)
             .some((clave) => /^sb-.*-auth-token$/.test(clave));
