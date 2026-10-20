@@ -103,7 +103,7 @@ console.log('PASS — worker history embeds profiles through valid foreign-key r
 assert.match(sw, /cuevacoin-shell-v143/);
 assert.doesNotMatch(sw, /cuevacoin-shell-v140/);
 assert.match(app, /VERSION_FALLBACK = 'V\.143'/);
-assert.match(index, /const VERSION_FALLBACK = 'V\.142'/);
+assert.match(index, /const VERSION_FALLBACK = 'V\.143'/);
 assert.ok(index.includes('src="js/finance/history/historial.js?v=141"'), 'Worker history module must use a versioned URL to bypass stale edge/browser cache');
 assert.ok(index.includes('src="js/admin/finance/historial-trabajadora.js?v=141"'), 'Admin worker-history module must use a versioned URL');
 assert.ok(index.includes('id="admin-worker-history-modal"'), 'Admin worker-history modal must exist');
