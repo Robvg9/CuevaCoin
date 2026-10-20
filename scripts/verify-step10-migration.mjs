@@ -43,17 +43,17 @@ const inactiveFinanceMigration = readFileSync(
 );
 assert.match(
   inactiveFinanceMigration,
-  /IF v_target\\.estado IS DISTINCT FROM 'activo' THEN[\\s\\S]*?Cuenta destino no activa/,
+  /IF v_target\.estado IS DISTINCT FROM 'activo' THEN[\s\S]*?Cuenta destino no activa/,
   'Atomic manual balance adjustment must reject inactive and archived target profiles',
 );
 assert.match(
   inactiveFinanceMigration,
-  /SELECT saldo, estado[\\s\\S]*?IF v_estado IS DISTINCT FROM 'activo' THEN[\\s\\S]*?No se puede pagar a una cuenta no activa/,
+  /SELECT saldo, estado[\s\S]*?IF v_estado IS DISTINCT FROM 'activo' THEN[\s\S]*?No se puede pagar a una cuenta no activa/,
   'Batch salary/bonus payouts must reject inactive and archived target profiles',
 );
 assert.match(
   rollbackTest,
-  /STEP10_ARCHIVED_ADJUSTMENT_TEST[\\s\\S]*?STEP10_ARCHIVED_PAYOUT_TEST/,
+  /STEP10_ARCHIVED_ADJUSTMENT_TEST[\s\S]*?STEP10_ARCHIVED_PAYOUT_TEST/,
   'Transactional live test must exercise both archived-account guards',
 );
 console.log('PASS — admin adjustment and batch payout deny archived/inactive accounts; rollback test covers both paths');
