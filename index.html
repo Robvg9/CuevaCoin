@@ -3099,14 +3099,10 @@
         <button type="button" id="btn-olvido-contrasena" class="btn btn-secondary" style="width:100%; margin-top:8px;">¿Olvidaste tu contraseña?</button>
         <div id="recuperar-contrasena-panel" class="hidden" style="margin-top:12px; padding:12px; border:1px solid var(--border-color, #ddd); border-radius:12px; text-align:left;">
             <form id="form-solicitar-recuperacion">
-                <p style="font-size:13px; line-height:1.5;">Recupera tu acceso con un código enviado al correo asociado a tu cuenta activa. El campo Usuario o correo de arriba indica qué cuenta quieres recuperar.</p>
-                <button type="submit" id="btn-enviar-codigo-recuperacion" class="btn btn-primary" style="width:100%;">Enviar código de recuperación</button>
+                <p style="font-size:13px; line-height:1.5;">Recibirás un correo con el botón seguro «Restablecer contraseña». El campo Usuario o correo de arriba indica qué cuenta quieres recuperar.</p>
+                <button type="submit" id="btn-enviar-enlace-recuperacion" class="btn btn-primary" style="width:100%;">Enviar correo de restablecimiento</button>
             </form>
             <form id="form-confirmar-recuperacion" class="hidden" style="margin-top:12px;">
-                <div id="recuperar-codigo-wrap">
-                    <label for="recuperar-codigo" style="display:block; margin-top:8px;">Código de seis dígitos (si el correo incluye uno)</label>
-                    <input type="text" id="recuperar-codigo" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="Código recibido por correo" required>
-                </div>
                 <label for="recuperar-nueva-contrasena" style="display:block; margin-top:8px;">Nueva contraseña</label>
                 <input type="password" id="recuperar-nueva-contrasena" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Mínimo 8 caracteres" required>
                 <label for="recuperar-confirmar-contrasena" style="display:block; margin-top:8px;">Confirmar nueva contraseña</label>
@@ -4632,7 +4628,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.144';
+                const VERSION_FALLBACK = 'V.145';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -4860,7 +4856,7 @@
     <script type="module" src="js/ui/push.js"></script>
     <script type="module" src="js/auth/google-ui.js"></script>
     <script defer src="js/auth/login-hardening.js?v=143"></script>
-    <script defer src="js/auth/password-recovery.js?v=144"></script>
+    <script defer src="js/auth/password-recovery.js?v=145"></script>
     <!-- Fase 2 / Oleada 4: sesión, anuncios, bonos info, sugerencias user, config local -->
     <script type="module" src="js/session/logout.js"></script>
     <script type="module" src="js/ui/anuncios.js"></script>

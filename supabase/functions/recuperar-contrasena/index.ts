@@ -84,15 +84,15 @@ function createRecoveryMailTransport() {
   return { transport, from };
 }
 
-async function sendRecoveryEmail(to: string, actionLink: string, otp: string) {
+async function sendRecoveryEmail(to: string, actionLink: string) {
   const { transport, from } = createRecoveryMailTransport();
   const safeLink = escapeHtml(actionLink);
-  const safeOtp = escapeHtml(otp);
   const text = [
-    "Se solicitó restablecer la contraseña de CuevaCoin.", "",
-    "Abre este enlace seguro para elegir una contraseña nueva:", actionLink, "",
-    `También puedes introducir este código de recuperación: ${otp}`,
-    "El enlace y el código son de un solo uso y caducan en 15 minutos.", "",
+    "Se solicitó restablecer la contraseña de CuevaCoin.",
+    "",
+    "Abre la versión HTML de este correo y pulsa el botón «Restablecer contraseña».",
+    "El botón caduca en 15 minutos y solo puede utilizarse una vez.",
+    "",
     "Si no solicitaste esta recuperación, ignora este mensaje.",
   ].join("\n");
   const html = `<!doctype html>
@@ -100,15 +100,11 @@ async function sendRecoveryEmail(to: string, actionLink: string, otp: string) {
 <h2>Recuperación de contraseña — CuevaCoin</h2>
 <p>Se solicitó restablecer la contraseña de tu cuenta.</p>
 <p><a href="${safeLink}" style="display:inline-block;padding:12px 18px;background:#2457c5;color:#fff;text-decoration:none;border-radius:6px">Restablecer contraseña</a></p>
-<p>Si el botón no funciona, copia este enlace en tu navegador:</p>
-<p style="overflow-wrap:anywhere"><a href="${safeLink}">${safeLink}</a></p>
-<p>También puedes escribir este código de recuperación:</p>
-<p style="font-size:24px;font-weight:bold;letter-spacing:4px">${safeOtp}</p>
-<p>El enlace y el código son de un solo uso y caducan en 15 minutos.</p>
+<p>El botón es de un solo uso y caduca en 15 minutos.</p>
 <p>Si no solicitaste esta recuperación, ignora este mensaje.</p>
 </body></html>`;
   try {
-    await transport.sendMail({ from, to, subject: "Recuperación de contraseña — CuevaCoin", text, html });
+    await transport.sendMail({ from, to, subject: "Restablecer contraseña — CuevaCoin", text, html });
   } finally {
     transport.close();
   }
@@ -145,12 +141,11 @@ Deno.serve(async (req: Request) => {
   const contentLength = Number(req.headers.get("content-length") || 0);
   if (contentLength > 4096) return reply({ error: "Solicitud inválida." }, 400);
 
-  let body: { identifier?: unknown; mode?: unknown; code?: unknown; newPassword?: unknown; rid?: unknown; token?: unknown };
+  let body: { identifier?: unknown; mode?: unknown; newPassword?: unknown; rid?: unknown; token?: unknown };
   try { body = await req.json(); } catch { return reply({ error: "Solicitud inválida." }, 400); }
 
   const mode = typeof body.mode === "string" ? body.mode : "";
   const identifier = typeof body.identifier === "string" ? body.identifier.trim() : "";
-  const code = typeof body.code === "string" ? body.code.trim() : "";
   const newPassword = typeof body.newPassword === "string" ? body.newPassword : "";
   if (newPassword && (newPassword.length < 8 || newPassword.length > 128)) {
     return reply({ error: "La nueva contraseña debe tener entre 8 y 128 caracteres." }, 400);
@@ -164,7 +159,6 @@ Deno.serve(async (req: Request) => {
   }
   const options = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
   const admin = createClient(url, serviceRole, options);
-  const publicAuth = createClient(url, anonKey, options);
 
   try {
     // Request may be initiated with username or profile contact email.
@@ -233,8 +227,7 @@ Deno.serve(async (req: Request) => {
         options: { redirectTo: redirect.toString() },
       });
       const actionLink = generatedLink?.properties?.action_link || "";
-      const emailOtp = generatedLink?.properties?.email_otp || "";
-      if (generateLinkError || !actionLink || !emailOtp) {
+      if (generateLinkError || !actionLink) {
         await admin.from("password_recovery_requests")
           .update({ consumed_at: new Date().toISOString() }).eq("id", rid);
         console.error("[recuperar-contrasena] Recovery link generation failed", {
@@ -245,7 +238,7 @@ Deno.serve(async (req: Request) => {
       }
 
       try {
-        await sendRecoveryEmail(profile.correo, actionLink, emailOtp);
+        await sendRecoveryEmail(profile.correo, actionLink);
       } catch (sendError) {
         await admin.from("password_recovery_requests")
           .update({ consumed_at: new Date().toISOString() }).eq("id", rid);
@@ -266,42 +259,6 @@ Deno.serve(async (req: Request) => {
         return reply({ error: "RECOVERY_EMAIL_UNAVAILABLE" }, 502);
       }
       return reply({ accepted: true }, 202);
-    }
-
-    if (mode === "complete") {
-      if (!identifier || identifier.length > 120 || !/^\d{6}$/.test(code) ||
-          newPassword.length < 8 || newPassword.length > 128) return invalidRecovery();
-      const profile = await findActiveProfile(admin, identifier);
-      if (!profile) return invalidRecovery();
-
-      const { data: originalAuth, error: originalAuthError } = await admin.auth.admin.getUserById(profile.id);
-      const originalAuthEmail = originalAuth?.user?.email?.trim();
-      if (originalAuthError || !originalAuthEmail) return invalidRecovery();
-
-      const { data: verified, error: verifyError } = await publicAuth.auth.verifyOtp({
-        email: originalAuthEmail, token: code, type: "recovery",
-      });
-      if (verifyError || !verified.user || verified.user.id !== profile.id) {
-        return invalidRecovery();
-      }
-      const { data: recoveryRequest } = await admin.from("password_recovery_requests")
-        .select("id, mail_auth_user_id, shadow_user_created_by_recovery")
-        .eq("profile_id", profile.id).is("consumed_at", null)
-        .gt("expires_at", new Date().toISOString())
-        .order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (!recoveryRequest || recoveryRequest.mail_auth_user_id !== profile.id ||
-          recoveryRequest.mail_auth_user_id !== verified.user.id) {
-        return invalidRecovery();
-      }
-      const { error: updateError } = await admin.auth.admin.updateUserById(profile.id, { password: newPassword });
-      if (updateError) {
-        console.error("[recuperar-contrasena] password update failed");
-        return reply({ error: "RECOVERY_SERVICE_UNAVAILABLE" }, 500);
-      }
-      await admin.from("password_recovery_requests")
-        .update({ consumed_at: new Date().toISOString() })
-        .eq("profile_id", profile.id).is("consumed_at", null);
-      return reply({ success: true }, 200);
     }
 
     if (mode === "complete-link") {

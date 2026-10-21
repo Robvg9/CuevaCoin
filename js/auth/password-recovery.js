@@ -1,4 +1,4 @@
-/* CuevaCoin V143 — email recovery supports either OTP templates or magic-link templates. */
+/* CuevaCoin V145 — recovery uses only the email's «Restablecer contraseña» button. */
 (() => {
   const byId = (id) => document.getElementById(id);
   const clean = (value) => String(value || "").trim();
@@ -55,14 +55,10 @@
     const panel = byId("recuperar-contrasena-panel");
     const requestForm = byId("form-solicitar-recuperacion");
     const completeForm = byId("form-confirmar-recuperacion");
-    const codeWrap = byId("recuperar-codigo-wrap");
-    const codeInput = byId("recuperar-codigo");
     if (!panel || !requestForm || !completeForm) return;
     panel.classList.remove("hidden");
     requestForm.classList.add("hidden");
     completeForm.classList.remove("hidden");
-    if (codeWrap) codeWrap.classList.add("hidden");
-    if (codeInput) codeInput.required = false;
     const submit = byId("btn-confirmar-recuperacion");
     if (submit) submit.textContent = "Guardar nueva contraseña";
     setMessage("Enlace de recuperación abierto. Establece una contraseña nueva para esta cuenta.");
@@ -106,8 +102,6 @@
     const completeForm = byId("form-confirmar-recuperacion");
     const cancelButton = byId("btn-cancelar-recuperacion");
     const usernameInput = byId("username");
-    const codeWrap = byId("recuperar-codigo-wrap");
-    const codeInput = byId("recuperar-codigo");
     if (!openButton || !panel || !requestForm || !completeForm || !usernameInput ||
         openButton.dataset.recoveryBound === "1") return;
     openButton.dataset.recoveryBound = "1";
@@ -116,11 +110,9 @@
       panel.classList.remove("hidden");
       requestForm.classList.remove("hidden");
       completeForm.classList.add("hidden");
-      if (codeWrap) codeWrap.classList.remove("hidden");
-      if (codeInput) codeInput.required = true;
       linkMode = false;
       setMessage("");
-      const requestButton = byId("btn-enviar-codigo-recuperacion");
+      const requestButton = byId("btn-enviar-enlace-recuperacion");
       if (requestButton) requestButton.disabled = false;
       if (usernameInput.value.trim()) {
         setMessage("Usaremos el usuario o correo que escribiste arriba.");
@@ -133,7 +125,7 @@
     requestForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const identifier = clean(usernameInput.value);
-      const button = byId("btn-enviar-codigo-recuperacion");
+      const button = byId("btn-enviar-enlace-recuperacion");
       if (!identifier || identifier.length > 120) {
         setMessage("Escribe un usuario o correo válido en el campo del inicio de sesión.", true);
         usernameInput.focus();
@@ -146,11 +138,7 @@
       setMessage("Solicitando recuperación…");
       try {
         await callRecovery({ mode: "request", identifier });
-        completeForm.classList.remove("hidden");
-        if (codeWrap) codeWrap.classList.remove("hidden");
-        if (codeInput) codeInput.required = true;
-        setMessage("Supabase aceptó la solicitud, pero no puede confirmar la entrega. Revisa el correo y spam: según la plantilla, puede llegar un código o un enlace. Si no llega, habrá que revisar la configuración de envío de correo del proyecto.");
-        if (codeInput) codeInput.focus();
+        setMessage("Si la cuenta está activa y el envío está configurado, recibirás un correo. Abre únicamente el botón «Restablecer contraseña» del mensaje para elegir tu nueva contraseña. Revisa también Spam.");
       } catch (error) {
         if (error.status === 429) {
           setMessage("Demasiados intentos. Espera unos minutos antes de solicitar otra recuperación.", true);
@@ -166,15 +154,13 @@
       } finally {
         if (button) {
           button.disabled = false;
-          button.textContent = "Enviar enlace o código";
+          button.textContent = "Enviar correo de restablecimiento";
         }
       }
     });
 
     completeForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const identifier = clean(usernameInput.value);
-      const code = clean(codeInput?.value);
       const password = byId("recuperar-nueva-contrasena")?.value || "";
       const confirm = byId("recuperar-confirmar-contrasena")?.value || "";
       const button = byId("btn-confirmar-recuperacion");
@@ -192,9 +178,8 @@
         setMessage("El enlace aún no está validado o ha expirado. Solicita una recuperación nueva.", true);
         return;
       }
-      if (!linkMode && !/^\d{6}$/.test(code)) {
-        setMessage("Introduce el código de seis dígitos recibido por correo, o abre el enlace de recuperación si el correo lo contiene.", true);
-        codeInput?.focus();
+      if (!linkMode || !params().get("rid") || !params().get("rt") || !linkSessionReady) {
+        setMessage("Abre el botón «Restablecer contraseña» del correo para validar la recuperación.", true);
         return;
       }
       if (button) {
@@ -203,27 +188,17 @@
       }
       setMessage("Verificando recuperación y actualizando contraseña…");
       try {
-        if (linkMode) {
-          const query = params();
-          await callRecovery({
-            mode: "complete-link",
-            rid: query.get("rid"),
-            token: query.get("rt"),
-            newPassword: password,
-          }, true);
-        } else {
-          await callRecovery({
-            mode: "complete",
-            identifier,
-            code,
-            newPassword: password,
-          });
-        }
+        const query = params();
+        await callRecovery({
+          mode: "complete-link",
+          rid: query.get("rid"),
+          token: query.get("rt"),
+          newPassword: password,
+        }, true);
         requestForm.classList.add("hidden");
         completeForm.classList.add("hidden");
         setMessage("Contraseña restablecida. Ya puedes iniciar sesión con tu usuario o correo y la nueva contraseña.");
         if (byId("password")) byId("password").value = "";
-        if (codeInput) codeInput.value = "";
         byId("recuperar-nueva-contrasena").value = "";
         byId("recuperar-confirmar-contrasena").value = "";
         if (linkMode) {
@@ -238,7 +213,7 @@
         } else if (error.status === 502 || error.status === 503) {
           setMessage("El servicio de recuperación no está disponible. No se cambió la contraseña; inténtalo más tarde.", true);
         } else {
-          setMessage("Código inválido o vencido, enlace usado o cuenta no disponible. Solicita una recuperación nueva.", true);
+          setMessage("El botón de recuperación expiró o ya fue utilizado, o la cuenta no está disponible. Solicita un correo nuevo.", true);
         }
       } finally {
         if (button) {
@@ -260,8 +235,6 @@
       completeForm.classList.add("hidden");
       requestForm.reset();
       completeForm.reset();
-      if (codeWrap) codeWrap.classList.remove("hidden");
-      if (codeInput) codeInput.required = true;
       setMessage("");
     });
 
