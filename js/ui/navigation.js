@@ -96,6 +96,8 @@ export function loadSection(section) {
         } else if (section === 'solicitudes') {
             _call('loadAdminSolicitudes');
             _call('loadAdminSolicitudesCorreo');
+        } else if (section === 'recuperacion') {
+            _call('loadAdminRecoveryRequests');
         } else if (section === 'auditoria') {
             _call('cargarDatalistUsuariosAuditoria');
             _call('loadAdminAuditoria');
