@@ -31,22 +31,27 @@ export async function loadAdminUsuarios() {
 
     usuariosFiltrados.forEach(u => {
         const card = document.createElement('div');
-        card.className = 'usuario-card';
         const estaArchivado = u.estado === 'archivado';
+        card.className = 'usuario-card usuario-card-compacto' + (estaArchivado ? ' usuario-card-archivado' : '');
+        const correo = u.googleEmail || u.correo || 'Sin correo registrado';
+        const ultimaVez = window.formatearUltimaVez(u.ultimaConexion);
+        const metaAhorro = u.metaAhorro ? '$' + Number(u.metaAhorro).toFixed(2) : 'Sin fijar';
         card.innerHTML = `
             <div class="usuario-card-header">
                 <img class="usuario-card-avatar" src="${u.foto || `https://ui-avatars.com/api/?name=${u.usuario}&background=2563EB&color=fff`}" alt="${u.nombre || u.usuario}">
-                <div>
+                <div class="usuario-card-identidad">
                     <div class="usuario-card-nombre">${u.nombre || 'N/A'}</div>
-                    <div class="usuario-card-usuario">${u.usuario}</div>
+                    <div class="usuario-card-usuario">@${u.usuario}</div>
                 </div>
                 <span class="usuario-card-estado ${estaArchivado ? 'archivado' : (u.estado === 'activo' ? 'activo' : 'inactivo')}">${estaArchivado ? 'Archivado' : u.estado}</span>
             </div>
-            <div class="usuario-card-detalles">
-                <span class="usuario-card-saldo">$${Number(u.saldo).toFixed(2)}</span>
-                <span>Correo: ${u.googleEmail || u.correo || 'Sin correo registrado'}</span>
-                <span>Última vez: ${window.formatearUltimaVez(u.ultimaConexion)}</span>
-                <span>Meta de ahorro: ${u.metaAhorro ? '$' + Number(u.metaAhorro).toFixed(2) : 'Sin fijar'}</span>
+            <div class="usuario-card-info">
+                <span class="usuario-card-saldo" title="Saldo disponible">${Number(u.saldo).toFixed(2)}</span>
+                <span class="usuario-card-correo" title="Correo: ${correo}">✉ ${correo}</span>
+            </div>
+            <div class="usuario-card-meta">
+                <span title="Última conexión: ${ultimaVez}">◷ ${ultimaVez}</span>
+                <span title="Meta de ahorro: ${metaAhorro}">🎯 ${metaAhorro}</span>
             </div>
             <div class="usuario-card-acciones">
                 <button class="btn btn-secondary" title="Consultar todos los movimientos financieros de este trabajador" onclick="window.abrirHistorialTrabajadoraAdmin('${u.id}')">📜 Historial</button>

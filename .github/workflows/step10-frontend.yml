@@ -19,7 +19,7 @@ on:
       - "js/admin/finance/stats.js"
       - "js/finance/orchestration/show-admin-panel.js"
       - "js/finance/orchestration/show-user-dashboard.js"
-      - "scripts/verify-v148-experience.mjs"
+      - "scripts/verify-v149-users-ui.mjs"
       - "wrangler.jsonc"
       - "js/admin/finance/pagos.js"
       - "js/admin/finance/usuarios.js"
@@ -52,7 +52,7 @@ on:
       - "js/admin/finance/stats.js"
       - "js/finance/orchestration/show-admin-panel.js"
       - "js/finance/orchestration/show-user-dashboard.js"
-      - "scripts/verify-v148-experience.mjs"
+      - "scripts/verify-v149-users-ui.mjs"
       - "wrangler.jsonc"
       - "js/admin/finance/pagos.js"
       - "js/admin/finance/usuarios.js"
@@ -82,5 +82,5 @@ jobs:
         run: node scripts/verify-password-recovery.mjs
       - name: Verify atomic financial UI and release assets
         run: node scripts/verify-step10-release.mjs
-      - name: Verify V148 offline cache, automatic PWA updates and compact Android UI
-        run: node scripts/verify-v148-experience.mjs
+      - name: Verify V148 offline behavior and V149 compact admin users list
+        run: node scripts/verify-v149-users-ui.mjs

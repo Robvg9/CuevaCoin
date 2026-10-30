@@ -3062,6 +3062,185 @@
             #admin-worker-history-modal .hist-filtro-campo input,
             #admin-worker-history-modal .hist-filtro-campo select { font-size: 11px; }
         }
+
+        /* V149 — lista de usuarios admin: fichas compactas para ver varios perfiles
+           a la vez sin esconder datos importantes ni acciones de gestión. */
+        #admin-usuarios-seccion > .card {
+            padding: 12px;
+        }
+        #admin-usuarios-seccion > .card:hover {
+            transform: none;
+        }
+        #admin-usuarios-seccion > .card h2 {
+            margin-bottom: 9px;
+            font-size: 17px;
+        }
+        #admin-usuarios-seccion .search-filter {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 7px;
+            margin: 0 0 9px;
+        }
+        #admin-usuarios-seccion .search-filter input {
+            grid-column: 1 / -1;
+            width: 100%;
+            min-width: 0;
+            min-height: 36px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+        #admin-usuarios-seccion .search-filter select {
+            grid-column: 1;
+            width: 100%;
+            min-width: 0;
+            min-height: 35px;
+            padding: 7px 9px;
+            border-radius: 9px;
+            font-size: 11px;
+        }
+        #admin-usuarios-seccion .search-filter .btn {
+            grid-column: 2;
+            min-height: 35px;
+            padding: 7px 10px;
+            border-radius: 9px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        #admin-usuarios-seccion .usuarios-cards {
+            gap: 7px;
+            margin-top: 8px;
+        }
+        #admin-usuarios-seccion .usuario-card-compacto {
+            gap: 4px;
+            padding: 8px 9px;
+            border-radius: 13px;
+            border-width: 1px;
+            box-shadow: 0 1px 5px rgba(15, 23, 42, .055);
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+        #admin-usuarios-seccion .usuario-card-compacto:hover {
+            transform: none;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, .09);
+        }
+        #admin-usuarios-seccion .usuario-card-header {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+            gap: 8px;
+        }
+        #admin-usuarios-seccion .usuario-card-avatar {
+            width: 34px;
+            height: 34px;
+        }
+        #admin-usuarios-seccion .usuario-card-identidad {
+            flex: 1 1 auto;
+            min-width: 0;
+            line-height: 1.2;
+        }
+        #admin-usuarios-seccion .usuario-card-nombre {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 13px;
+            line-height: 1.25;
+        }
+        #admin-usuarios-seccion .usuario-card-usuario {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 10px;
+            line-height: 1.2;
+        }
+        #admin-usuarios-seccion .usuario-card-estado {
+            flex: 0 0 auto;
+            margin-left: 2px;
+            padding: 3px 7px;
+            border-radius: 8px;
+            font-size: 9px;
+            line-height: 1.2;
+        }
+        #admin-usuarios-seccion .usuario-card-info {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            padding-top: 4px;
+            border-top: 1px solid var(--border-color);
+        }
+        #admin-usuarios-seccion .usuario-card-saldo {
+            font-size: 14px;
+            line-height: 1.2;
+            white-space: nowrap;
+            font-weight: 700;
+        }
+        #admin-usuarios-seccion .usuario-card-correo {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+            font-size: 10px;
+            line-height: 1.2;
+            opacity: .76;
+            text-align: right;
+        }
+        #admin-usuarios-seccion .usuario-card-meta {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
+            align-items: center;
+            gap: 7px;
+            min-width: 0;
+            font-size: 9px;
+            line-height: 1.2;
+            opacity: .72;
+        }
+        #admin-usuarios-seccion .usuario-card-meta span {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+        }
+        #admin-usuarios-seccion .usuario-card-acciones {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 5px;
+            margin-top: 2px;
+        }
+        #admin-usuarios-seccion .usuario-card-archivado .usuario-card-acciones {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        #admin-usuarios-seccion .usuario-card-acciones .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-width: 0;
+            min-height: 28px;
+            padding: 5px 2px;
+            border-radius: 8px;
+            font-size: 9px;
+            line-height: 1.1;
+            white-space: nowrap;
+            text-align: center;
+        }
+        @media (max-width: 360px) {
+            #admin-usuarios-seccion > .card {
+                padding: 9px;
+            }
+            #admin-usuarios-seccion .usuario-card-acciones {
+                gap: 3px;
+            }
+            #admin-usuarios-seccion .usuario-card-acciones .btn {
+                font-size: 8px;
+                padding-inline: 1px;
+            }
+            #admin-usuarios-seccion .usuario-card-meta {
+                font-size: 8px;
+            }
+        }
     </style>
     <!-- Cropper.js: editor de recorte para forzar la foto de perfil a 1:1 (cuadrada) -->
     <!-- FIX-VELOCIDAD-2 (2026-08-09): mismo truco que la fuente Inter más
@@ -4846,7 +5025,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.148';
+                const VERSION_FALLBACK = 'V.149';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -5209,7 +5388,7 @@
     <script type="module" src="js/chat/chat-promo.js"></script>
     <!-- Fase 3 / Oleada 8 — admin financiero -->
     <script type="module" src="js/admin/finance/stats.js?v=148"></script>
-    <script type="module" src="js/admin/finance/usuarios.js?v=141"></script>
+    <script type="module" src="js/admin/finance/usuarios.js?v=149"></script>
     <script type="module" src="js/admin/finance/historial-trabajadora.js?v=148"></script>
     <script type="module" src="js/admin/finance/destinatarios.js"></script>
     <script type="module" src="js/admin/finance/pagos.js"></script>

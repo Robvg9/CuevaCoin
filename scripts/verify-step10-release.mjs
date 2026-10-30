@@ -102,14 +102,14 @@ assert.ok(history.includes("const categoria = categoriaTransaccion(t);"),
   'History rendering must use the same locally scoped category classifier');
 console.log('PASS — worker history embeds profiles through valid foreign-key relations and uses its scoped classifier');
 
-assert.match(sw, /cuevacoin-shell-v148/);
+assert.match(sw, /cuevacoin-shell-v149/);
 assert.ok(manifest.icons.some(icon => icon.src === '/icon-192.png' && icon.sizes === '192x192'), 'PWA manifest must include a real 192px icon');
 assert.equal(icon192.readUInt32BE(16), 192, 'PWA 192px icon width must be 192');
 assert.equal(icon192.readUInt32BE(20), 192, 'PWA 192px icon height must be 192');
 assert.ok(sw.includes("'/icon-192.png'"), 'Service worker must precache the 192px icon');
 assert.doesNotMatch(sw, /cuevacoin-shell-v140/);
-assert.match(app, /VERSION_FALLBACK = 'V\.148'/);
-assert.match(index, /const VERSION_FALLBACK = 'V\.148'/);
+assert.match(app, /VERSION_FALLBACK = 'V\.149'/);
+assert.match(index, /const VERSION_FALLBACK = 'V\.149'/);
 assert.ok(index.includes('src="js/finance/history/historial.js?v=141"'), 'Worker history module must use a versioned URL to bypass stale edge/browser cache');
 assert.ok(index.includes('src="js/admin/finance/historial-trabajadora.js?v=148"'), 'Admin worker-history module must use a versioned URL');
 assert.ok(index.includes('id="admin-worker-history-modal"'), 'Admin worker-history modal must exist');
