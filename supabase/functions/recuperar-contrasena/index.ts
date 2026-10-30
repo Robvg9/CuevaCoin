@@ -26,7 +26,7 @@ function clientIp(req: Request): string {
   return req.headers.get("cf-connecting-ip") ||
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 }
-function allowAttempt(ip: string): boolean {
+function allowAttempt(ip: string, limit = MAX_ATTEMPTS_PER_IP): boolean {
   const now = Date.now();
   const old = attempts.get(ip);
   if (!old || old.resetAt <= now) {
@@ -37,7 +37,7 @@ function allowAttempt(ip: string): boolean {
   if (attempts.size > 4096) {
     for (const [key, value] of attempts) if (value.resetAt <= now) attempts.delete(key);
   }
-  return old.count <= MAX_ATTEMPTS_PER_IP;
+  return old.count <= limit;
 }
 function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, "\\$&");
@@ -132,7 +132,7 @@ async function findActiveProfileForAdmin(admin: ReturnType<typeof createClient>,
   if (!identifier || identifier.length > 120 || /[\r\n\0]/.test(identifier)) return null;
   const column = identifier.includes("@") ? "correo" : "usuario";
   const { data, error } = await admin.from("perfiles")
-    .select("id, usuario, nombre, estado, es_admin")
+    .select("id, usuario, nombre, apellido, estado, es_admin, foto_url, numero_cuenta, telefono")
     .eq("estado", "activo")
     .eq("es_admin", false)
     .ilike(column, escapeLike(identifier))
@@ -197,14 +197,17 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return reply({ error: "Método no permitido." }, 405);
 
   const ip = clientIp(req);
-  if (!allowAttempt(ip)) return reply({ error: "RECOVERY_RATE_LIMIT" }, 429);
   const contentLength = Number(req.headers.get("content-length") || 0);
   if (contentLength > 4096) return reply({ error: "Solicitud inválida." }, 400);
 
-  let body: { identifier?: unknown; mode?: unknown; newPassword?: unknown; rid?: unknown; token?: unknown; code?: unknown };
+  let body: { identifier?: unknown; mode?: unknown; newPassword?: unknown; rid?: unknown; token?: unknown; code?: unknown; identityConfirmed?: unknown; verificationChannel?: unknown };
   try { body = await req.json(); } catch { return reply({ error: "Solicitud inválida." }, 400); }
 
   const mode = typeof body.mode === "string" ? body.mode : "";
+  const adminReadOrIssue = mode === "admin-list" || mode === "admin-issue";
+  if (!allowAttempt(ip + ":" + mode, adminReadOrIssue ? 60 : MAX_ATTEMPTS_PER_IP)) {
+    return reply({ error: "RECOVERY_RATE_LIMIT" }, 429);
+  }
   const identifier = typeof body.identifier === "string" ? body.identifier.trim() : "";
   const newPassword = typeof body.newPassword === "string" ? body.newPassword : "";
   if (newPassword && (newPassword.length < 8 || newPassword.length > 128)) {
@@ -241,7 +244,7 @@ Deno.serve(async (req: Request) => {
         let profiles: any[] = [];
         if (profileIds.length) {
           const { data, error } = await admin.from("perfiles")
-            .select("id, usuario, nombre, estado")
+            .select("id, usuario, nombre, apellido, estado, foto_url, numero_cuenta, telefono")
             .in("id", profileIds);
           if (error) return reply({ error: "RECOVERY_SERVICE_UNAVAILABLE" }, 503);
           profiles = data || [];
@@ -251,8 +254,13 @@ Deno.serve(async (req: Request) => {
           const profile = byId.get(request.profile_id);
           return {
             id: request.id,
+            profile_id: request.profile_id,
             username: profile?.usuario || "Cuenta no disponible",
-            name: profile?.nombre || profile?.usuario || "Trabajadora",
+            name: [profile?.nombre, profile?.apellido].filter(Boolean).join(" ").trim() || profile?.usuario || "Trabajadora",
+            photo_url: profile?.foto_url || null,
+            account_number: profile?.numero_cuenta || null,
+            phone: profile?.telefono || null,
+            account_status: profile?.estado || "no disponible",
             created_at: request.created_at,
             status: request.status,
             code_expires_at: request.admin_code_expires_at,
@@ -261,19 +269,21 @@ Deno.serve(async (req: Request) => {
         return reply({ requests: items }, 200);
       }
 
+      const verificationChannel = body.verificationChannel === "whatsapp" || body.verificationChannel === "presencial"
+        ? body.verificationChannel
+        : "";
+      if (body.identityConfirmed !== true || !verificationChannel) {
+        return reply({ error: "IDENTITY_VERIFICATION_REQUIRED" }, 400);
+      }
       const rid = typeof body.rid === "string" ? body.rid : "";
       if (!rid || rid.length > 80) return invalidRecovery();
       const { data: request, error: requestError } = await admin.from("password_recovery_requests")
-        .select("id, profile_id, status, expires_at, admin_code_expires_at")
+        .select("id, profile_id, status, expires_at, admin_code_expires_at, admin_code_hash")
         .eq("id", rid)
         .eq("recovery_method", "admin")
         .maybeSingle();
       if (requestError || !request || !["pending", "issued"].includes(request.status) ||
           new Date(request.expires_at).getTime() <= Date.now()) return invalidRecovery();
-      if (request.status === "issued" && request.admin_code_expires_at &&
-          new Date(request.admin_code_expires_at).getTime() > Date.now()) {
-        return reply({ error: "RECOVERY_CODE_ALREADY_ACTIVE" }, 409);
-      }
       const { data: targetProfile, error: targetError } = await admin.from("perfiles")
         .select("id, usuario, nombre, estado, es_admin")
         .eq("id", request.profile_id)
@@ -286,7 +296,7 @@ Deno.serve(async (req: Request) => {
       const now = new Date();
       const issuedAt = now.toISOString();
       const expiresAt = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
-      const { data: issued, error: issueError } = await admin.from("password_recovery_requests")
+      let issueQuery = admin.from("password_recovery_requests")
         .update({
           status: "issued",
           admin_code_hash: await tokenHash(code),
@@ -294,10 +304,16 @@ Deno.serve(async (req: Request) => {
           admin_code_expires_at: expiresAt,
           admin_code_attempts: 0,
           admin_approved_by: adminProfile.id,
+          admin_verified_at: issuedAt,
+          admin_verification_channel: verificationChannel,
         })
         .eq("id", rid)
         .eq("status", request.status)
-        .is("consumed_at", null)
+        .is("consumed_at", null);
+      issueQuery = request.admin_code_hash
+        ? issueQuery.eq("admin_code_hash", request.admin_code_hash)
+        : issueQuery.is("admin_code_hash", null);
+      const { data: issued, error: issueError } = await issueQuery
         .select("id")
         .maybeSingle();
       if (issueError || !issued) return reply({ error: "RECOVERY_REQUEST_CHANGED" }, 409);
@@ -305,11 +321,11 @@ Deno.serve(async (req: Request) => {
       const { error: auditError } = await admin.from("auditoria").insert({
         usuario_id: adminProfile.id,
         usuario_nombre: adminProfile.nombre || adminProfile.usuario,
-        accion: `Generó código de recuperación de un solo uso para ${targetProfile.nombre || targetProfile.usuario} (${targetProfile.usuario}). Caduca en 15 minutos.`,
+        accion: `Generó código de recuperación para ${[targetProfile.nombre, targetProfile.apellido].filter(Boolean).join(" ").trim() || targetProfile.usuario} (@${targetProfile.usuario}) tras verificar identidad por ${verificationChannel === "whatsapp" ? "WhatsApp" : "en persona"}. Caduca en 15 minutos.`,
       });
       if (auditError) {
         await admin.from("password_recovery_requests")
-          .update({ status: "rejected", admin_code_hash: null })
+          .update({ status: "rejected", admin_code_hash: null, admin_verified_at: null, admin_verification_channel: null })
           .eq("id", rid).eq("status", "issued");
         console.error("[recuperar-contrasena] admin issuance audit failed");
         return reply({ error: "RECOVERY_SERVICE_UNAVAILABLE" }, 503);
@@ -363,6 +379,24 @@ Deno.serve(async (req: Request) => {
       if (insertError) {
         console.error("[recuperar-contrasena] admin request could not be stored");
         return reply({ error: "RECOVERY_SERVICE_UNAVAILABLE" }, 503);
+      }
+
+      // Notify every active administrator; Realtime refreshes their recovery queue.
+      const workerName = [profile.nombre, profile.apellido].filter(Boolean).join(" ").trim() || profile.usuario;
+      const { data: admins, error: adminsError } = await admin.from("perfiles")
+        .select("id")
+        .eq("es_admin", true)
+        .eq("estado", "activo");
+      if (!adminsError && admins?.length) {
+        const { error: noticeError } = await admin.from("notificaciones").insert(
+          admins.map((recipient: any) => ({
+            usuario_id: recipient.id,
+            mensaje: `🔐 Nueva solicitud de recuperación: ${workerName} (@${profile.usuario}). Revisa «Recuperación de cuentas».`,
+            tipo_evento: "recuperacion_cuenta",
+            leida: false,
+          }))
+        );
+        if (noticeError) console.error("[recuperar-contrasena] admin recovery notification insert failed");
       }
       return reply({ accepted: true }, 202);
     }
