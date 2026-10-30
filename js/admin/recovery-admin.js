@@ -133,6 +133,15 @@
         verificationChannel.add(new Option("En persona", "presencial"));
         card.appendChild(verificationChannel);
 
+        const identityConfirmation = document.createElement("label");
+        identityConfirmation.style.cssText = "display:flex;gap:8px;align-items:flex-start;margin:8px 0;font-size:13px;";
+        const identityCheck = document.createElement("input");
+        identityCheck.type = "checkbox";
+        const identityText = document.createElement("span");
+        identityText.textContent = "Confirmo que he hablado con la titular y que solicita recuperar esta cuenta.";
+        identityConfirmation.append(identityCheck, identityText);
+        card.appendChild(identityConfirmation);
+
         const issue = document.createElement("button");
         issue.type = "button";
         issue.className = "btn btn-primary";
