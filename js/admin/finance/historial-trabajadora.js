@@ -4,6 +4,10 @@
  */
 
 const PAGE_SIZE = 500;
+const HISTORY_CACHE_DB = 'cuevacoin-offline-read-cache';
+const HISTORY_CACHE_STORE = 'adminWorkerHistory';
+const HISTORY_CACHE_VERSION = 1;
+const HISTORY_CACHE_LIMIT = 50;
 let trabajadorActualId = null;
 let transaccionesActuales = [];
 let renderToken = 0;
@@ -20,11 +24,11 @@ function obtenerInfoTransaccion(tx) {
     const cantidad = Number(tx?.cantidad || 0);
     switch (tx?.tipo) {
         case 'deposito_admin':
-            return { categoria: 'salario', icono: '💵', etiqueta: 'Pago / dinero añadido por admin', explicacion: 'El administrador agregó dinero a la cuenta.' };
+            return { categoria: 'salario', icono: '💵', etiqueta: 'Depósito admin', explicacion: 'El administrador agregó dinero a la cuenta.' };
         case 'retiro_admin':
             return cantidad < 0
-                ? { categoria: 'descuento', icono: '➖', etiqueta: 'Descuento administrativo', explicacion: 'Dinero descontado del saldo por el administrador; consulta el motivo para identificar el cobro en efectivo u otro ajuste.' }
-                : { categoria: 'ajuste', icono: '⚖️', etiqueta: 'Ajuste administrativo', explicacion: 'Cambio positivo de saldo registrado por el administrador.' };
+                ? { categoria: 'descuento', icono: '➖', etiqueta: 'Descuento admin', explicacion: 'Dinero descontado por el administrador.' }
+                : { categoria: 'ajuste', icono: '⚖️', etiqueta: 'Ajuste admin', explicacion: 'Cambio positivo de saldo registrado por el administrador.' };
         case 'retiro':
             return { categoria: 'retiro', icono: '🏧', etiqueta: 'Retiro', explicacion: 'Retiro solicitado por el trabajador.' };
         case 'transferencia':
@@ -41,6 +45,59 @@ function textoPersona(persona) {
     return persona.nombre || persona.usuario || '';
 }
 
+function abrirDBHistorialOffline() {
+    if (!window.indexedDB) return Promise.resolve(null);
+    return new Promise((resolve, reject) => {
+        const request = window.indexedDB.open(HISTORY_CACHE_DB, HISTORY_CACHE_VERSION);
+        request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(HISTORY_CACHE_STORE)) {
+                db.createObjectStore(HISTORY_CACHE_STORE, { keyPath: 'key' });
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('No se pudo abrir la caché offline.'));
+    });
+}
+
+async function leerHistorialOffline(key) {
+    const db = await abrirDBHistorialOffline();
+    if (!db) return null;
+    return new Promise((resolve, reject) => {
+        const request = db.transaction(HISTORY_CACHE_STORE, 'readonly')
+            .objectStore(HISTORY_CACHE_STORE).get(key);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error || new Error('No se pudo leer la caché offline.'));
+    }).finally(() => db.close());
+}
+
+async function guardarHistorialOffline(key, nombre, filas) {
+    const db = await abrirDBHistorialOffline();
+    if (!db) return;
+    const snapshot = {
+        key,
+        workerName: nombre || 'Trabajador',
+        items: (filas || []).slice(0, HISTORY_CACHE_LIMIT),
+        updatedAt: new Date().toISOString()
+    };
+    await new Promise((resolve, reject) => {
+        const tx = db.transaction(HISTORY_CACHE_STORE, 'readwrite');
+        tx.objectStore(HISTORY_CACHE_STORE).put(snapshot);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error || new Error('No se pudo guardar la caché offline.'));
+        tx.onabort = () => reject(tx.error || new Error('Se canceló el guardado offline.'));
+    }).finally(() => db.close());
+}
+
+function formatearFechaCompacta(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Fecha desconocida';
+    const fecha = date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+    const hora = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    const anio = date.getFullYear() !== new Date().getFullYear() ? ' ' + date.getFullYear() : '';
+    return fecha + anio + ' · ' + hora;
+}
+
 function crearTexto(tag, className, value) {
     const el = document.createElement(tag);
     if (className) el.className = className;
@@ -55,10 +112,7 @@ function formatearDinero(value) {
 }
 
 function formatearFecha(value) {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? 'Fecha desconocida' : date.toLocaleString('es-ES', {
-        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+    return formatearFechaCompacta(value);
 }
 
 async function obtenerTodasLasTransacciones(usuarioId, token) {
@@ -108,7 +162,7 @@ export async function abrirHistorialTrabajadoraAdmin(usuarioId) {
     if (!nombreEl || !estadoEl || !listaEl || !vacioEl || !totalEl) return;
 
     nombreEl.textContent = 'Cargando…';
-    estadoEl.textContent = 'Consultando los movimientos guardados en la base de datos…';
+    estadoEl.textContent = 'Actualizando historial…';
     listaEl.replaceChildren();
     vacioEl.classList.add('hidden');
     totalEl.textContent = '';
@@ -117,6 +171,20 @@ export async function abrirHistorialTrabajadoraAdmin(usuarioId) {
         if (field) field.value = '';
     }
     window.openModal('admin-worker-history-modal');
+
+    const cacheKey = admin.id + ':' + usuarioId;
+    try {
+        const cached = await leerHistorialOffline(cacheKey);
+        if (token !== renderToken) return;
+        if (cached && Array.isArray(cached.items)) {
+            transaccionesActuales = cached.items;
+            nombreEl.textContent = cached.workerName || 'Trabajador';
+            estadoEl.textContent = 'Copia local · ' + formatearFechaCompacta(cached.updatedAt);
+            filtrarHistorialTrabajadoraAdmin();
+        }
+    } catch (cacheError) {
+        console.warn('[CuevaCoin] No se pudo leer el historial offline:', cacheError);
+    }
 
     try {
         const [perfilResult, transacciones] = await Promise.all([
@@ -131,16 +199,27 @@ export async function abrirHistorialTrabajadoraAdmin(usuarioId) {
         if (perfilResult.error) throw perfilResult.error;
 
         const perfil = perfilResult.data || {};
-        nombreEl.textContent = perfil.nombre || perfil.usuario || 'Trabajador';
+        const nombre = perfil.nombre || perfil.usuario || 'Trabajador';
+        nombreEl.textContent = nombre;
         transaccionesActuales = transacciones;
+        try {
+            await guardarHistorialOffline(cacheKey, nombre, transacciones);
+        } catch (cacheError) {
+            console.warn('[CuevaCoin] No se pudo guardar el historial offline:', cacheError);
+        }
         estadoEl.textContent = transacciones.length
-            ? 'Historial de solo lectura. Los movimientos aparecen por fecha, con motivo y saldo antes/después cuando esos datos existen.'
+            ? 'Historial actualizado · solo lectura'
             : 'No hay movimientos registrados para este trabajador.';
         filtrarHistorialTrabajadoraAdmin();
     } catch (error) {
         if (token !== renderToken) return;
         console.error('[CuevaCoin] No se pudo cargar el historial individual:', error);
-        estadoEl.textContent = 'No se pudo consultar el historial en la base de datos. Comprueba la conexión y los permisos e inténtalo de nuevo.';
+        if (transaccionesActuales.length) {
+            estadoEl.textContent = 'Sin conexión · mostrando la última copia guardada en este dispositivo.';
+            filtrarHistorialTrabajadoraAdmin();
+            return;
+        }
+        estadoEl.textContent = 'Sin conexión y sin historial guardado para este trabajador en este dispositivo.';
         listaEl.replaceChildren();
         vacioEl.classList.add('hidden');
         totalEl.textContent = '';
@@ -184,7 +263,7 @@ export function filtrarHistorialTrabajadoraAdmin() {
         const info = obtenerInfoTransaccion(tx);
         const amount = Number(tx.cantidad || 0);
         const card = document.createElement('article');
-        card.className = 'tx-card';
+        card.className = 'tx-card admin-history-tx-card';
 
         const header = document.createElement('div');
         header.className = 'tx-card-header';
@@ -199,22 +278,21 @@ export function filtrarHistorialTrabajadoraAdmin() {
         const amountEl = crearTexto('div', 'tx-card-monto ' + (amount >= 0 ? 'positivo' : 'negativo'),
             (amount > 0 ? '+' : amount < 0 ? '−' : '') + formatearDinero(Math.abs(amount)));
         header.append(icon, titleBox, amountEl);
-        card.append(header, crearTexto('p', 'tx-card-explicacion', info.explicacion));
+        card.append(header);
 
         const details = document.createElement('div');
-        details.className = 'tx-card-detalles';
-        details.append(
-            crearTexto('span', 'tx-card-motivo', '📝 Motivo: ' + (tx.motivo || 'No especificado')),
-            crearTexto('span', '', '👤 Registrado por: ' + (textoPersona(tx.admin) || 'No especificado'))
-        );
+        details.className = 'admin-history-details';
+        details.append(crearTexto('span', 'admin-history-motivo', '📝 ' + (tx.motivo || 'Sin motivo')));
+        const adminName = textoPersona(tx.admin);
+        if (adminName) details.append(crearTexto('span', 'admin-history-admin', 'Por: ' + adminName));
         const counterpart = textoPersona(tx.contraparte);
-        if (counterpart) details.append(crearTexto('span', '', '↔️ Contraparte: ' + counterpart));
+        if (counterpart) details.append(crearTexto('span', 'admin-history-counterpart', '↔ ' + counterpart));
         card.append(details);
 
         if (tx.saldo_antes != null || tx.saldo_despues != null) {
             const before = tx.saldo_antes != null ? formatearDinero(tx.saldo_antes) : '—';
             const after = tx.saldo_despues != null ? formatearDinero(tx.saldo_despues) : '—';
-            card.append(crearTexto('div', 'tx-card-saldos', 'Saldo: ' + before + ' → ' + after));
+            card.append(crearTexto('div', 'admin-history-saldos', 'Saldo ' + before + ' → ' + after));
         }
         listaEl.appendChild(card);
     });
