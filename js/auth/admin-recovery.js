@@ -100,7 +100,7 @@
     confirmForm?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const identifier = clean(username?.value);
-      const code = clean($("recuperar-codigo-admin")?.value).toUpperCase().replace(/[\\s-]/g, "");
+      const code = clean($("recuperar-codigo-admin")?.value).toUpperCase().replace(/[\s-]/g, "");
       const password = $("recuperar-admin-nueva-contrasena")?.value || "";
       const confirmPassword = $("recuperar-admin-confirmar-contrasena")?.value || "";
       const button = $("btn-confirmar-recuperacion-admin");
