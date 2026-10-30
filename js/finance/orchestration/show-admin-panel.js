@@ -21,10 +21,17 @@ export function showAdminPanel(admin) {
 
         document.getElementById('topbar-user').textContent = admin.nombre || admin.usuario;
         document.getElementById('topbar-avatar').src = admin.foto || `https://ui-avatars.com/api/?name=${admin.usuario}&background=0F172A&color=fff`;
-        document.getElementById('auditoria-link').style.display = '';
-        document.getElementById('usuarios-link').style.display = '';
-        document.getElementById('solicitudes-link').style.display = '';
-        document.getElementById('recuperacion-link-item').style.display = '';
+        // Restaurar los contenedores <li> también al cambiar de rol en la sesión.
+        ['auditoria-link', 'usuarios-link', 'solicitudes-link'].forEach(id => {
+            const link = document.getElementById(id);
+            if (link) {
+                link.style.display = '';
+                const item = link.closest('li');
+                if (item) item.style.display = '';
+            }
+        });
+        const recoveryItem = document.getElementById('recuperacion-link-item');
+        if (recoveryItem) recoveryItem.style.display = '';
         document.getElementById('anuncios-link-item').style.display = '';
         document.getElementById('estadisticas-link-item').style.display = '';
         document.getElementById('historial-link-item').style.display = 'none';

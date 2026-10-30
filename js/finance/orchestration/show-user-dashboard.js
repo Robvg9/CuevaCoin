@@ -23,10 +23,17 @@ export function showUserDashboard(usuario) {
 
         document.getElementById('topbar-user').textContent = usuario.nombre || usuario.usuario;
         document.getElementById('topbar-avatar').src = usuario.foto || `https://ui-avatars.com/api/?name=${usuario.usuario}&background=2563EB&color=fff`;
-        document.getElementById('auditoria-link').style.display = 'none';
-        document.getElementById('usuarios-link').style.display = 'none';
-        document.getElementById('solicitudes-link').style.display = 'none';
-        document.getElementById('recuperacion-link-item').style.display = 'none';
+        // Ocultar el <li> completo: esconder solo el enlace dejaba huecos grandes.
+        ['auditoria-link', 'usuarios-link', 'solicitudes-link'].forEach(id => {
+            const link = document.getElementById(id);
+            if (link) {
+                link.style.display = 'none';
+                const item = link.closest('li');
+                if (item) item.style.display = 'none';
+            }
+        });
+        const recoveryItem = document.getElementById('recuperacion-link-item');
+        if (recoveryItem) recoveryItem.style.display = 'none';
         document.getElementById('anuncios-link-item').style.display = 'none';
         document.getElementById('estadisticas-link-item').style.display = 'none';
         document.getElementById('historial-link-item').style.display = '';

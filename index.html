@@ -2910,6 +2910,158 @@
             content: "• ";
             color: var(--warning-color);
         }
+
+        /* V148 — menú compacto y sin filas vacías para opciones ocultas por rol. */
+        .sidebar-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            list-style: none;
+            min-height: calc(100% - 58px);
+            margin: 0;
+            padding: 10px 12px 14px;
+        }
+        .sidebar-menu li {
+            display: block;
+            flex: 0 0 auto;
+            margin: 0;
+        }
+        .sidebar-menu a {
+            min-height: 50px;
+            padding: 8px 13px;
+            border-radius: 14px;
+            font-size: 14px;
+            box-shadow: 0 1px 5px rgba(15, 23, 42, 0.08);
+            transition: background .15s ease, box-shadow .15s ease;
+        }
+        .sidebar-menu a:hover {
+            transform: none;
+            box-shadow: 0 2px 7px rgba(15, 23, 42, 0.10);
+        }
+        .sidebar-menu a i {
+            margin-right: 10px;
+            width: 22px;
+            font-size: 17px;
+        }
+        .sidebar-menu li:last-child {
+            margin-top: auto;
+            padding-top: 10px;
+        }
+
+        /* V148 — historial individual compacto: cantidad, fecha, motivo y saldo. */
+        #admin-worker-history-modal .admin-worker-history-modal-content {
+            width: calc(100% - 16px) !important;
+            max-height: calc(100dvh - 18px) !important;
+            padding: 13px 14px 12px;
+            border-radius: 17px;
+            overflow-y: auto;
+        }
+        #admin-worker-history-modal .admin-worker-history-modal-content h2 {
+            margin: 0 28px 8px 0;
+            font-size: 18px;
+            line-height: 1.25;
+        }
+        #admin-worker-history-modal .admin-history-intro { display: none; }
+        #admin-worker-history-modal .hist-filtros-grid {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 7px;
+            margin: 5px 0 8px;
+        }
+        #admin-worker-history-modal .hist-filtro-campo { gap: 3px; min-width: 0; }
+        #admin-worker-history-modal .hist-filtro-campo label { font-size: 10px; }
+        #admin-worker-history-modal .hist-filtro-campo input,
+        #admin-worker-history-modal .hist-filtro-campo select {
+            min-width: 0;
+            min-height: 34px;
+            padding: 7px 8px;
+            font-size: 12px;
+        }
+        #admin-worker-history-modal .hist-filtro-campo-ancho { grid-column: 1 / -1; }
+        #admin-worker-history-modal #admin-worker-history-status {
+            min-height: 0 !important;
+            margin: 3px 0 4px !important;
+            font-size: 10px;
+            line-height: 1.25;
+        }
+        #admin-worker-history-modal #admin-worker-history-total {
+            margin: 2px 0 6px !important;
+            font-size: 10px !important;
+        }
+        #admin-worker-history-modal #admin-worker-history-cards { gap: 6px; }
+        #admin-worker-history-modal .admin-history-tx-card {
+            padding: 7px 9px;
+            gap: 4px;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(15, 23, 42, .055);
+        }
+        #admin-worker-history-modal .admin-history-tx-card .tx-card-header {
+            gap: 8px;
+            min-width: 0;
+        }
+        #admin-worker-history-modal .admin-history-tx-card .tx-card-icono {
+            width: 29px;
+            height: 29px;
+            font-size: 15px;
+        }
+        #admin-worker-history-modal .admin-history-tx-card .tx-card-titulo {
+            flex-direction: row;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 3px 7px;
+        }
+        #admin-worker-history-modal .admin-history-tx-card .tx-card-tipo {
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 10px;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+        #admin-worker-history-modal .admin-history-tx-card .tx-card-fecha {
+            font-size: 10px;
+            white-space: nowrap;
+        }
+        #admin-worker-history-modal .admin-history-tx-card .tx-card-monto {
+            font-size: 14px;
+            line-height: 1.2;
+        }
+        #admin-worker-history-modal .admin-history-details {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            min-width: 0;
+            padding-top: 4px;
+            border-top: 1px solid var(--border-color);
+            font-size: 10px;
+            line-height: 1.2;
+            opacity: .82;
+        }
+        #admin-worker-history-modal .admin-history-motivo {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        #admin-worker-history-modal .admin-history-admin,
+        #admin-worker-history-modal .admin-history-counterpart {
+            flex: 0 1 auto;
+            max-width: 42%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        #admin-worker-history-modal .admin-history-saldos {
+            font-size: 10px;
+            line-height: 1.2;
+            opacity: .7;
+        }
+        @media (max-width: 380px) {
+            #admin-worker-history-modal .admin-history-admin,
+            #admin-worker-history-modal .admin-history-counterpart { max-width: 34%; }
+            #admin-worker-history-modal .hist-filtro-campo input,
+            #admin-worker-history-modal .hist-filtro-campo select { font-size: 11px; }
+        }
     </style>
     <!-- Cropper.js: editor de recorte para forzar la foto de perfil a 1:1 (cuadrada) -->
     <!-- FIX-VELOCIDAD-2 (2026-08-09): mismo truco que la fuente Inter más
@@ -3211,6 +3363,7 @@
                         <div class="value" id="transferencias-hoy">0</div>
                     </div>
                 </div>
+                <p id="admin-stats-cache-status" role="status" aria-live="polite" style="margin: -8px 2px 14px; font-size: 11px; opacity: .68;"></p>
 
                 <div class="card">
                     <h2>Acciones Rápidas</h2>
@@ -4050,10 +4203,10 @@
 
     <!-- Historial financiero individual del trabajador (solo lectura para admin) -->
     <div id="admin-worker-history-modal" class="modal">
-        <div class="modal-content" style="max-width: 980px; width: calc(100% - 20px); max-height: 88vh; overflow-y: auto;">
+        <div class="modal-content admin-worker-history-modal-content" style="max-width: 980px; width: calc(100% - 20px); max-height: 88vh; overflow-y: auto;">
             <span class="close" onclick="closeModal('admin-worker-history-modal')">&times;</span>
             <h2>📜 Historial financiero · <span id="admin-worker-history-name">Trabajador</span></h2>
-            <p style="opacity:0.8; margin: 6px 0 16px;">Pagos, depósitos, descuentos, retiros y transferencias guardados en la base de datos. Este panel es de solo lectura y no modifica saldos.</p>
+            <p class="admin-history-intro" style="opacity:0.8; margin: 6px 0 16px;">Pagos, depósitos, descuentos, retiros y transferencias guardados en la base de datos. Este panel es de solo lectura y no modifica saldos.</p>
             <div class="hist-filtros-grid">
                 <div class="hist-filtro-campo">
                     <label for="admin-worker-history-type">Tipo de movimiento</label>
@@ -4645,6 +4798,37 @@
                     function(registration) {
                         console.log('ServiceWorker registration successful');
                         mostrarVersionApp();
+
+                        // V148: comprobar al abrir, al volver al primer plano y cada hora.
+                        // El Service Worker aplica la nueva versión con skipWaiting/clients.claim.
+                        const comprobarActualizacionAutomatica = function() {
+                            if (document.hidden) return;
+                            registration.update().then(function() {
+                                if (registration.waiting && navigator.serviceWorker.controller) {
+                                    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                                }
+                            }).catch(function(error) {
+                                console.debug('[CuevaCoin] No se pudo comprobar actualización:', error);
+                            });
+                        };
+                        comprobarActualizacionAutomatica();
+                        window.addEventListener('focus', comprobarActualizacionAutomatica);
+                        document.addEventListener('visibilitychange', function() {
+                            if (!document.hidden) comprobarActualizacionAutomatica();
+                        });
+                        window.setInterval(comprobarActualizacionAutomatica, 60 * 60 * 1000);
+                        registration.addEventListener('updatefound', function() {
+                            const installing = registration.installing;
+                            if (!installing) return;
+                            installing.addEventListener('statechange', function() {
+                                if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+                                    installing.postMessage({ type: 'SKIP_WAITING' });
+                                }
+                            });
+                        });
+                        if (registration.waiting && navigator.serviceWorker.controller) {
+                            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                        }
                     },
                     function(err) {
                         console.log('ServiceWorker registration failed: ', err);
@@ -4662,7 +4846,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.147';
+                const VERSION_FALLBACK = 'V.148';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -5024,17 +5208,17 @@
     <script type="module" src="js/chat/chat-messages.js"></script>
     <script type="module" src="js/chat/chat-promo.js"></script>
     <!-- Fase 3 / Oleada 8 — admin financiero -->
-    <script type="module" src="js/admin/finance/stats.js"></script>
+    <script type="module" src="js/admin/finance/stats.js?v=148"></script>
     <script type="module" src="js/admin/finance/usuarios.js?v=141"></script>
-    <script type="module" src="js/admin/finance/historial-trabajadora.js?v=141"></script>
+    <script type="module" src="js/admin/finance/historial-trabajadora.js?v=148"></script>
     <script type="module" src="js/admin/finance/destinatarios.js"></script>
     <script type="module" src="js/admin/finance/pagos.js"></script>
     <script type="module" src="js/admin/finance/reportes.js"></script>
     <script type="module" src="js/admin/finance/auditoria.js"></script>
     <script type="module" src="js/admin/finance/solicitudes-realtime.js"></script>
     <!-- Fase 3 / Oleada 9 — orquestación (última) -->
-    <script type="module" src="js/finance/orchestration/show-admin-panel.js"></script>
-    <script type="module" src="js/finance/orchestration/show-user-dashboard.js"></script>
+    <script type="module" src="js/finance/orchestration/show-admin-panel.js?v=148"></script>
+    <script type="module" src="js/finance/orchestration/show-user-dashboard.js?v=148"></script>
     <script type="module" src="js/finance/orchestration/procesar-sesion.js?v=143"></script>
     <!-- Fase 4 — helpers residuales seguros (chat DOM, stats range, auditoría categoría) -->
     <script type="module" src="js/chat/chat-dom.js"></script>
