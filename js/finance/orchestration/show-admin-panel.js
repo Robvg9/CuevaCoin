@@ -24,6 +24,7 @@ export function showAdminPanel(admin) {
         document.getElementById('auditoria-link').style.display = '';
         document.getElementById('usuarios-link').style.display = '';
         document.getElementById('solicitudes-link').style.display = '';
+        document.getElementById('recuperacion-link-item').style.display = '';
         document.getElementById('anuncios-link-item').style.display = '';
         document.getElementById('estadisticas-link-item').style.display = '';
         document.getElementById('historial-link-item').style.display = 'none';
