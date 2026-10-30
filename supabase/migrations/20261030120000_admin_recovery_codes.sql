@@ -2,6 +2,8 @@
 -- El código nunca se almacena en claro; solo se conserva SHA-256 del código aleatorio.
 -- El backend Supabase service-role es el único que lee/escribe estas columnas.
 
+BEGIN;
+
 alter table public.password_recovery_requests
   add column if not exists recovery_method text not null default 'email',
   add column if not exists status text not null default 'pending',
@@ -44,3 +46,5 @@ comment on column public.password_recovery_requests.admin_code_hash is
   'SHA-256 de un código aleatorio de alta entropía; el código original solo se entrega una vez al administrador.';
 comment on column public.password_recovery_requests.admin_code_expires_at is
   'Caducidad del código administrativo; duración prevista: 15 minutos desde su emisión.';
+
+COMMIT;
