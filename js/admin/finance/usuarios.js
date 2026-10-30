@@ -46,7 +46,7 @@ export async function loadAdminUsuarios() {
                 <span class="usuario-card-estado ${estaArchivado ? 'archivado' : (u.estado === 'activo' ? 'activo' : 'inactivo')}">${estaArchivado ? 'Archivado' : u.estado}</span>
             </div>
             <div class="usuario-card-info">
-                <span class="usuario-card-saldo" title="Saldo disponible">$ ${Number(u.saldo).toFixed(2)}</span>
+                <span class="usuario-card-saldo" title="Saldo disponible">${Number(u.saldo).toFixed(2)}</span>
                 <span class="usuario-card-correo" title="Correo: ${correo}">✉ ${correo}</span>
             </div>
             <div class="usuario-card-meta">
