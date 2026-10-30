@@ -102,6 +102,23 @@
         card.style.cssText = "margin:12px 0;padding:14px;";
         card.appendChild(makeText("h3", item.name || item.username, "margin:0 0 5px;"));
         card.appendChild(makeText("p", "Usuario: " + item.username, "margin:3px 0;"));
+        const openProfile = makeText("button", "Ver ficha del perfil");
+        openProfile.type = "button";
+        openProfile.className = "btn btn-secondary";
+        openProfile.addEventListener("click", () => {
+          const select = $("admin-chat-destinatario");
+          if (!select || !item.profile_id) return;
+          let option = Array.from(select.options).find((entry) => entry.value === item.profile_id);
+          if (!option) {
+            option = document.createElement("option");
+            option.value = item.profile_id;
+            option.textContent = item.name + " (@" + item.username + ")";
+            select.add(option);
+          }
+          select.value = item.profile_id;
+          window.abrirVerUsuarioModal?.();
+        });
+        card.appendChild(openProfile);
         card.appendChild(makeText("p", "Solicitud: " + new Date(item.created_at).toLocaleString(), "font-size:12px;opacity:.75;margin:3px 0 10px;"));
         const activeCode = item.status === "issued" && item.code_expires_at && new Date(item.code_expires_at).getTime() > Date.now();
         const statusLine = activeCode
