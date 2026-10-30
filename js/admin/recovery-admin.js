@@ -145,29 +145,22 @@
         const issue = document.createElement("button");
         issue.type = "button";
         issue.className = "btn btn-primary";
-        issue.textContent = activeCode ? "Código ya emitido" : item.status === "pending" ? "Generar código (15 min)" : "Emitir nuevo código";
-        issue.disabled = !!activeCode;
+        issue.textContent = activeCode ? "Reemitir código (anula el anterior)" : item.status === "pending" ? "Emitir código (15 min)" : "Emitir nuevo código";
+        issue.disabled = false;
         issue.addEventListener("click", async () => {
-          if (item.status === "issued" && !confirm("El código anterior ya venció. ¿Generar uno nuevo?")) return;
+          if (!verificationChannel.value || !identityCheck.checked) {
+            window.showToast?.("Selecciona el canal y confirma que identificaste a la titular antes de emitir.", 4500);
+            return;
+          }
+          if (activeCode && !confirm("El código anterior quedará invalidado. ¿Generar uno nuevo?")) return;
           issue.disabled = true;
           issue.textContent = "Generando…";
           try {
-            const verificationChannel = window.prompt("¿Cómo verificaste su identidad? Escribe WhatsApp o presencial.");
-            const channel = String(verificationChannel || "").trim().toLowerCase();
-            if (channel !== "whatsapp" && channel !== "presencial") {
-              issue.disabled = false;
-              issue.textContent = "Generar código (15 min)";
-              window.showToast?.("Selecciona WhatsApp o presencial para verificar la identidad.", 4500);
-              return;
-            }
-            if (!window.confirm("Confirmo que hablé con la titular y que solicita recuperar esta cuenta. ¿Emitir el código?")) {
-              issue.disabled = false;
-              issue.textContent = "Generar código (15 min)";
-              return;
-            }
-            const issued = await callAdminRecovery({ mode: "admin-issue", rid: item.id, verificationChannel: channel, identityConfirmed: true });
+            const issued = await callAdminRecovery({ mode: "admin-issue", rid: item.id, verificationChannel: verificationChannel.value, identityConfirmed: identityCheck.checked });
             issue.textContent = "Código generado";
-            card.appendChild(makeCodePanel(issued.code, issued.expires_at));
+            issue.disabled = true;
+            card.querySelector(".admin-recovery-code-panel")?.remove();
+            card.appendChild(makeCodePanel(issued.code, issued.expires_at, verificationChannel.value));
             const status = card.querySelector("p:last-of-type");
             if (status) status.textContent = "Código emitido. Entrégalo a la trabajadora por un canal privado.";
             const dot = $("recuperacion-pendiente-dot");
