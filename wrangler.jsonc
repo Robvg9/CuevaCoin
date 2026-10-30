@@ -5,6 +5,6 @@
     "directory": "./"
   },
   "build": {
-    "command": "node --version && node scripts/verify-password-recovery.mjs && node scripts/verify-step10-release.mjs && node scripts/verify-v149-users-ui.mjs"
+    "command": "node --version && node scripts/verify-password-recovery.mjs && node scripts/verify-step10-release.mjs && node scripts/verify-v149-users-ui.mjs && node scripts/verify-p1-01-xss.mjs"
   }
 }
