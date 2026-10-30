@@ -4662,7 +4662,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.145';
+                const VERSION_FALLBACK = 'V.147';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -4964,8 +4964,8 @@
     <script type="module" src="js/ui/push.js"></script>
     <script type="module" src="js/auth/google-ui.js"></script>
     <script defer src="js/auth/login-hardening.js?v=143"></script>
-    <script defer src="js/auth/password-recovery.js?v=146"></script>
-    <script type="module" src="js/auth/admin-recovery.js?v=146"></script>
+    <script defer src="js/auth/password-recovery.js?v=147"></script>
+    <script type="module" src="js/auth/admin-recovery.js?v=147"></script>
     <!-- Fase 2 / Oleada 4: sesión, anuncios, bonos info, sugerencias user, config local -->
     <script type="module" src="js/session/logout.js"></script>
     <script type="module" src="js/ui/anuncios.js"></script>
@@ -4986,7 +4986,7 @@
     <!-- Fase 2 / Oleada 7: correo lista, usuarios estado, cuenta desactivada, sugerencias realtime -->
     <script type="module" src="js/admin/correo-lista.js"></script>
     <script type="module" src="js/admin/usuarios-estado.js?v=141"></script>
-    <script type="module" src="js/admin/recovery-admin.js?v=146"></script>
+    <script type="module" src="js/admin/recovery-admin.js?v=147"></script>
     <script type="module" src="js/admin/cuenta-desactivada.js"></script>
     <script type="module" src="js/admin/sugerencias-realtime.js"></script>
     <!-- Fase 3 / Oleada 1 — arquitectura financiera (mapa) -->

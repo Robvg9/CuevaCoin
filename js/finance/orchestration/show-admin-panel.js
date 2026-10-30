@@ -40,6 +40,7 @@ export function showAdminPanel(admin) {
         if (typeof window.verificarAnuncioActivo === 'function') window.verificarAnuncioActivo();
         if (typeof window.actualizarBadgeNotificaciones === 'function') window.actualizarBadgeNotificaciones(admin.id);
         if (typeof window.suscribirRealtimeNotificaciones === 'function') window.suscribirRealtimeNotificaciones(admin.id);
+        if (typeof window.loadAdminRecoveryRequests === 'function') window.loadAdminRecoveryRequests();
         if (typeof window.actualizarPuntosRojosMenu === 'function') window.actualizarPuntosRojosMenu();
         if (typeof window.suscribirRealtimeSolicitudesRetiro === 'function') window.suscribirRealtimeSolicitudesRetiro();
         if (typeof window.actualizarBonosDot === 'function') window.actualizarBonosDot(true);

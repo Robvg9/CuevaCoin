@@ -9,6 +9,8 @@ const utils = read('js/core/utils.js');
 const loginHardening = read('js/auth/login-hardening.js');
 const legacy = read('js/legacy-app.js');
 const sw = read('service-worker.js');
+const manifest = JSON.parse(read('manifest.json'));
+const icon192 = readFileSync('icon-192.png');
 const app = read('js/core/app.js');
 const history = read('js/finance/history/historial.js');
 const userCards = read('js/admin/finance/usuarios.js');
@@ -101,6 +103,10 @@ assert.ok(history.includes("const categoria = categoriaTransaccion(t);"),
 console.log('PASS — worker history embeds profiles through valid foreign-key relations and uses its scoped classifier');
 
 assert.match(sw, /cuevacoin-shell-v147/);
+assert.ok(manifest.icons.some(icon => icon.src === '/icon-192.png' && icon.sizes === '192x192'), 'PWA manifest must include a real 192px icon');
+assert.equal(icon192.readUInt32BE(16), 192, 'PWA 192px icon width must be 192');
+assert.equal(icon192.readUInt32BE(20), 192, 'PWA 192px icon height must be 192');
+assert.ok(sw.includes("'/icon-192.png'"), 'Service worker must precache the 192px icon');
 assert.doesNotMatch(sw, /cuevacoin-shell-v140/);
 assert.match(app, /VERSION_FALLBACK = 'V\.147'/);
 assert.match(index, /const VERSION_FALLBACK = 'V\.147'/);
