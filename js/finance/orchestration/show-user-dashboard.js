@@ -26,6 +26,7 @@ export function showUserDashboard(usuario) {
         document.getElementById('auditoria-link').style.display = 'none';
         document.getElementById('usuarios-link').style.display = 'none';
         document.getElementById('solicitudes-link').style.display = 'none';
+        document.getElementById('recuperacion-link-item').style.display = 'none';
         document.getElementById('anuncios-link-item').style.display = 'none';
         document.getElementById('estadisticas-link-item').style.display = 'none';
         document.getElementById('historial-link-item').style.display = '';

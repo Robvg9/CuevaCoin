@@ -24,6 +24,7 @@ export function showAdminPanel(admin) {
         document.getElementById('auditoria-link').style.display = '';
         document.getElementById('usuarios-link').style.display = '';
         document.getElementById('solicitudes-link').style.display = '';
+        document.getElementById('recuperacion-link-item').style.display = '';
         document.getElementById('anuncios-link-item').style.display = '';
         document.getElementById('estadisticas-link-item').style.display = '';
         document.getElementById('historial-link-item').style.display = 'none';
@@ -39,6 +40,7 @@ export function showAdminPanel(admin) {
         if (typeof window.verificarAnuncioActivo === 'function') window.verificarAnuncioActivo();
         if (typeof window.actualizarBadgeNotificaciones === 'function') window.actualizarBadgeNotificaciones(admin.id);
         if (typeof window.suscribirRealtimeNotificaciones === 'function') window.suscribirRealtimeNotificaciones(admin.id);
+        if (typeof window.loadAdminRecoveryRequests === 'function') window.loadAdminRecoveryRequests();
         if (typeof window.actualizarPuntosRojosMenu === 'function') window.actualizarPuntosRojosMenu();
         if (typeof window.suscribirRealtimeSolicitudesRetiro === 'function') window.suscribirRealtimeSolicitudesRetiro();
         if (typeof window.actualizarBonosDot === 'function') window.actualizarBonosDot(true);

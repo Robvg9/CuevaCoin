@@ -9,6 +9,8 @@ const utils = read('js/core/utils.js');
 const loginHardening = read('js/auth/login-hardening.js');
 const legacy = read('js/legacy-app.js');
 const sw = read('service-worker.js');
+const manifest = JSON.parse(read('manifest.json'));
+const icon192 = readFileSync('icon-192.png');
 const app = read('js/core/app.js');
 const history = read('js/finance/history/historial.js');
 const userCards = read('js/admin/finance/usuarios.js');
@@ -100,10 +102,14 @@ assert.ok(history.includes("const categoria = categoriaTransaccion(t);"),
   'History rendering must use the same locally scoped category classifier');
 console.log('PASS — worker history embeds profiles through valid foreign-key relations and uses its scoped classifier');
 
-assert.match(sw, /cuevacoin-shell-v145/);
+assert.match(sw, /cuevacoin-shell-v147/);
+assert.ok(manifest.icons.some(icon => icon.src === '/icon-192.png' && icon.sizes === '192x192'), 'PWA manifest must include a real 192px icon');
+assert.equal(icon192.readUInt32BE(16), 192, 'PWA 192px icon width must be 192');
+assert.equal(icon192.readUInt32BE(20), 192, 'PWA 192px icon height must be 192');
+assert.ok(sw.includes("'/icon-192.png'"), 'Service worker must precache the 192px icon');
 assert.doesNotMatch(sw, /cuevacoin-shell-v140/);
-assert.match(app, /VERSION_FALLBACK = 'V\.145'/);
-assert.match(index, /const VERSION_FALLBACK = 'V\.145'/);
+assert.match(app, /VERSION_FALLBACK = 'V\.147'/);
+assert.match(index, /const VERSION_FALLBACK = 'V\.147'/);
 assert.ok(index.includes('src="js/finance/history/historial.js?v=141"'), 'Worker history module must use a versioned URL to bypass stale edge/browser cache');
 assert.ok(index.includes('src="js/admin/finance/historial-trabajadora.js?v=141"'), 'Admin worker-history module must use a versioned URL');
 assert.ok(index.includes('id="admin-worker-history-modal"'), 'Admin worker-history modal must exist');
@@ -147,7 +153,7 @@ assert.match(loginHardening, /usuario\.estado === 'archivado'/, 'Password login 
 assert.match(sessionRestore, /usuario\.estado === 'archivado'/, 'Persisted/OAuth sessions must block archived accounts on reload/reconnect');
 assert.ok(index.includes('option value="archivado">Archivados</option>'), 'The UI must expose the Archived filter');
 console.log('PASS — archived accounts hidden from normal lists, reversible admin actions, and login/session guards');
-console.log('PASS — PWA release aligned to V.145 and worker-history modules cache-busted');
+console.log('PASS — PWA release aligned to V.147 and worker-history modules cache-busted');
 
 const qr='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 const chart='https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
