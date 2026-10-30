@@ -79,6 +79,17 @@ export function suscribirRealtimeNotificaciones(usuarioId) {
             filter: `usuario_id=eq.${usuarioId}`,
         }, (payload) => {
             actualizarBadgeNotificaciones(usuarioId);
+            if (payload?.new?.tipo_evento === 'recuperacion_cuenta') {
+                try {
+                    const actual = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual') || 'null');
+                    if (actual && actual.id === usuarioId && actual.esAdmin) {
+                        if (typeof window.showToast === 'function') window.showToast(payload.new.mensaje || '🔐 Nueva solicitud de recuperación de cuenta.', 6000);
+                        if (typeof window.loadAdminRecoveryRequests === 'function') window.loadAdminRecoveryRequests();
+                    }
+                } catch (error) {
+                    console.warn('[CuevaCoin] No se pudo actualizar la cola de recuperación en tiempo real:', error);
+                }
+            }
             if (typeof window !== 'undefined' && typeof window.reproducirAvisoNotificacion === 'function') {
                 window.reproducirAvisoNotificacion();
             }
