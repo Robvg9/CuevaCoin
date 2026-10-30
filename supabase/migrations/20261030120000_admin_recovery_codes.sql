@@ -12,7 +12,9 @@ alter table public.password_recovery_requests
   add column if not exists admin_code_expires_at timestamptz,
   add column if not exists admin_code_attempts integer not null default 0,
   add column if not exists admin_code_used_at timestamptz,
-  add column if not exists admin_approved_by uuid references public.perfiles(id);
+  add column if not exists admin_approved_by uuid references public.perfiles(id),
+  add column if not exists admin_verified_at timestamptz,
+  add column if not exists admin_verification_channel text;
 
 alter table public.password_recovery_requests
   drop constraint if exists password_recovery_requests_recovery_method_check;
@@ -25,6 +27,12 @@ alter table public.password_recovery_requests
 alter table public.password_recovery_requests
   add constraint password_recovery_requests_status_check
   check (status in ('pending', 'issued', 'processing', 'completed', 'expired', 'rejected'));
+
+alter table public.password_recovery_requests
+  drop constraint if exists password_recovery_requests_admin_verification_channel_check;
+alter table public.password_recovery_requests
+  add constraint password_recovery_requests_admin_verification_channel_check
+  check (admin_verification_channel is null or admin_verification_channel in ('whatsapp', 'presencial'));
 
 alter table public.password_recovery_requests
   drop constraint if exists password_recovery_requests_admin_code_attempts_check;
@@ -46,5 +54,9 @@ comment on column public.password_recovery_requests.admin_code_hash is
   'SHA-256 de un código aleatorio de alta entropía; el código original solo se entrega una vez al administrador.';
 comment on column public.password_recovery_requests.admin_code_expires_at is
   'Caducidad del código administrativo; duración prevista: 15 minutos desde su emisión.';
+comment on column public.password_recovery_requests.admin_verified_at is
+  'Instante en que el administrador confirmó la identidad antes de emitir el código.';
+comment on column public.password_recovery_requests.admin_verification_channel is
+  'Canal usado por el administrador para verificar a la titular: whatsapp o presencial.';
 
 COMMIT;
