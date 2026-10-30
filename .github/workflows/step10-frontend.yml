@@ -84,3 +84,5 @@ jobs:
         run: node scripts/verify-step10-release.mjs
       - name: Verify V148 offline behavior and V149 compact admin users list
         run: node scripts/verify-v149-users-ui.mjs
+      - name: Verify P1-01 safe DOM rendering for untrusted profile and history data
+        run: node scripts/verify-p1-01-xss.mjs
