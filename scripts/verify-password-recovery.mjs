@@ -58,8 +58,8 @@ assert.match(adminRecoveryMigration, /admin_verification_channel/);
 assert.match(adminRecoveryUi, /form-solicitar-recuperacion-admin/);
 assert.match(adminRecoveryUi, /form-confirmar-recuperacion-admin/);
 assert.match(adminQueueUi, /Ver ficha del perfil/);
-assert.match(adminQueueUi, /identityCheck\\.checked/);
-assert.match(adminQueueUi, /verificationChannel\\.value/);
+assert.ok(adminQueueUi.includes("identityCheck.checked"), "Admin must confirm identity before issuance");
+assert.ok(adminQueueUi.includes("verificationChannel.value"), "Admin must select the identity-verification channel");
 assert.doesNotMatch(recoveryEdge, /if \(mode === "complete"\)/, "OTP completion route must be removed");
 assert.match(recoveryEdge, /auth\.admin\.updateUserById/, "Password update must target the original account UUID");
 assert.match(recoveryEdge, /userData\.user\.id !== request\.profile_id/, "Recovery link must prove ownership of the original Auth UUID");
@@ -93,4 +93,4 @@ assert.ok(index.includes("env(safe-area-inset-top)"), "Responsive login must acc
 assert.doesNotMatch(loginScreenMarkup, /Si usted desea tener su propia Aplicación\/Sitio Web, contáctenos/, "Promotional copy must not crowd the login view");
 console.log("PASS — recovery uses only the email button, reports delivery rejection, and never resets inactive/shared-mailbox accounts");
 console.log("PASS — login card is responsive, safe-area aware, scrollable and reduced-content");
-console.log("PASS — V145 source/cache-busting and CI contract are aligned");
+console.log("PASS — V147 source/cache-busting and email/admin recovery contracts are aligned");
