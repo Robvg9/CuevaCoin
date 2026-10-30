@@ -2974,6 +2974,12 @@
                     <span id="solicitudes-retiro-dot" class="novedad-dot-inline hidden"></span>
                 </a>
             </li>
+            <li id="recuperacion-link-item" style="display:none;">
+                <a role="button" tabindex="0" onclick="loadSection('recuperacion')" id="recuperacion-link">
+                    <i>🔐</i> Recuperación de cuentas
+                    <span id="recuperacion-pendiente-dot" class="novedad-dot-inline hidden"></span>
+                </a>
+            </li>
             <li>
                 <a role="button" tabindex="0" onclick="loadSection('perfil')">
                     <i>👤</i> Perfil
@@ -3102,6 +3108,23 @@
                 <p style="font-size:13px; line-height:1.5;">Recibirás un correo con el botón seguro «Restablecer contraseña». El campo Usuario o correo de arriba indica qué cuenta quieres recuperar.</p>
                 <button type="submit" id="btn-enviar-enlace-recuperacion" class="btn btn-primary" style="width:100%;">Enviar correo de restablecimiento</button>
             </form>
+            <button type="button" id="btn-mostrar-recuperacion-admin" class="btn btn-secondary" style="width:100%; margin-top:10px;">No tengo acceso al correo · Recuperar con administrador</button>
+            <form id="form-solicitar-recuperacion-admin" class="hidden" style="margin-top:12px;">
+                <p style="font-size:13px;line-height:1.5;">Se creará una solicitud pendiente en la cuenta del administrador. El administrador verificará tu identidad y te entregará un código temporal. No se envía SMS ni correo.</p>
+                <button type="submit" id="btn-solicitar-codigo-admin" class="btn btn-primary" style="width:100%;">Enviar solicitud al administrador</button>
+            </form>
+            <button type="button" id="btn-ya-tengo-codigo" class="btn btn-secondary hidden" style="width:100%;margin-top:10px;">Ya tengo un código</button>
+            <form id="form-confirmar-recuperacion-admin" class="hidden" style="margin-top:12px;">
+                <label for="recuperar-codigo-admin" style="display:block;margin-top:8px;">Código entregado por el administrador</label>
+                <input type="text" id="recuperar-codigo-admin" autocomplete="one-time-code" autocapitalize="characters" maxlength="16" placeholder="Código de 16 caracteres" required>
+                <label for="recuperar-admin-nueva-contrasena" style="display:block;margin-top:8px;">Nueva contraseña</label>
+                <input type="password" id="recuperar-admin-nueva-contrasena" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Mínimo 8 caracteres" required>
+                <label for="recuperar-admin-confirmar-contrasena" style="display:block;margin-top:8px;">Confirmar nueva contraseña</label>
+                <input type="password" id="recuperar-admin-confirmar-contrasena" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Repite la nueva contraseña" required>
+                <button type="submit" id="btn-confirmar-recuperacion-admin" class="btn btn-primary" style="width:100%;margin-top:10px;">Restablecer contraseña</button>
+                <button type="button" id="btn-volver-recuperacion-correo" class="btn btn-secondary" style="width:100%;margin-top:8px;">Volver a recuperación por correo</button>
+            </form>
+            <p id="recuperar-admin-mensaje" aria-live="polite" style="font-size:13px;line-height:1.5;margin:10px 0;"></p>
             <form id="form-confirmar-recuperacion" class="hidden" style="margin-top:12px;">
                 <label for="recuperar-nueva-contrasena" style="display:block; margin-top:8px;">Nueva contraseña</label>
                 <input type="password" id="recuperar-nueva-contrasena" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Mínimo 8 caracteres" required>
@@ -3239,6 +3262,17 @@
                     <h2>Solicitudes de Cambio de Correo Pendientes</h2>
                     <div id="admin-solicitudes-correo-cards" class="solicitudes-cards"></div>
                     <p id="admin-solicitudes-correo-vacio" class="hidden" style="text-align: center; opacity: 0.8; margin-top: 16px;">No hay solicitudes de cambio de correo pendientes.</p>
+                </div>
+            </div>
+
+            <!-- Recuperación administrativa de cuentas: solo visible para administrador. -->
+            <div id="admin-recuperacion" class="section hidden">
+                <div class="card">
+                    <h2>🔐 Recuperación de cuentas</h2>
+                    <p style="opacity:.8;line-height:1.5;">Aquí aparecen las solicitudes de trabajadoras que no pueden acceder a su correo. Verifica personalmente su identidad antes de emitir un código. Cada código es de un solo uso, queda asociado a una cuenta y vence en 15 minutos.</p>
+                    <button type="button" id="btn-refresh-admin-recovery" class="btn btn-secondary" style="width:100%;margin:8px 0 14px;">Actualizar solicitudes</button>
+                    <div id="admin-recovery-request-cards"></div>
+                    <p id="admin-recovery-empty" class="hidden" style="text-align:center;opacity:.75;margin-top:16px;">No hay solicitudes pendientes de recuperación.</p>
                 </div>
             </div>
 
@@ -4786,32 +4820,106 @@
             }, 12000);
         };
 
-        // Check if app is installed
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            // Show install button
-            const installButton = document.createElement('button');
-            installButton.textContent = 'Instalar App';
-            installButton.className = 'btn btn-primary';
-            installButton.style.position = 'fixed';
-            installButton.style.bottom = '20px';
-            installButton.style.right = '20px';
-            installButton.style.zIndex = '1000';
-            installButton.onclick = () => {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted the install prompt');
-                    } else {
-                        console.log('User dismissed the install prompt');
+        // CuevaCoin V146: botón de instalación resiliente + instrucciones manuales.
+        let deferredInstallPrompt = null;
+        let installButton = null;
+
+        function cuevacoinIsInstalled() {
+            return window.matchMedia('(display-mode: standalone)').matches ||
+                window.navigator.standalone === true;
+        }
+
+        function cuevacoinInstallToast(text) {
+            if (typeof window.showToast === 'function') window.showToast(text, 5000);
+            else window.alert(text);
+        }
+
+        function cuevacoinInstallInstructions() {
+            const ua = navigator.userAgent || '';
+            let steps = 'Abre el menú del navegador (⋮ o Compartir) y selecciona «Instalar aplicación» o «Añadir a pantalla de inicio».';
+            if (/iPhone|iPad|iPod/i.test(ua)) {
+                steps = 'En Safari: pulsa Compartir y después «Añadir a pantalla de inicio».';
+            } else if (/SamsungBrowser/i.test(ua)) {
+                steps = 'En Samsung Internet: abre el menú ☰ y elige «Añadir página a» o «Instalar aplicación».';
+            } else if (/Android/i.test(ua)) {
+                steps = 'En Chrome para Android: pulsa ⋮ (arriba a la derecha) y elige «Instalar aplicación». Si esa opción no aparece, usa «Añadir a pantalla de inicio».';
+            } else {
+                steps = 'En Chrome o Edge de escritorio: usa el icono de instalación de la barra de direcciones o el menú del navegador → «Instalar CuevaCoin».';
+            }
+            window.alert('Para instalar CuevaCoin:\n\n' + steps + '\n\nSi no aparece esa opción, abre el enlace directamente en Chrome o en el navegador actualizado del teléfono.');
+        }
+
+        function cuevacoinEnsureInstallButton() {
+            if (!document.body || cuevacoinIsInstalled()) {
+                if (installButton) installButton.style.display = 'none';
+                return;
+            }
+            if (!installButton) {
+                installButton = document.createElement('button');
+                installButton.type = 'button';
+                installButton.textContent = '📲 Instalar app';
+                installButton.className = 'btn btn-primary';
+                installButton.setAttribute('aria-label', 'Instalar CuevaCoin en este dispositivo');
+                installButton.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:1000;box-shadow:0 4px 14px rgba(0,0,0,.18);';
+                installButton.addEventListener('click', async () => {
+                    if (cuevacoinIsInstalled()) {
+                        installButton.style.display = 'none';
+                        cuevacoinInstallToast('CuevaCoin ya está instalada en este dispositivo.');
+                        return;
                     }
-                    deferredPrompt = null;
+                    if (!deferredInstallPrompt) {
+                        cuevacoinInstallInstructions();
+                        return;
+                    }
+                    const promptEvent = deferredInstallPrompt;
+                    deferredInstallPrompt = null; // El evento solo puede utilizarse una vez.
+                    installButton.disabled = true;
+                    installButton.textContent = 'Abriendo instalación…';
+                    try {
+                        await promptEvent.prompt();
+                        const choice = await promptEvent.userChoice;
+                        if (choice && choice.outcome === 'accepted') {
+                            cuevacoinInstallToast('Instalación iniciada. Busca CuevaCoin en la pantalla de inicio.');
+                        } else {
+                            cuevacoinInstallToast('No se instaló todavía. Puedes intentarlo desde el menú del navegador.');
+                        }
+                    } catch (error) {
+                        console.warn('[CuevaCoin PWA] El navegador no pudo abrir el diálogo de instalación:', error);
+                        cuevacoinInstallToast('El navegador no pudo abrir la instalación automática. Te mostraremos cómo añadir CuevaCoin desde su menú.');
+                        cuevacoinInstallInstructions();
+                    } finally {
+                        installButton.disabled = false;
+                        installButton.textContent = '📲 Instalar app';
+                    }
                 });
-            };
-            document.body.appendChild(installButton);
+                document.body.appendChild(installButton);
+            } else {
+                installButton.style.display = '';
+            }
+        }
+
+        window.addEventListener('beforeinstallprompt', (event) => {
+            event.preventDefault();
+            deferredInstallPrompt = event;
+            cuevacoinEnsureInstallButton();
         });
+
+        window.addEventListener('appinstalled', () => {
+            deferredInstallPrompt = null;
+            if (installButton) {
+                installButton.textContent = '✅ Aplicación instalada';
+                installButton.disabled = true;
+                installButton.style.display = 'none';
+            }
+            cuevacoinInstallToast('CuevaCoin se instaló correctamente.');
+        });
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', cuevacoinEnsureInstallButton, { once: true });
+        } else {
+            cuevacoinEnsureInstallButton();
+        }
+
     </script>
 
     <!-- Supabase -->
@@ -4856,7 +4964,8 @@
     <script type="module" src="js/ui/push.js"></script>
     <script type="module" src="js/auth/google-ui.js"></script>
     <script defer src="js/auth/login-hardening.js?v=143"></script>
-    <script defer src="js/auth/password-recovery.js?v=145"></script>
+    <script defer src="js/auth/password-recovery.js?v=146"></script>
+    <script type="module" src="js/auth/admin-recovery.js?v=146"></script>
     <!-- Fase 2 / Oleada 4: sesión, anuncios, bonos info, sugerencias user, config local -->
     <script type="module" src="js/session/logout.js"></script>
     <script type="module" src="js/ui/anuncios.js"></script>
@@ -4877,6 +4986,7 @@
     <!-- Fase 2 / Oleada 7: correo lista, usuarios estado, cuenta desactivada, sugerencias realtime -->
     <script type="module" src="js/admin/correo-lista.js"></script>
     <script type="module" src="js/admin/usuarios-estado.js?v=141"></script>
+    <script type="module" src="js/admin/recovery-admin.js?v=146"></script>
     <script type="module" src="js/admin/cuenta-desactivada.js"></script>
     <script type="module" src="js/admin/sugerencias-realtime.js"></script>
     <!-- Fase 3 / Oleada 1 — arquitectura financiera (mapa) -->
