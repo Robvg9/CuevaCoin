@@ -1,5 +1,12 @@
 /** Fase 3 / Oleada 6 — loadUserHistorial */
 
+function crearElementoTexto(tag, className, value) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    element.textContent = value == null ? '' : String(value);
+    return element;
+}
+
 export async function loadUserHistorial(usuarioId) {
     const tipoFiltro = document.getElementById('user-filter-tipo').value;
     const fechaDesde = document.getElementById('user-filter-fecha-desde').value; // 'YYYY-MM-DD' o ''
@@ -7,7 +14,7 @@ export async function loadUserHistorial(usuarioId) {
     const textoFiltro = document.getElementById('user-filter-texto').value.trim().toLowerCase();
     const cardsContainer = document.getElementById('user-transacciones-cards');
     const vacioMsg = document.getElementById('user-historial-vacio');
-    cardsContainer.innerHTML = '';
+    cardsContainer.replaceChildren();
 
     // RLS ya limita esto a las propias transacciones del usuario
     // F1 (v63): se agrega el join a "contraparte" (nombre/usuario) para
@@ -114,9 +121,9 @@ export async function loadUserHistorial(usuarioId) {
         const cantidad = Number(t.cantidad);
         const tipo = etiquetas[categoria] || (cantidad > 0 ? 'Recibido' : 'Enviado');
         const cantidadAbs = Math.abs(cantidad);
-        const fecha = new Date(t.creado_en).toLocaleDateString('es-ES', { 
-            day: '2-digit', 
-            month: 'short', 
+        const fecha = new Date(t.creado_en).toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: 'short',
             year: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
@@ -134,37 +141,82 @@ export async function loadUserHistorial(usuarioId) {
         // no tienen "a quién agregar a favoritos".
         const esFavoritable = (categoria === 'enviado' || categoria === 'recibido') && t.contraparte_id;
         const nombreContraparte = t.contraparte ? (t.contraparte.nombre || t.contraparte.usuario) : '';
-        const esFavoritoActual = esFavoritable && window.favoritosIdsCache.has(t.contraparte_id);
-        const botonFavorito = esFavoritable
-            ? `<button type="button" class="tx-card-favorito-btn" title="${esFavoritoActual ? 'Quitar de favoritos' : 'Agregar a favoritos'}" onclick="toggleFavorito('${t.contraparte_id}', '${nombreContraparte.replace(/'/g, "\\'")}', this)">${esFavoritoActual ? '⭐' : '☆'}</button>`
-            : '';
+        const esFavoritoActual = Boolean(esFavoritable && window.favoritosIdsCache
+            && window.favoritosIdsCache.has(t.contraparte_id));
 
         const card = document.createElement('div');
         card.className = 'tx-card';
-        card.innerHTML = `
-            <div class="tx-card-header">
-                <span class="tx-card-icono tx-card-icono-${categoria}" title="${explicacionTipo[categoria] || ''}">${iconosTipo[categoria] || '🔹'}</span>
-                <div class="tx-card-titulo">
-                    <span class="tx-card-tipo ${categoria}">${tipo}</span>
-                    <span class="tx-card-fecha">${fecha}</span>
-                </div>
-                <div class="tx-card-monto ${cantidad >= 0 ? 'positivo' : 'negativo'}">
-                    ${cantidad >= 0 ? '+' : ''}$${cantidadAbs.toFixed(2)}
-                </div>
-            </div>
-            <p class="tx-card-explicacion">${explicacionTipo[categoria] || ''}</p>
-            <div class="tx-card-detalles">
-                <span class="tx-card-motivo">📝 ${t.motivo || 'Sin motivo'}</span>
-                <span title="Quién aprobó/procesó este movimiento">👤 ${adminNombre}</span>
-            </div>
-            <div class="tx-card-saldos" title="Cómo cambió tu saldo con este movimiento">
-                Saldo: ${saldoAntes} → <strong>${saldoDespues}</strong>
-            </div>
-            <div class="tx-card-acciones">
-                ${botonFavorito}
-                <button type="button" class="btn tx-card-comprobante-btn" onclick='window.compartirComprobante(${JSON.stringify(t).replace(/'/g, "&apos;")})'>📄 Comprobante</button>
-            </div>
-        `;
+
+        const header = document.createElement('div');
+        header.className = 'tx-card-header';
+
+        const icon = crearElementoTexto('span',
+            'tx-card-icono tx-card-icono-' + categoria,
+            iconosTipo[categoria] || '🔹');
+        icon.title = explicacionTipo[categoria] || '';
+
+        const titleBox = document.createElement('div');
+        titleBox.className = 'tx-card-titulo';
+        titleBox.appendChild(crearElementoTexto('span', 'tx-card-tipo ' + categoria, tipo));
+        titleBox.appendChild(crearElementoTexto('span', 'tx-card-fecha', fecha));
+
+        const amount = crearElementoTexto('div',
+            'tx-card-monto ' + (cantidad >= 0 ? 'positivo' : 'negativo'),
+            (cantidad >= 0 ? '+' : '') + '$' + cantidadAbs.toFixed(2));
+
+        header.appendChild(icon);
+        header.appendChild(titleBox);
+        header.appendChild(amount);
+
+        const explanation = crearElementoTexto('p',
+            'tx-card-explicacion',
+            explicacionTipo[categoria] || '');
+
+        const details = document.createElement('div');
+        details.className = 'tx-card-detalles';
+        details.appendChild(crearElementoTexto('span', 'tx-card-motivo',
+            '📝 ' + (t.motivo || 'Sin motivo')));
+        const adminDetail = crearElementoTexto('span', '',
+            '👤 ' + String(adminNombre || 'N/A'));
+        adminDetail.title = 'Quién aprobó/procesó este movimiento';
+        details.appendChild(adminDetail);
+
+        const balances = document.createElement('div');
+        balances.className = 'tx-card-saldos';
+        balances.title = 'Cómo cambió tu saldo con este movimiento';
+        balances.appendChild(crearElementoTexto('span', '', 'Saldo: ' + saldoAntes + ' → '));
+        balances.appendChild(crearElementoTexto('strong', '', saldoDespues));
+
+        const actions = document.createElement('div');
+        actions.className = 'tx-card-acciones';
+
+        if (esFavoritable) {
+            const favoriteButton = crearElementoTexto('button', 'tx-card-favorito-btn',
+                esFavoritoActual ? '⭐' : '☆');
+            favoriteButton.type = 'button';
+            favoriteButton.title = esFavoritoActual ? 'Quitar de favoritos' : 'Agregar a favoritos';
+            favoriteButton.addEventListener('click', () => {
+                if (typeof window.toggleFavorito === 'function') {
+                    window.toggleFavorito(t.contraparte_id, nombreContraparte || '', favoriteButton);
+                }
+            });
+            actions.appendChild(favoriteButton);
+        }
+
+        const receiptButton = crearElementoTexto('button', 'btn tx-card-comprobante-btn', '📄 Comprobante');
+        receiptButton.type = 'button';
+        receiptButton.addEventListener('click', () => {
+            if (typeof window.compartirComprobante === 'function') {
+                window.compartirComprobante(t);
+            }
+        });
+        actions.appendChild(receiptButton);
+
+        card.appendChild(header);
+        card.appendChild(explanation);
+        card.appendChild(details);
+        card.appendChild(balances);
+        card.appendChild(actions);
         cardsContainer.appendChild(card);
     });
 }
