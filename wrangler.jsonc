@@ -3,5 +3,8 @@
   "compatibility_date": "2026-08-10",
   "assets": {
     "directory": "./"
+  },
+  "build": {
+    "command": "node --version && node scripts/verify-password-recovery.mjs && node scripts/verify-step10-release.mjs"
   }
 }
