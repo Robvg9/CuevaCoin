@@ -129,7 +129,7 @@ async function findActiveProfile(admin: ReturnType<typeof createClient>, identif
 }
 
 async function findActiveProfileForAdmin(admin: ReturnType<typeof createClient>, identifier: string) {
-  if (!identifier || identifier.length > 120 || /[\\r\\n\\0]/.test(identifier)) return null;
+  if (!identifier || identifier.length > 120 || /[\r\n\0]/.test(identifier)) return null;
   const column = identifier.includes("@") ? "correo" : "usuario";
   const { data, error } = await admin.from("perfiles")
     .select("id, usuario, nombre, estado, es_admin")
@@ -173,7 +173,7 @@ async function getAuthenticatedAdmin(
   options: { auth: { persistSession: boolean; autoRefreshToken: boolean; detectSessionInUrl: boolean } },
   authorization: string,
 ) {
-  if (!/^Bearer\\s+\\S+/i.test(authorization)) return null;
+  if (!/^Bearer\s+\S+/i.test(authorization)) return null;
   const scopedAuth = createClient(url, anonKey, {
     ...options,
     global: { headers: { Authorization: authorization } },
@@ -370,7 +370,7 @@ Deno.serve(async (req: Request) => {
     // Redeem a code issued by the administrator. The code is bound to the username/profile.
     if (mode === "admin-complete") {
       const code = typeof body.code === "string"
-        ? body.code.toUpperCase().replace(/[\\s-]/g, "")
+        ? body.code.toUpperCase().replace(/[\s-]/g, "")
         : "";
       if (!identifier || identifier.length > 120 || !/^[A-HJ-NP-Z2-9]{16}$/.test(code) ||
           newPassword.length < 8 || newPassword.length > 128) return invalidRecovery();
