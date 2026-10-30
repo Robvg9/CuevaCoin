@@ -77,7 +77,16 @@ async function guardarHistorialOffline(key, nombre, filas) {
     const snapshot = {
         key,
         workerName: nombre || 'Trabajador',
-        items: (filas || []).slice(0, HISTORY_CACHE_LIMIT),
+        items: (filas || []).slice(0, HISTORY_CACHE_LIMIT).map(tx => ({
+            tipo: tx.tipo,
+            cantidad: Number(tx.cantidad || 0),
+            creado_en: tx.creado_en,
+            motivo: tx.motivo || null,
+            saldo_antes: tx.saldo_antes ?? null,
+            saldo_despues: tx.saldo_despues ?? null,
+            admin: tx.admin ? { nombre: tx.admin.nombre || null, usuario: tx.admin.usuario || null } : null,
+            contraparte: tx.contraparte ? { nombre: tx.contraparte.nombre || null, usuario: tx.contraparte.usuario || null } : null
+        })),
         updatedAt: new Date().toISOString()
     };
     await new Promise((resolve, reject) => {
