@@ -152,7 +152,20 @@
           issue.disabled = true;
           issue.textContent = "Generando…";
           try {
-            const issued = await callAdminRecovery({ mode: "admin-issue", rid: item.id });
+            const verificationChannel = window.prompt("¿Cómo verificaste su identidad? Escribe WhatsApp o presencial.");
+            const channel = String(verificationChannel || "").trim().toLowerCase();
+            if (channel !== "whatsapp" && channel !== "presencial") {
+              issue.disabled = false;
+              issue.textContent = "Generar código (15 min)";
+              window.showToast?.("Selecciona WhatsApp o presencial para verificar la identidad.", 4500);
+              return;
+            }
+            if (!window.confirm("Confirmo que hablé con la titular y que solicita recuperar esta cuenta. ¿Emitir el código?")) {
+              issue.disabled = false;
+              issue.textContent = "Generar código (15 min)";
+              return;
+            }
+            const issued = await callAdminRecovery({ mode: "admin-issue", rid: item.id, verificationChannel: channel, identityConfirmed: true });
             issue.textContent = "Código generado";
             card.appendChild(makeCodePanel(issued.code, issued.expires_at));
             const status = card.querySelector("p:last-of-type");
