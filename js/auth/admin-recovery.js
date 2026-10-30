@@ -36,7 +36,7 @@
     $("form-confirmar-recuperacion-admin")?.classList.add("hidden");
     $("btn-mostrar-recuperacion-admin")?.classList.add("hidden");
     $("btn-ya-tengo-codigo")?.classList.remove("hidden");
-    message("Escribe tu usuario en el campo de inicio de sesión. La solicitud aparecerá en la cuenta del administrador; no se enviará ningún SMS.");
+    message("Escribe tu usuario arriba y envía la solicitud. El administrador verá tu solicitud, revisará tu perfil y te entregará un código por WhatsApp o en persona. No se envía SMS.");
   }
 
   function showAdminCodeEntry() {
@@ -87,7 +87,7 @@
       if (button) { button.disabled = true; button.textContent = "Registrando solicitud…"; }
       try {
         await request({ mode: "admin-request", identifier });
-        message("Solicitud registrada. El administrador debe revisarla y entregarte un código. Cuando lo recibas, pulsa «Ya tengo un código». Si la cuenta no está disponible, no se revelará información.");
+        message("Solicitud enviada. El administrador debe revisar tu perfil y confirmar tu identidad. Cuando te entregue el código, pulsa «Ya tengo un código». El código vence a los 15 minutos.");
       } catch (error) {
         message(error.status === 429
           ? "Has alcanzado el límite de solicitudes. Contacta directamente al administrador."
