@@ -125,6 +125,14 @@
           ? "Código emitido. Vence: " + new Date(item.code_expires_at).toLocaleString()
           : item.status === "pending" ? "Pendiente de aprobación." : "El código anterior venció; puedes emitir otro.";
         card.appendChild(makeText("p", statusLine, "font-weight:600;margin:6px 0 10px;"));
+        const verificationChannel = document.createElement("select");
+        verificationChannel.style.cssText = "width:100%;margin:8px 0;";
+        verificationChannel.setAttribute("aria-label", "Canal usado para comprobar la identidad");
+        verificationChannel.add(new Option("Selecciona cómo la verificaste", ""));
+        verificationChannel.add(new Option("WhatsApp", "whatsapp"));
+        verificationChannel.add(new Option("En persona", "presencial"));
+        card.appendChild(verificationChannel);
+
         const issue = document.createElement("button");
         issue.type = "button";
         issue.className = "btn btn-primary";
