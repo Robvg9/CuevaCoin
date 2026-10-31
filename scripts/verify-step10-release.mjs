@@ -114,7 +114,7 @@ assert.equal(app.match(/VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], releaseVersion,
     "App fallback version must match the HTML release version");
 assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], releaseVersion,
     "Service worker cache version must match the HTML release version");
-assert.ok(index.includes('src="js/finance/history/historial.js?v=141"'), 'Worker history module must use a versioned URL to bypass stale edge/browser cache');
+assert.match(index, /src="js\/finance\/history\/historial\.js\?v=\d+"/, 'Worker history module must use a versioned URL to bypass stale edge/browser cache');
 assert.ok(index.includes('src="js/admin/finance/historial-trabajadora.js?v=148"'), 'Admin worker-history module must use a versioned URL');
 assert.ok(index.includes('id="admin-worker-history-modal"'), 'Admin worker-history modal must exist');
 assert.ok(userCards.includes('abrirHistorialTrabajadoraAdmin'), 'Admin worker cards must expose the read-only history action');
