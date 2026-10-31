@@ -77,6 +77,7 @@ class FakeElement {
         this.children = [];
         this.className = '';
         this.classList = new FakeClassList(this);
+        this.dataset = {};
         this.listeners = new Map();
         this.textContent = '';
         this.value = '';
