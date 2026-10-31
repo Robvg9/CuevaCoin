@@ -19,7 +19,7 @@ export function renderizarMiCodigoQR() {
 
     const contenedor = document.getElementById('mi-qr-canvas');
     if (!contenedor) return;
-    contenedor.innerHTML = '';
+    contenedor.replaceChildren();
     const instancia = new QRCode(contenedor, {
         text: `CUEVACOIN:${usuario.numeroCuenta}`,
         width: 180,

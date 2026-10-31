@@ -1,23 +1,61 @@
 /** Fase 3 / Oleada 8 — Reportes */
 
+function crearLineaReporte(etiqueta, valor) {
+    const line = document.createElement('p');
+    const strong = document.createElement('strong');
+    strong.textContent = etiqueta + ':';
+    const text = document.createElement('span');
+    text.textContent = ' ' + String(valor);
+    line.appendChild(strong);
+    line.appendChild(text);
+    return line;
+}
+
+function mostrarErrorReporte(message) {
+    const container = document.getElementById('reporte-contenido');
+    if (!container) return;
+    const error = document.createElement('p');
+    error.textContent = message;
+    container.replaceChildren(error);
+}
+
 export async function generarReporteDiario() {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
+    const container = document.getElementById('reporte-contenido');
+    if (!container) return;
+
+    container.replaceChildren();
+    const loading = document.createElement('p');
+    loading.textContent = 'Generando reporte…';
+    container.appendChild(loading);
+
     try {
-        const { data: transacciones } = await window.supabaseClient
+        const { data: transacciones, error } = await window.supabaseClient
             .from('transacciones')
-            .select('*')
+            .select('cantidad')
             .gte('creado_en', hoy.toISOString());
-        const totalDepositos = transacciones.filter(t => t.cantidad > 0).reduce((sum, t) => sum + Number(t.cantidad), 0);
-        const totalRetiros = transacciones.filter(t => t.cantidad < 0).reduce((sum, t) => sum + Math.abs(Number(t.cantidad)), 0);
-        document.getElementById('reporte-contenido').innerHTML = `
-            <p><strong>Fecha:</strong> ${hoy.toLocaleDateString()}</p>
-            <p><strong>Total Depósitos:</strong> $${totalDepositos.toFixed(2)}</p>
-            <p><strong>Total Retiros:</strong> $${totalRetiros.toFixed(2)}</p>
-            <p><strong>Transacciones:</strong> ${transacciones.length}</p>
-        `;
+        if (error) throw error;
+
+        const filas = Array.isArray(transacciones) ? transacciones : [];
+        const totalDepositos = filas.reduce((sum, t) => {
+            const amount = Number(t.cantidad);
+            return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+        }, 0);
+        const totalRetiros = filas.reduce((sum, t) => {
+            const amount = Number(t.cantidad);
+            return Number.isFinite(amount) && amount < 0 ? sum + Math.abs(amount) : sum;
+        }, 0);
+
+        const fragment = document.createDocumentFragment();
+        fragment.appendChild(crearLineaReporte('Fecha', hoy.toLocaleDateString()));
+        fragment.appendChild(crearLineaReporte('Total Depósitos', '$' + totalDepositos.toFixed(2)));
+        fragment.appendChild(crearLineaReporte('Total Retiros', '$' + totalRetiros.toFixed(2)));
+        fragment.appendChild(crearLineaReporte('Transacciones', filas.length));
+        container.replaceChildren(fragment);
     } catch (error) {
-        document.getElementById('reporte-contenido').innerHTML = '<p>Error al generar reporte</p>';
+        console.error('No se pudo generar el reporte diario:', error);
+        mostrarErrorReporte('Error al generar reporte');
     }
 }
 

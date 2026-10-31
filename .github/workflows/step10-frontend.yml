@@ -14,6 +14,18 @@ on:
       - "supabase/functions/cuevacoin-login/**"
       - "scripts/verify-password-recovery.mjs"
       - "js/finance/history/historial.js"
+      - "js/chat/**"
+      - "js/ui/notif-panel.js"
+      - "js/ui/sugerencias-user.js"
+      - "js/profile/qr-display.js"
+      - "js/admin/correo-lista.js"
+      - "js/admin/sugerencias-admin.js"
+      - "js/admin/finance/destinatarios.js"
+      - "js/admin/finance/auditoria.js"
+      - "js/admin/finance/reportes.js"
+      - "js/finance/transfers/favoritos.js"
+      - "js/finance/withdrawals/admin-solicitudes-ui.js"
+      - "scripts/verify-p1-01-xss.mjs"
       - "js/finance/queue/offline-queue.js"
       - "js/admin/finance/historial-trabajadora.js"
       - "js/admin/finance/stats.js"
@@ -47,6 +59,18 @@ on:
       - "supabase/functions/cuevacoin-login/**"
       - "scripts/verify-password-recovery.mjs"
       - "js/finance/history/historial.js"
+      - "js/chat/**"
+      - "js/ui/notif-panel.js"
+      - "js/ui/sugerencias-user.js"
+      - "js/profile/qr-display.js"
+      - "js/admin/correo-lista.js"
+      - "js/admin/sugerencias-admin.js"
+      - "js/admin/finance/destinatarios.js"
+      - "js/admin/finance/auditoria.js"
+      - "js/admin/finance/reportes.js"
+      - "js/finance/transfers/favoritos.js"
+      - "js/finance/withdrawals/admin-solicitudes-ui.js"
+      - "scripts/verify-p1-01-xss.mjs"
       - "js/finance/queue/offline-queue.js"
       - "js/admin/finance/historial-trabajadora.js"
       - "js/admin/finance/stats.js"
@@ -84,3 +108,5 @@ jobs:
         run: node scripts/verify-step10-release.mjs
       - name: Verify V148 offline behavior and V149 compact admin users list
         run: node scripts/verify-v149-users-ui.mjs
+      - name: Verify P1-01 safe DOM rendering for untrusted profile and history data
+        run: node scripts/verify-p1-01-xss.mjs

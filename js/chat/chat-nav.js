@@ -3,31 +3,54 @@
 export function renderizarContactosChat(tipoVista, contactos, mensajeVacio) {
     const cfg = CHAT_LISTA_CONFIG[tipoVista];
     const cont = document.getElementById(cfg.listaContainerId);
-    if (contactos.length === 0) {
-        cont.innerHTML = `<p class="chat-lista-vacia-msg">${mensajeVacio || 'Todavía no hay contactos disponibles.'}</p>`;
+    if (!cont) return;
+    cont.replaceChildren();
+
+    if (!contactos || contactos.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'chat-lista-vacia-msg';
+        empty.textContent = mensajeVacio || 'Todavía no hay contactos disponibles.';
+        cont.appendChild(empty);
         return;
     }
+
     const select = document.getElementById(cfg.selectId);
-    cont.innerHTML = '';
+    const fragment = document.createDocumentFragment();
     contactos.forEach(c => {
         const item = document.createElement('div');
         const activo = String(select.value) === String(c.id);
         item.className = 'chat-contacto-item' + (activo ? ' chat-contacto-activo' : '');
-        item.dataset.id = c.id;
-        const inicial = (c.nombre || '?').charAt(0).toUpperCase();
-        // v107: burbujita de "sin leer" por contacto (además del
-        // orden ya aplicado antes de llegar acá, que puso a este
-        // contacto arriba si corresponde).
-        item.innerHTML = `
-            <div class="chat-avatar">${inicial}</div>
-            <div class="chat-contacto-info">
-                <div class="chat-contacto-nombre">${c.nombre}${c.unread ? ' <span class="chat-contacto-dot" title="Mensaje sin leer"></span>' : ''}</div>
-                <div class="chat-contacto-subtitulo">${c.subtitulo || ''}</div>
-            </div>
-        `;
+        item.dataset.id = String(c.id);
+
+        const nombre = String(c.nombre || '?');
+        const avatar = document.createElement('div');
+        avatar.className = 'chat-avatar';
+        avatar.textContent = nombre.charAt(0).toUpperCase();
+
+        const info = document.createElement('div');
+        info.className = 'chat-contacto-info';
+        const nombreEl = document.createElement('div');
+        nombreEl.className = 'chat-contacto-nombre';
+        nombreEl.appendChild(document.createTextNode(nombre));
+        if (c.unread) {
+            const dot = document.createElement('span');
+            dot.className = 'chat-contacto-dot';
+            dot.title = 'Mensaje sin leer';
+            nombreEl.appendChild(dot);
+        }
+
+        const subtitle = document.createElement('div');
+        subtitle.className = 'chat-contacto-subtitulo';
+        subtitle.textContent = String(c.subtitulo || '');
+
+        info.appendChild(nombreEl);
+        info.appendChild(subtitle);
+        item.appendChild(avatar);
+        item.appendChild(info);
         item.addEventListener('click', () => window.abrirConversacionChat(tipoVista, c.id));
-        cont.appendChild(item);
+        fragment.appendChild(item);
     });
+    cont.appendChild(fragment);
 }
 
 export function sincronizarVistaChatSegunSeleccion(tipoVista) {
@@ -48,12 +71,22 @@ export function sincronizarVistaChatSegunSeleccion(tipoVista) {
     }
     const opcion = select.options[select.selectedIndex];
     const nombre = (opcion && (opcion.dataset.nombre || opcion.text)) || 'Contacto';
-    document.getElementById(cfg.avatarId).textContent = nombre.charAt(0).toUpperCase();
+    document.getElementById(cfg.avatarId).textContent = String(nombre).charAt(0).toUpperCase();
     const nombreEl = document.getElementById(cfg.nombreId);
     nombreEl.textContent = nombre;
-    if (cfg.clickeablePerfil) {
-        nombreEl.onclick = () => verPerfilDesdeChat(select.value);
+
+    // Reemplazamos el listener anterior para que una sincronización frecuente
+    // no acumule handlers ni use atributos onclick construidos dinámicamente.
+    if (nombreEl.__chatProfileClickHandler) {
+        nombreEl.removeEventListener('click', nombreEl.__chatProfileClickHandler);
+        nombreEl.__chatProfileClickHandler = null;
     }
+    if (cfg.clickeablePerfil) {
+        const handler = () => window.verPerfilDesdeChat(select.value);
+        nombreEl.addEventListener('click', handler);
+        nombreEl.__chatProfileClickHandler = handler;
+    }
+
     conversacionEl.classList.remove('hidden');
     listaWrapEl.classList.add('hidden');
 }

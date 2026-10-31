@@ -4,6 +4,22 @@
  * Solo render UI; aprobar/rechazar viven en correo-solicitudes.js.
  */
 
+function crearTextoSolicitudCorreo(tag, className, value) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    element.textContent = value == null ? '' : String(value);
+    return element;
+}
+
+function crearAccionSolicitudCorreo(label, className, action) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.textContent = label;
+    button.addEventListener('click', action);
+    return button;
+}
+
 export async function loadAdminSolicitudesCorreo() {
     const client = (typeof window !== 'undefined') ? window.supabaseClient : null;
     if (!client) return;
@@ -21,7 +37,7 @@ export async function loadAdminSolicitudesCorreo() {
     const cardsContainer = document.getElementById('admin-solicitudes-correo-cards');
     const vacioMsg = document.getElementById('admin-solicitudes-correo-vacio');
     if (!cardsContainer || !vacioMsg) return;
-    cardsContainer.innerHTML = '';
+    cardsContainer.replaceChildren();
 
     if (!solicitudes || solicitudes.length === 0) {
         cardsContainer.classList.add('hidden');
@@ -33,25 +49,45 @@ export async function loadAdminSolicitudesCorreo() {
 
     solicitudes.forEach(s => {
         const nombreMostrar = (s.perfiles && (s.perfiles.nombre || s.perfiles.usuario)) || 'N/A';
+        const fecha = new Date(s.creado_en).toLocaleString();
+        const correoActual = s.correo_actual || '(sin correo)';
+        const correoNuevo = String(s.correo_nuevo || '');
+        const motivo = s.motivo ? String(s.motivo) : '';
+
         const card = document.createElement('div');
         card.className = 'solicitud-card';
-        const correoNuevoEsc = String(s.correo_nuevo || '').replace(/'/g, "\\'");
-        const nombreEsc = String(nombreMostrar).replace(/'/g, "\\'");
-        card.innerHTML = `
-                    <div class="solicitud-card-header">
-                        <span class="solicitud-card-nombre">${nombreMostrar}</span>
-                    </div>
-                    <div class="solicitud-card-detalles">
-                        ${new Date(s.creado_en).toLocaleString()}<br>
-                        De: ${s.correo_actual || '(sin correo)'}<br>
-                        A: ${s.correo_nuevo}
-                        ${s.motivo ? '<br>Motivo: ' + s.motivo : ''}
-                    </div>
-                    <div class="solicitud-card-acciones">
-                        <button class="btn btn-success" onclick="aprobarCambioCorreo('${s.id}', '${s.usuario_id}', '${correoNuevoEsc}', '${nombreEsc}')">Aprobar</button>
-                        <button class="btn btn-danger" onclick="rechazarCambioCorreo('${s.id}', '${s.usuario_id}', '${nombreEsc}')">Rechazar</button>
-                    </div>
-                `;
+        const header = document.createElement('div');
+        header.className = 'solicitud-card-header';
+        header.appendChild(crearTextoSolicitudCorreo('span', 'solicitud-card-nombre', nombreMostrar));
+
+        const details = document.createElement('div');
+        details.className = 'solicitud-card-detalles';
+        details.appendChild(crearTextoSolicitudCorreo('span', '', fecha));
+        details.appendChild(document.createElement('br'));
+        details.appendChild(crearTextoSolicitudCorreo('span', '', 'De: ' + correoActual));
+        details.appendChild(document.createElement('br'));
+        details.appendChild(crearTextoSolicitudCorreo('span', '', 'A: ' + correoNuevo));
+        if (motivo) {
+            details.appendChild(document.createElement('br'));
+            details.appendChild(crearTextoSolicitudCorreo('span', '', 'Motivo: ' + motivo));
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'solicitud-card-acciones';
+        actions.appendChild(crearAccionSolicitudCorreo('Aprobar', 'btn btn-success', () => {
+            if (typeof window.aprobarCambioCorreo === 'function') {
+                window.aprobarCambioCorreo(s.id, s.usuario_id, correoNuevo, String(nombreMostrar));
+            }
+        }));
+        actions.appendChild(crearAccionSolicitudCorreo('Rechazar', 'btn btn-danger', () => {
+            if (typeof window.rechazarCambioCorreo === 'function') {
+                window.rechazarCambioCorreo(s.id, s.usuario_id, String(nombreMostrar));
+            }
+        }));
+
+        card.appendChild(header);
+        card.appendChild(details);
+        card.appendChild(actions);
         cardsContainer.appendChild(card);
     });
 }

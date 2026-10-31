@@ -1,5 +1,12 @@
 /** Fase 3 / Oleada 4 — Favoritos de transferencia */
 
+function crearTextoFavorito(tag, className, value) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    element.textContent = value == null ? '' : String(value);
+    return element;
+}
+
 export async function refrescarFavoritosIdsCache() {
     const { data, error } = await window.supabaseClient.from('favoritos').select('favorito_id');
     if (error) {
@@ -12,7 +19,8 @@ export async function refrescarFavoritosIdsCache() {
 export async function cargarChipsFavoritos() {
     const contenedor = document.getElementById('transferir-favoritos-chips');
     if (!contenedor) return;
-    contenedor.innerHTML = '<p class="favoritos-vacio">Cargando favoritos...</p>';
+    contenedor.replaceChildren();
+    contenedor.appendChild(crearTextoFavorito('p', 'favoritos-vacio', 'Cargando favoritos...'));
 
     const { data, error } = await window.supabaseClient
         .from('favoritos')
@@ -21,27 +29,35 @@ export async function cargarChipsFavoritos() {
 
     if (error) {
         console.error('Error cargando favoritos:', error);
-        contenedor.innerHTML = '';
+        contenedor.replaceChildren();
         return;
     }
 
     window.favoritosIdsCache = new Set((data || []).map(f => f.favorito_id));
+    const favoritos = (data || []).filter(f => f.favorito?.correo);
 
-    const chips = (data || [])
-        .filter(f => f.favorito?.correo)
-        .map(f => {
-            const nombre = (f.favorito.nombre || f.favorito.usuario || 'Favorito').replace(/"/g, '&quot;');
-            const correo = f.favorito.correo.replace(/'/g, "\\'");
-            return `<button type="button" class="favorito-chip" onclick="usarFavoritoParaTransferir('${correo}')">⭐ ${nombre}</button>`;
-        });
+    if (favoritos.length === 0) {
+        contenedor.replaceChildren(
+            crearTextoFavorito('p', 'favoritos-vacio', 'Aún no tienes favoritos. Márcalos con ⭐ desde tu historial.')
+        );
+        return;
+    }
 
-    contenedor.innerHTML = chips.length > 0
-        ? chips.join('')
-        : '<p class="favoritos-vacio">Aún no tienes favoritos. Márcalos con ⭐ desde tu historial.</p>';
+    const fragment = document.createDocumentFragment();
+    favoritos.forEach(f => {
+        const nombre = f.favorito.nombre || f.favorito.usuario || 'Favorito';
+        const correo = String(f.favorito.correo);
+        const button = crearTextoFavorito('button', 'favorito-chip', '⭐ ' + nombre);
+        button.type = 'button';
+        button.addEventListener('click', () => usarFavoritoParaTransferir(correo));
+        fragment.appendChild(button);
+    });
+    contenedor.replaceChildren(fragment);
 }
 
 export function usarFavoritoParaTransferir(correo) {
-    document.getElementById('transferir-destinatario-correo').value = correo;
+    const input = document.getElementById('transferir-destinatario-correo');
+    if (input) input.value = String(correo || '');
 }
 
 export async function toggleFavorito(contraparteId, nombre, botonEl) {
@@ -61,7 +77,7 @@ export async function toggleFavorito(contraparteId, nombre, botonEl) {
             return;
         }
         window.favoritosIdsCache.delete(contraparteId);
-        window.showToast(`${nombre} ya no es favorito`, 2500);
+        window.showToast(String(nombre || '') + ' ya no es favorito', 2500);
     } else {
         const { error } = await window.supabaseClient
             .from('favoritos')
@@ -72,7 +88,7 @@ export async function toggleFavorito(contraparteId, nombre, botonEl) {
             return;
         }
         window.favoritosIdsCache.add(contraparteId);
-        window.showToast(`${nombre} agregado a favoritos ⭐`, 2500);
+        window.showToast(String(nombre || '') + ' agregado a favoritos ⭐', 2500);
     }
 
     if (botonEl) {

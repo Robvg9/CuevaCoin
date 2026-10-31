@@ -4,7 +4,6 @@
  * No inserta notificaciones de retiro; solo lista y marca leídas.
  */
 
-
 export const SECCION_POR_TIPO_EVENTO = {
     solicitud_retiro: 'solicitudes',
     solicitud_cambio_correo: 'solicitudes',
@@ -21,9 +20,8 @@ export const SECCION_POR_TIPO_EVENTO = {
     anuncio: null
 };
 
-
 export function interpretarNotificacionSeccion(mensaje, tipoEvento) {
-    if (tipoEvento && tipoEvento in SECCION_POR_TIPO_EVENTO) {
+    if (tipoEvento && Object.prototype.hasOwnProperty.call(SECCION_POR_TIPO_EVENTO, tipoEvento)) {
         return SECCION_POR_TIPO_EVENTO[tipoEvento];
     }
     if (!mensaje) return null;
@@ -42,13 +40,20 @@ export function interpretarNotificacionSeccion(mensaje, tipoEvento) {
     return null;
 }
 
+function mostrarEstadoNotificaciones(lista, mensaje) {
+    const estado = document.createElement('div');
+    estado.className = 'notif-vacio';
+    estado.textContent = mensaje;
+    lista.replaceChildren(estado);
+}
+
 export async function cargarPanelNotificaciones(usuarioId) {
     const lista = document.getElementById('notif-panel-lista');
     if (!lista) return;
-    lista.innerHTML = '<div class="notif-vacio">Cargando...</div>';
+    mostrarEstadoNotificaciones(lista, 'Cargando...');
     const client = window.supabaseClient;
     if (!client) {
-        lista.innerHTML = '<div class="notif-vacio">No se pudieron cargar las notificaciones.</div>';
+        mostrarEstadoNotificaciones(lista, 'No se pudieron cargar las notificaciones.');
         return;
     }
     const { data, error } = await client
@@ -59,28 +64,43 @@ export async function cargarPanelNotificaciones(usuarioId) {
         .limit(20);
     if (error) {
         console.error('Error cargando notificaciones:', error);
-        lista.innerHTML = '<div class="notif-vacio">No se pudieron cargar las notificaciones.</div>';
+        mostrarEstadoNotificaciones(lista, 'No se pudieron cargar las notificaciones.');
         return;
     }
     if (!data || data.length === 0) {
-        lista.innerHTML = '<div class="notif-vacio">No tienes notificaciones todavía.</div>';
+        mostrarEstadoNotificaciones(lista, 'No tienes notificaciones todavía.');
         return;
     }
-    lista.innerHTML = data.map(n => {
+
+    const fragment = document.createDocumentFragment();
+    data.forEach(n => {
         const fecha = new Date(n.creado_en).toLocaleString('es', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit'
         });
-        const seccion = interpretarNotificacionSeccion(n.mensaje, n.tipo_evento);
-        const claseAccionable = seccion ? ' notif-item-accionable' : '';
-        const atributoSeccion = seccion ? ` data-seccion="${seccion}"` : '';
-        const flecha = seccion ? '<span class="notif-item-flecha">›</span>' : '';
-        return `<div class="notif-item ${n.leida ? '' : 'no-leida'}${claseAccionable}"${atributoSeccion}>
-                    ${flecha}
-                    ${n.mensaje.replace('🎉 META_AHORRO: ', '🎉 ')}
-                    <span class="notif-fecha">${fecha}</span>
-                </div>`;
-    }).join('');
+        const seccion = interpretarNotificacionSeccion(String(n.mensaje || ''), n.tipo_evento);
+        const item = document.createElement('div');
+        item.className = 'notif-item' + (n.leida ? '' : ' no-leida');
+        if (seccion) {
+            item.classList.add('notif-item-accionable');
+            item.dataset.seccion = seccion;
+            const arrow = document.createElement('span');
+            arrow.className = 'notif-item-flecha';
+            arrow.textContent = '›';
+            item.appendChild(arrow);
+        }
+
+        const message = document.createElement('span');
+        message.textContent = String(n.mensaje || '').replace('🎉 META_AHORRO: ', '🎉 ');
+        const date = document.createElement('span');
+        date.className = 'notif-fecha';
+        date.textContent = fecha;
+        item.appendChild(message);
+        item.appendChild(date);
+        fragment.appendChild(item);
+    });
+    lista.replaceChildren(fragment);
+
     const idsNoLeidas = data.filter(n => !n.leida).map(n => n.id);
     if (idsNoLeidas.length > 0) {
         client

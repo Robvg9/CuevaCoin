@@ -13,7 +13,7 @@ export function appendMensajeChat(contenedor, el) {
 }
 
 export function agregarMensajeYScroll(contenedor, el) {
-    if (contenedor.querySelector('p')) contenedor.innerHTML = '';
+    if (contenedor.querySelector('p')) contenedor.replaceChildren();
     const alFondo = window.chatEstabaAlFondo(contenedor);
     window.appendMensajeChat(contenedor, el);
     if (alFondo) contenedor.scrollTop = contenedor.scrollHeight;

@@ -1,5 +1,21 @@
 /** Fase 3 / Oleada 5 — loadAdminSolicitudes (UI lista) */
 
+function crearTextoSolicitud(tag, className, value) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    element.textContent = value == null ? '' : String(value);
+    return element;
+}
+
+function crearAccionSolicitud(label, className, action) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.textContent = label;
+    button.addEventListener('click', action);
+    return button;
+}
+
 export async function loadAdminSolicitudes() {
     const { data: solicitudes, error } = await window.supabaseClient
         .from('solicitudes_retiro')
@@ -13,9 +29,10 @@ export async function loadAdminSolicitudes() {
 
     const cardsContainer = document.getElementById('admin-solicitudes-cards');
     const vacioMsg = document.getElementById('admin-solicitudes-vacio');
-    cardsContainer.innerHTML = '';
+    if (!cardsContainer || !vacioMsg) return;
+    cardsContainer.replaceChildren();
 
-    if (solicitudes.length === 0) {
+    if (!solicitudes || solicitudes.length === 0) {
         cardsContainer.classList.add('hidden');
         vacioMsg.classList.remove('hidden');
         return;
@@ -25,22 +42,41 @@ export async function loadAdminSolicitudes() {
 
     solicitudes.forEach(s => {
         const nombreMostrar = (s.perfiles && (s.perfiles.nombre || s.perfiles.usuario)) || 'N/A';
+        const cantidad = Number(s.cantidad);
+        const fecha = new Date(s.creado_en).toLocaleString();
         const card = document.createElement('div');
         card.className = 'solicitud-card';
-        card.innerHTML = `
-            <div class="solicitud-card-header">
-                <span class="solicitud-card-nombre">${nombreMostrar}</span>
-                <span class="solicitud-card-monto">$${Number(s.cantidad).toFixed(2)}</span>
-            </div>
-            <div class="solicitud-card-detalles">
-                ${new Date(s.creado_en).toLocaleString()}${s.motivo ? ' · ' + s.motivo : ''}
-            </div>
-            <div class="solicitud-card-acciones">
-                <button class="btn btn-success" onclick="window.aprobarSolicitud('${s.id}', '${s.usuario_id}', ${s.cantidad})">Aprobar</button>
-                <button class="btn btn-danger" onclick="window.rechazarSolicitud('${s.id}', '${s.usuario_id}', ${s.cantidad}, '${nombreMostrar.replace(/'/g, "\\'")}')">Rechazar</button>
-                <button class="btn" onclick="avisarTiempoSolicitud('${s.usuario_id}')">🕐 Avisar tiempo</button>
-            </div>
-        `;
+
+        const header = document.createElement('div');
+        header.className = 'solicitud-card-header';
+        header.appendChild(crearTextoSolicitud('span', 'solicitud-card-nombre', nombreMostrar));
+        header.appendChild(crearTextoSolicitud('span', 'solicitud-card-monto',
+            '$' + (Number.isFinite(cantidad) ? cantidad.toFixed(2) : '0.00')));
+
+        const details = crearTextoSolicitud('div', 'solicitud-card-detalles',
+            fecha + (s.motivo ? ' · ' + String(s.motivo) : ''));
+
+        const actions = document.createElement('div');
+        actions.className = 'solicitud-card-acciones';
+        actions.appendChild(crearAccionSolicitud('Aprobar', 'btn btn-success', () => {
+            if (typeof window.aprobarSolicitud === 'function') {
+                window.aprobarSolicitud(s.id, s.usuario_id, cantidad);
+            }
+        }));
+        actions.appendChild(crearAccionSolicitud('Rechazar', 'btn btn-danger', () => {
+            if (typeof window.rechazarSolicitud === 'function') {
+                window.rechazarSolicitud(s.id, s.usuario_id, cantidad, String(nombreMostrar));
+            }
+        }));
+        actions.appendChild(crearAccionSolicitud('🕐 Avisar tiempo', 'btn', () => {
+            if (typeof window.avisarTiempoSolicitud === 'function') {
+                window.avisarTiempoSolicitud(s.usuario_id);
+            }
+        }));
+
+        card.appendChild(header);
+        card.appendChild(details);
+        card.appendChild(actions);
         cardsContainer.appendChild(card);
     });
 }

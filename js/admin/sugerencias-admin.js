@@ -11,6 +11,34 @@ export const RESPUESTAS_RAPIDAS_SUGERENCIAS = [
     '¡Gracias! Ya se solucionó, prueba de nuevo.'
 ];
 
+function crearElementoSugerencia(tag, className, value) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (value != null) element.textContent = String(value);
+    return element;
+}
+
+function crearAccionSugerencia(label, className, action) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.textContent = label;
+    button.addEventListener('click', action);
+    return button;
+}
+
+function crearRespuestasRapidas(sugerenciaId, textarea) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'respuestas-rapidas';
+    RESPUESTAS_RAPIDAS_SUGERENCIAS.forEach(texto => {
+        const button = crearAccionSugerencia(texto, 'respuesta-rapida-chip', () => {
+            textarea.value = texto;
+        });
+        button.dataset.texto = texto;
+        wrapper.appendChild(button);
+    });
+    return wrapper;
+}
 
 export async function loadAdminSugerencias() {
     const { data, error } = await window.supabaseClient
@@ -20,93 +48,110 @@ export async function loadAdminSugerencias() {
 
     const lista = document.getElementById('admin-sugerencias-lista');
     const vacioMsg = document.getElementById('admin-sugerencias-vacio');
+    if (!lista || !vacioMsg) return;
 
     if (error) {
         console.error(error);
-        lista.innerHTML = '';
+        lista.replaceChildren();
         vacioMsg.textContent = 'No se pudieron cargar las sugerencias.';
         vacioMsg.classList.remove('hidden');
         return;
     }
 
+    lista.replaceChildren();
     if (!data || data.length === 0) {
-        lista.innerHTML = '';
         vacioMsg.textContent = 'Todavía no llegó ninguna sugerencia.';
         vacioMsg.classList.remove('hidden');
         return;
     }
     vacioMsg.classList.add('hidden');
 
-    lista.innerHTML = data.map(s => {
+    data.forEach(s => {
         const fecha = new Date(s.creado_en).toLocaleString('es', {
             day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
         });
         const nombre = s.perfiles?.nombre || s.perfiles?.usuario || 'Trabajadora';
-        // E11/E2 (v62): buzón con respuesta. Si ya tiene respuesta,
-        // se muestra como referencia (con botón para editarla/volver
-        // a mandar); si no, se muestra el formulario de respuesta
-        // directo (con las plantillas rápidas arriba del textarea).
-        const bloqueRespuesta = s.respuesta
-            ? `
-                <div class="sugerencia-respuesta">
-                    <strong>Tu respuesta:</strong>
-                    <p>${s.respuesta}</p>
-                    <button type="button" class="btn" style="margin-top: 6px;" onclick="mostrarFormRespuestaSugerencia('${s.id}')">Editar respuesta</button>
-                </div>
-                <div class="sugerencia-respuesta-form hidden" id="form-respuesta-${s.id}">
-                    ${respuestasRapidasHtml(s.id)}
-                    <textarea id="respuesta-texto-${s.id}" rows="3" maxlength="500">${s.respuesta}</textarea>
-                    <button type="button" class="btn btn-primary" style="margin-top: 6px;" onclick="enviarRespuestaSugerencia('${s.id}')">Guardar respuesta</button>
-                </div>
-            `
-            : `
-                <button type="button" class="btn" style="margin-top: 8px;" onclick="mostrarFormRespuestaSugerencia('${s.id}')">Responder</button>
-                <div class="sugerencia-respuesta-form hidden" id="form-respuesta-${s.id}">
-                    ${respuestasRapidasHtml(s.id)}
-                    <textarea id="respuesta-texto-${s.id}" rows="3" maxlength="500" placeholder="Escribe la respuesta para ${nombre}..."></textarea>
-                    <button type="button" class="btn btn-primary" style="margin-top: 6px;" onclick="enviarRespuestaSugerencia('${s.id}')">Enviar respuesta</button>
-                </div>
-            `;
-        return `
-            <div class="sugerencia-card ${s.leida ? '' : 'no-leida'}">
-                <div class="sugerencia-card-meta">
-                    <strong>${nombre}</strong>
-                    <span>${fecha}</span>
-                </div>
-                <p>${s.mensaje}</p>
-                ${!s.leida ? `<button type="button" class="btn" style="margin-top: 8px;" onclick="marcarSugerenciaLeida('${s.id}')">Marcar como leída</button>` : ''}
-                ${bloqueRespuesta}
-            </div>
-        `;
-    }).join('');
+        const sugerenciaId = String(s.id);
+
+        const card = document.createElement('div');
+        card.className = 'sugerencia-card' + (s.leida ? '' : ' no-leida');
+
+        const meta = document.createElement('div');
+        meta.className = 'sugerencia-card-meta';
+        meta.appendChild(crearElementoSugerencia('strong', '', nombre));
+        meta.appendChild(crearElementoSugerencia('span', '', fecha));
+        card.appendChild(meta);
+        card.appendChild(crearElementoSugerencia('p', '', s.mensaje || ''));
+
+        if (!s.leida) {
+            card.appendChild(crearAccionSugerencia('Marcar como leída', 'btn', () => {
+                marcarSugerenciaLeida(sugerenciaId);
+            }));
+        }
+
+        const form = document.createElement('div');
+        form.className = 'sugerencia-respuesta-form hidden';
+        form.id = 'form-respuesta-' + sugerenciaId;
+
+        const textarea = document.createElement('textarea');
+        textarea.id = 'respuesta-texto-' + sugerenciaId;
+        textarea.rows = 3;
+        textarea.maxLength = 500;
+        textarea.value = s.respuesta == null ? '' : String(s.respuesta);
+        if (!s.respuesta) textarea.placeholder = 'Escribe la respuesta para ' + String(nombre) + '...';
+
+        form.appendChild(crearRespuestasRapidas(sugerenciaId, textarea));
+        form.appendChild(textarea);
+        form.appendChild(crearAccionSugerencia(
+            s.respuesta ? 'Guardar respuesta' : 'Enviar respuesta',
+            'btn btn-primary',
+            () => enviarRespuestaSugerencia(sugerenciaId)
+        ));
+
+        if (s.respuesta) {
+            const response = document.createElement('div');
+            response.className = 'sugerencia-respuesta';
+            response.appendChild(crearElementoSugerencia('strong', '', 'Tu respuesta:'));
+            response.appendChild(crearElementoSugerencia('p', '', s.respuesta));
+            response.appendChild(crearAccionSugerencia('Editar respuesta', 'btn', () => {
+                form.classList.toggle('hidden');
+            }));
+            card.appendChild(response);
+        } else {
+            card.appendChild(crearAccionSugerencia('Responder', 'btn', () => {
+                form.classList.toggle('hidden');
+            }));
+        }
+
+        card.appendChild(form);
+        lista.appendChild(card);
+    });
 }
 
+/**
+ * API histórica conservada para compatibilidad: ahora devuelve un nodo DOM,
+ * no una cadena HTML. El contenido de respuesta rápida nunca se interpreta como markup.
+ */
 export function respuestasRapidasHtml(sugerenciaId) {
-    return `
-        <div class="respuestas-rapidas">
-            ${RESPUESTAS_RAPIDAS_SUGERENCIAS.map(texto => `
-                <button type="button" class="respuesta-rapida-chip" onclick="aplicarRespuestaRapida('${sugerenciaId}', this)" data-texto="${texto.replace(/"/g, '"')}">${texto}</button>
-            `).join('')}
-        </div>
-    `;
+    const textarea = document.createElement('textarea');
+    textarea.id = 'respuesta-texto-' + String(sugerenciaId);
+    return crearRespuestasRapidas(sugerenciaId, textarea);
 }
-
 
 export function mostrarFormRespuestaSugerencia(sugerenciaId) {
-    const form = document.getElementById(`form-respuesta-${sugerenciaId}`);
+    const form = document.getElementById('form-respuesta-' + String(sugerenciaId));
     if (form) form.classList.toggle('hidden');
 }
 
-
 export function aplicarRespuestaRapida(sugerenciaId, boton) {
-    const textarea = document.getElementById(`respuesta-texto-${sugerenciaId}`);
-    if (textarea) textarea.value = boton.dataset.texto;
+    const textarea = document.getElementById('respuesta-texto-' + String(sugerenciaId));
+    if (textarea) textarea.value = String(boton?.dataset?.texto || '');
 }
-
 
 export async function enviarRespuestaSugerencia(sugerenciaId) {
     if (!window.requiereConexionParaOperar()) return;
-    const textarea = document.getElementById(`respuesta-texto-${sugerenciaId}`);
+    const textarea = document.getElementById('respuesta-texto-' + String(sugerenciaId));
+    if (!textarea) return;
     const respuesta = textarea.value.trim();
     if (!respuesta) {
         window.showToast('Escribe una respuesta antes de enviar', 3000);
@@ -148,7 +193,8 @@ export async function enviarRespuestaSugerencia(sugerenciaId) {
 }
 
 export async function marcarSugerenciaLeida(sugerenciaId) {
-    const { error } = await window.supabaseClient.from('sugerencias').update({ leida: true }).eq('id', sugerenciaId);
+    const { error } = await window.supabaseClient.from('sugerencias')
+        .update({ leida: true }).eq('id', sugerenciaId);
     if (error) {
         console.error(error);
         window.showToast('No se pudo marcar como leída', 3000);

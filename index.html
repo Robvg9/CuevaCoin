@@ -5025,7 +5025,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.149';
+                const VERSION_FALLBACK = 'V.150';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -5376,7 +5376,7 @@
     <!-- Fase 3 / Oleada 6 — historial + comprobantes -->
     <script type="module" src="js/finance/history/filtros.js"></script>
     <script type="module" src="js/finance/history/comprobantes.js"></script>
-    <script type="module" src="js/finance/history/historial.js?v=141"></script>
+    <script type="module" src="js/finance/history/historial.js?v=150"></script>
     <script type="module" src="js/finance/history/pdf-export.js"></script>
     <!-- Fase 3 / Oleada 7 — chat -->
     <script type="module" src="js/chat/chat-visto.js"></script>
@@ -5388,7 +5388,7 @@
     <script type="module" src="js/chat/chat-promo.js"></script>
     <!-- Fase 3 / Oleada 8 — admin financiero -->
     <script type="module" src="js/admin/finance/stats.js?v=148"></script>
-    <script type="module" src="js/admin/finance/usuarios.js?v=149"></script>
+    <script type="module" src="js/admin/finance/usuarios.js?v=150"></script>
     <script type="module" src="js/admin/finance/historial-trabajadora.js?v=148"></script>
     <script type="module" src="js/admin/finance/destinatarios.js"></script>
     <script type="module" src="js/admin/finance/pagos.js"></script>

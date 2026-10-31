@@ -88,7 +88,7 @@ export async function mostrarVersionApp() {
     const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
     if (els.length === 0) return;
 
-    const VERSION_FALLBACK = 'V.149';
+    const VERSION_FALLBACK = 'V.150';
     const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
 
     try {
@@ -213,10 +213,26 @@ export function asegurarUiVersionYActualizar() {
     if (sesionCardBtn && !document.getElementById('btn-actualizar-app-config')) {
         const card = document.createElement('div');
         card.className = 'card';
-        card.innerHTML = '<h2>🔄 Actualizar aplicación</h2>' +
-            '<p style="opacity:0.8;margin-bottom:14px;">Si la app se ve desactualizada o algo no carga bien, actualiza CuevaCoin desde acá. Se limpia la caché y se recarga la versión más reciente. Tu sesión y operaciones pendientes se conservan.</p>' +
-            '<button type="button" id="btn-actualizar-app-config" class="btn btn-secondary" style="width:100%;" onclick="solicitarActualizarApp()">🔄 Actualizar app / Limpiar caché</button>' +
-            '<p class="js-app-version" style="font-size:11px;opacity:0.55;margin-top:10px;text-align:center;font-family:sans-serif;"></p>';
+
+        const title = document.createElement('h2');
+        title.textContent = '🔄 Actualizar aplicación';
+        const description = document.createElement('p');
+        description.style.cssText = 'opacity:0.8;margin-bottom:14px;';
+        description.textContent = 'Si la app se ve desactualizada o algo no carga bien, actualiza CuevaCoin desde acá. Se limpia la caché y se recarga la versión más reciente. Tu sesión y operaciones pendientes se conservan.';
+
+        const updateButton = document.createElement('button');
+        updateButton.type = 'button';
+        updateButton.id = 'btn-actualizar-app-config';
+        updateButton.className = 'btn btn-secondary';
+        updateButton.style.width = '100%';
+        updateButton.textContent = '🔄 Actualizar app / Limpiar caché';
+        updateButton.addEventListener('click', solicitarActualizarApp);
+
+        const version = document.createElement('p');
+        version.className = 'js-app-version';
+        version.style.cssText = 'font-size:11px;opacity:0.55;margin-top:10px;text-align:center;font-family:sans-serif;';
+
+        card.append(title, description, updateButton, version);
         const sesionCard = sesionCardBtn.closest('.card');
         if (sesionCard && sesionCard.parentNode) {
             sesionCard.parentNode.insertBefore(card, sesionCard.nextSibling);
@@ -227,16 +243,57 @@ export function asegurarUiVersionYActualizar() {
         const modal = document.createElement('div');
         modal.id = 'actualizar-app-modal';
         modal.className = 'modal';
-        modal.innerHTML = '<div class="modal-content" style="max-width:420px;text-align:center;">' +
-            '<span class="close" onclick="closeModal(\'actualizar-app-modal\')">&times;</span>' +
-            '<div style="font-size:40px;margin-bottom:8px;">🔄</div>' +
-            '<h2 style="margin-bottom:8px;">Actualizar CuevaCoin</h2>' +
-            '<p style="margin-bottom:20px;opacity:0.85;line-height:1.5;">Se actualizará CuevaCoin y se limpiará la caché local. La aplicación se recargará con la versión más reciente.</p>' +
-            '<p style="font-size:12px;opacity:0.65;margin-bottom:18px;">Tu sesión y las operaciones pendientes de sincronizar se conservan.</p>' +
-            '<div style="display:flex;gap:12px;justify-content:center;">' +
-            '<button type="button" class="btn" style="flex:1;" onclick="closeModal(\'actualizar-app-modal\')">Cancelar</button>' +
-            '<button type="button" id="btn-actualizar-app-confirmar" class="btn btn-primary" style="flex:1;" onclick="limpiarCacheYActualizar()">Actualizar ahora</button>' +
-            '</div></div>';
+
+        const content = document.createElement('div');
+        content.className = 'modal-content';
+        content.style.cssText = 'max-width:420px;text-align:center;';
+
+        const close = document.createElement('span');
+        close.className = 'close';
+        close.textContent = '×';
+        close.addEventListener('click', () => {
+            if (typeof window.closeModal === 'function') window.closeModal('actualizar-app-modal');
+        });
+
+        const icon = document.createElement('div');
+        icon.style.cssText = 'font-size:40px;margin-bottom:8px;';
+        icon.textContent = '🔄';
+
+        const heading = document.createElement('h2');
+        heading.style.marginBottom = '8px';
+        heading.textContent = 'Actualizar CuevaCoin';
+
+        const explanation = document.createElement('p');
+        explanation.style.cssText = 'margin-bottom:20px;opacity:0.85;line-height:1.5;';
+        explanation.textContent = 'Se actualizará CuevaCoin y se limpiará la caché local. La aplicación se recargará con la versión más reciente.';
+
+        const retention = document.createElement('p');
+        retention.style.cssText = 'font-size:12px;opacity:0.65;margin-bottom:18px;';
+        retention.textContent = 'Tu sesión y las operaciones pendientes de sincronizar se conservan.';
+
+        const actions = document.createElement('div');
+        actions.style.cssText = 'display:flex;gap:12px;justify-content:center;';
+
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.className = 'btn';
+        cancel.style.flex = '1';
+        cancel.textContent = 'Cancelar';
+        cancel.addEventListener('click', () => {
+            if (typeof window.closeModal === 'function') window.closeModal('actualizar-app-modal');
+        });
+
+        const confirm = document.createElement('button');
+        confirm.type = 'button';
+        confirm.id = 'btn-actualizar-app-confirmar';
+        confirm.className = 'btn btn-primary';
+        confirm.style.flex = '1';
+        confirm.textContent = 'Actualizar ahora';
+        confirm.addEventListener('click', limpiarCacheYActualizar);
+
+        actions.append(cancel, confirm);
+        content.append(close, icon, heading, explanation, retention, actions);
+        modal.appendChild(content);
         document.body.appendChild(modal);
     }
 }

@@ -9,7 +9,7 @@ export async function loadUserSugerencias(usuarioId) {
     const lista = document.getElementById('user-sugerencias-lista');
     if (!lista) return;
     if (!client) {
-        lista.innerHTML = '';
+        lista.replaceChildren();
         return;
     }
 
@@ -21,34 +21,53 @@ export async function loadUserSugerencias(usuarioId) {
 
     if (error) {
         console.error(error);
-        lista.innerHTML = '';
+        lista.replaceChildren();
         return;
     }
     if (!data || data.length === 0) {
-        lista.innerHTML = '<p style="opacity: 0.8;">Todavía no mandaste ninguna sugerencia.</p>';
+        const empty = document.createElement('p');
+        empty.style.opacity = '0.8';
+        empty.textContent = 'Todavía no mandaste ninguna sugerencia.';
+        lista.replaceChildren(empty);
         return;
     }
-    lista.innerHTML = data.map(s => {
+
+    const fragment = document.createDocumentFragment();
+    data.forEach(s => {
         const fecha = new Date(s.creado_en).toLocaleString('es', {
             day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
         });
-        const bloqueRespuesta = s.respuesta ? `
-                    <div class="sugerencia-respuesta">
-                        <strong>Respuesta del admin:</strong>
-                        <p>${s.respuesta}</p>
-                    </div>
-                ` : '';
-        return `
-                    <div class="sugerencia-card">
-                        <div class="sugerencia-card-meta">
-                            <span>${fecha}</span>
-                            <span>${s.leida ? '✅ Leída por el admin' : '⏳ Pendiente de leer'}</span>
-                        </div>
-                        <p>${s.mensaje}</p>
-                        ${bloqueRespuesta}
-                    </div>
-                `;
-    }).join('');
+        const card = document.createElement('div');
+        card.className = 'sugerencia-card';
+
+        const meta = document.createElement('div');
+        meta.className = 'sugerencia-card-meta';
+        const date = document.createElement('span');
+        date.textContent = fecha;
+        const status = document.createElement('span');
+        status.textContent = s.leida ? '✅ Leída por el admin' : '⏳ Pendiente de leer';
+        meta.appendChild(date);
+        meta.appendChild(status);
+
+        const message = document.createElement('p');
+        message.textContent = String(s.mensaje || '');
+        card.appendChild(meta);
+        card.appendChild(message);
+
+        if (s.respuesta) {
+            const response = document.createElement('div');
+            response.className = 'sugerencia-respuesta';
+            const title = document.createElement('strong');
+            title.textContent = 'Respuesta del admin:';
+            const text = document.createElement('p');
+            text.textContent = String(s.respuesta);
+            response.appendChild(title);
+            response.appendChild(text);
+            card.appendChild(response);
+        }
+        fragment.appendChild(card);
+    });
+    lista.replaceChildren(fragment);
 
     const idsSinVer = data.filter(s => s.respuesta && !s.respuesta_vista).map(s => s.id);
     const actualizarDot = (typeof window !== 'undefined' && window.actualizarBonosDot)

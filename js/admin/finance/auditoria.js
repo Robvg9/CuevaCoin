@@ -1,5 +1,12 @@
 /** Fase 3 / Oleada 8 — Auditoría */
 
+function crearTextoAuditoria(tag, className, value) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    element.textContent = value == null ? '' : String(value);
+    return element;
+}
+
 export async function loadAdminAuditoria() {
     const container = document.getElementById('audit-log');
     const vacioMsg = document.getElementById('audit-log-vacio');
@@ -8,7 +15,7 @@ export async function loadAdminAuditoria() {
     const fechaHasta = document.getElementById('audit-filter-fecha-hasta').value;
     const filtroUsuario = document.getElementById('audit-filter-usuario').value.trim().toLowerCase();
     const filtroTexto = document.getElementById('audit-filter-texto').value.trim().toLowerCase();
-    container.innerHTML = '';
+    container.replaceChildren();
 
     cargarDatalistUsuariosAuditoria();
 
@@ -20,29 +27,29 @@ export async function loadAdminAuditoria() {
 
     if (error) {
         console.error(error);
-        container.innerHTML = '<p>No se pudo cargar la auditoría.</p>';
+        container.replaceChildren(crearTextoAuditoria('p', '', 'No se pudo cargar la auditoría.'));
         return;
     }
 
     // E13 (v71): los 4 filtros se combinan con AND - un evento solo se
     // muestra si pasa TODOS los que estén activos (mismo criterio
     // combinable que F4 en el historial del trabajador).
-    const auditoriaFiltrada = auditoria.filter(a => {
+    const auditoriaFiltrada = (auditoria || []).filter(a => {
         if (filtroTipo !== '' && window.categoriaAuditoria(a.accion) !== filtroTipo) return false;
 
         if (fechaDesde || fechaHasta) {
-            const fechaEvento = a.creado_en.slice(0, 10);
+            const fechaEvento = String(a.creado_en || '').slice(0, 10);
             if (fechaDesde && fechaEvento < fechaDesde) return false;
             if (fechaHasta && fechaEvento > fechaHasta) return false;
         }
 
         if (filtroUsuario !== '') {
-            const nombre = (a.usuario_nombre || '').toLowerCase();
+            const nombre = String(a.usuario_nombre || '').toLowerCase();
             if (!nombre.includes(filtroUsuario)) return false;
         }
 
         if (filtroTexto !== '') {
-            if (!(a.accion || '').toLowerCase().includes(filtroTexto)) return false;
+            if (!String(a.accion || '').toLowerCase().includes(filtroTexto)) return false;
         }
 
         return true;
@@ -59,28 +66,30 @@ export async function loadAdminAuditoria() {
     const iconoAuditoria = { retiro: '💸', saldo: '💰', usuario: '👤', login: '🔑', otro: '📋' };
 
     auditoriaFiltrada.forEach(a => {
-        const categoria = window.categoriaAuditoria(a.accion);
-        // F-AUDITORIA-UI: por las dudas de que quede algún id crudo
-        // en registros viejos guardados antes de este fix (ej.
-        // "(id: xxxx-xxxx)" o "usuario ID: xxxx-xxxx"), se limpia acá
-        // también al mostrar, para que el admin nunca vea un UUID.
-        const accionLimpia = (a.accion || '')
+        const categoriaOriginal = window.categoriaAuditoria(a.accion);
+        const categoria = Object.prototype.hasOwnProperty.call(iconoAuditoria, categoriaOriginal)
+            ? categoriaOriginal : 'otro';
+        // F-AUDITORIA-UI: limpiamos identificadores históricos antes de mostrarlos.
+        const accionLimpia = String(a.accion || '')
             .replace(/\s*\(id:\s*[0-9a-f-]+\)/gi, '')
             .replace(/usuario ID:\s*[0-9a-f-]+/gi, 'un usuario');
         const logEntry = document.createElement('div');
         logEntry.className = 'audit-entry';
-        const fecha = new Date(a.creado_en).toLocaleString();
-        logEntry.innerHTML = `
-            <div class="audit-entry-icon">${iconoAuditoria[categoria] || iconoAuditoria.otro}</div>
-            <div class="audit-entry-body">
-                <div class="audit-entry-accion">${accionLimpia}</div>
-                <div class="audit-entry-meta">
-                    <span class="audit-entry-usuario">${a.usuario_nombre || 'N/A'}</span>
-                    <span>·</span>
-                    <span>${fecha}</span>
-                </div>
-            </div>
-        `;
+
+        const icon = crearTextoAuditoria('div', 'audit-entry-icon', iconoAuditoria[categoria]);
+        const body = document.createElement('div');
+        body.className = 'audit-entry-body';
+        body.appendChild(crearTextoAuditoria('div', 'audit-entry-accion', accionLimpia));
+
+        const meta = document.createElement('div');
+        meta.className = 'audit-entry-meta';
+        meta.appendChild(crearTextoAuditoria('span', 'audit-entry-usuario', a.usuario_nombre || 'N/A'));
+        meta.appendChild(crearTextoAuditoria('span', '', '·'));
+        meta.appendChild(crearTextoAuditoria('span', '', new Date(a.creado_en).toLocaleString()));
+
+        body.appendChild(meta);
+        logEntry.appendChild(icon);
+        logEntry.appendChild(body);
         container.appendChild(logEntry);
     });
 }
@@ -103,7 +112,14 @@ export async function cargarDatalistUsuariosAuditoria() {
     }
     const nombresUnicos = [...new Set((data || []).map(a => a.usuario_nombre).filter(Boolean))].sort();
     const datalist = document.getElementById('audit-usuarios-datalist');
-    datalist.innerHTML = nombresUnicos.map(n => `<option value="${n.replace(/"/g, '&quot;')}"></option>`).join('');
+    if (!datalist) return;
+    const fragment = document.createDocumentFragment();
+    nombresUnicos.forEach(nombre => {
+        const option = document.createElement('option');
+        option.value = String(nombre);
+        fragment.appendChild(option);
+    });
+    datalist.replaceChildren(fragment);
     datalistUsuariosAuditoriaCargado = true;
 }
 
