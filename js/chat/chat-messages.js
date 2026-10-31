@@ -336,7 +336,7 @@ export async function loadPrivadoChat() {
         return;
     }
     if (chat.length === 0) {
-        messagesContainer.innerHTML = '<p>Todavía no hay mensajes con esta persona.</p>';
+        mostrarEstadoChat(messagesContainer, 'Todavía no hay mensajes con esta persona.');
         return;
     }
     chat.forEach(msg => {
