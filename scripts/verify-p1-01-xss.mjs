@@ -14,6 +14,33 @@ function assertNoHtmlInjectionSinks(source, label) {
     assert.match(source, /addEventListener/);
 }
 
+const additionalSafeDomModules = [
+    'js/finance/transfers/favoritos.js',
+    'js/admin/finance/destinatarios.js',
+    'js/finance/withdrawals/admin-solicitudes-ui.js',
+    'js/admin/correo-lista.js',
+    'js/admin/sugerencias-admin.js',
+    'js/admin/finance/auditoria.js',
+    'js/admin/finance/reportes.js',
+    'js/chat/chat-dom.js',
+    'js/chat/chat-nav.js',
+    'js/chat/chat-messages.js',
+    'js/chat/chat-scroll.js',
+    'js/ui/notif-panel.js',
+    'js/ui/sugerencias-user.js',
+    'js/profile/qr-display.js'
+];
+
+for (const modulePath of additionalSafeDomModules) {
+    const source = readFileSync(modulePath, 'utf8');
+    assert.doesNotMatch(source, /\binnerHTML\s*=|\bouterHTML\s*=|insertAdjacentHTML\s*\(/i,
+        modulePath + ' must not parse dynamic content as HTML');
+    assert.doesNotMatch(source, /\bonclick\s*=|\.onclick\s*=/i,
+        modulePath + ' must not build inline event handlers');
+}
+
+console.log('PASS — 14 additional admin, finance, chat, notification and profile modules contain no HTML parsing sinks or inline handlers');
+
 class FakeClassList {
     constructor(element) {
         this.element = element;
