@@ -26,6 +26,7 @@ const additionalSafeDomModules = [
     'js/chat/chat-nav.js',
     'js/chat/chat-messages.js',
     'js/chat/chat-scroll.js',
+    'js/core/app.js',
     'js/ui/notif-panel.js',
     'js/ui/sugerencias-user.js',
     'js/profile/qr-display.js'
