@@ -81,9 +81,12 @@ assert.match(recoveryUi, /AbortSignal\.timeout\(30000\)/);
 assert.match(session, /cc_recovery/);
 assert.match(profiles, /obtenerMiPerfilApp\(usuarioAuth = null\)/);
 assert.match(app, /esFalloDeConexionConfirmado/);
-assert.match(app, /VERSION_FALLBACK = 'V\.149'/);
-assert.match(index, /const VERSION_FALLBACK = 'V\.149'/);
-assert.match(serviceWorker, /cuevacoin-shell-v149/);
+const releaseVersion = index.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1];
+assert.ok(releaseVersion, "HTML must declare a release fallback version");
+assert.equal(app.match(/VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], releaseVersion,
+    "App fallback version must match the HTML release version");
+assert.equal(serviceWorker.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], releaseVersion,
+    "Service worker cache version must match the HTML release version");
 assert.doesNotMatch(index, /id="recuperar-codigo"|btn-enviar-codigo-recuperacion|Código de seis dígitos/, "Legacy email OTP controls must remain absent");
 assert.match(index, /id="recuperar-codigo-admin"/, "Admin-assisted recovery code input must exist");
 assert.ok(frontendWorkflow.includes("node scripts/verify-password-recovery.mjs"), "CI must run recovery/login contract checks");
@@ -93,4 +96,4 @@ assert.ok(index.includes("env(safe-area-inset-top)"), "Responsive login must acc
 assert.doesNotMatch(loginScreenMarkup, /Si usted desea tener su propia Aplicación\/Sitio Web, contáctenos/, "Promotional copy must not crowd the login view");
 console.log("PASS — recovery uses only the email button, reports delivery rejection, and never resets inactive/shared-mailbox accounts");
 console.log("PASS — login card is responsive, safe-area aware, scrollable and reduced-content");
-console.log("PASS — V147 source/cache-busting and email/admin recovery contracts are aligned");
+console.log("PASS — V147 recovery contracts and PWA version " + releaseVersion + " are aligned");
