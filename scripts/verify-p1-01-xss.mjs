@@ -40,7 +40,7 @@ for (const modulePath of additionalSafeDomModules) {
         modulePath + ' must not build inline event handlers');
 }
 
-console.log('PASS — 14 additional admin, finance, chat, notification and profile modules contain no HTML parsing sinks or inline handlers');
+console.log('PASS — 15 additional admin, finance, chat, notification, profile and app modules contain no HTML parsing sinks or inline handlers');
 
 class FakeClassList {
     constructor(element) {
