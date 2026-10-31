@@ -54,5 +54,5 @@ assert.match(index, /#admin-usuarios-seccion \.usuario-card-correo/);
 
 console.log('PASS — V150 release/version/cache-busting assets aligned');
 console.log('PASS — V148 offline dashboard, local history and automatic PWA update checks preserved');
-console.log('PASS — V149 user cards condensed while retaining identity, status, balance, email, activity and savings goal');
-console.log('PASS — V149 preserves history, balance adjustment, activate/deactivate, archive and restore actions');
+console.log('PASS — V149 compact user cards preserved in V150 with identity, status, balance, email, activity and savings goal');
+console.log('PASS — V150 preserves history, balance adjustment, activate/deactivate, archive and restore actions');
