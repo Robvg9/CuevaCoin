@@ -208,7 +208,7 @@ async function testAdminUsersRendering() {
     const buttons = findAll(card, node => node.tagName === 'BUTTON');
     assert.equal(buttons.length, 4, 'history, adjust, activate/deactivate and archive actions remain visible');
     buttons.forEach(button => button.dispatch('click'));
-    assert.deepEqual(calls, [
+    assert.deepEqual(calls.map(call => Array.from(call)), [
         ['history', maliciousId],
         ['adjust', maliciousId],
         ['toggle', maliciousId],
@@ -288,7 +288,7 @@ async function testUserHistoryRendering() {
 
     favoriteButton.dispatch('click');
     receiptButton.dispatch('click');
-    assert.deepEqual(calls, [
+    assert.deepEqual(calls.map(call => Array.from(call)), [
         ['favorite', maliciousCounterpartId, maliciousCounterpart, 'BUTTON'],
         ['receipt', 'tx-1']
     ], 'event listeners must preserve favorite and receipt behavior without inline handlers');
