@@ -1,5 +1,22 @@
 /** Fase 3 / Oleada 7 — Carga/envío de mensajes */
 
+function mostrarEstadoChat(container, mensaje, className, tagName = 'p') {
+    if (!container) return;
+    const estado = document.createElement(tagName);
+    if (className) estado.className = className;
+    estado.textContent = String(mensaje || '');
+    container.replaceChildren(estado);
+}
+
+function reiniciarSelectChat(select, etiqueta) {
+    if (!select) return;
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = String(etiqueta || '');
+    select.replaceChildren(option);
+}
+
+
 export async function loadAdminChat() {
     const adminId = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual')).id;
     const messagesContainer = document.getElementById('admin-chat-messages');
@@ -9,7 +26,7 @@ export async function loadAdminChat() {
     // conversación abierta, encabezado con avatar+nombre) con la
     // selección actual del <select> oculto.
     window.sincronizarVistaChatSegunSeleccion('admin');
-    messagesContainer.innerHTML = '';
+    messagesContainer.replaceChildren();
 
     // Punto 18a: chats privados por conversación. Si todavía no
     // hay un trabajador seleccionado (ej. no hay ninguno creado
@@ -26,12 +43,12 @@ export async function loadAdminChat() {
 
     if (error) {
         console.error(error);
-        messagesContainer.innerHTML = '<p>No se pudo cargar el chat.</p>';
+        mostrarEstadoChat(messagesContainer, 'No se pudo cargar el chat.');
         return;
     }
 
     if (chat.length === 0) {
-        messagesContainer.innerHTML = '<p>Todavía no hay mensajes con este trabajador.</p>';
+        mostrarEstadoChat(messagesContainer, 'Todavía no hay mensajes con este trabajador.');
         return;
     }
 
@@ -99,7 +116,7 @@ export async function sendAdminMessage() {
 
 export async function loadUserChat(usuarioId) {
     const messagesContainer = document.getElementById('user-chat-messages');
-    messagesContainer.innerHTML = '';
+    messagesContainer.replaceChildren();
 
     // RLS ya limita esto a los chats donde participa el trabajador
     const { data: chat, error } = await window.supabaseClient
@@ -110,7 +127,7 @@ export async function loadUserChat(usuarioId) {
 
     if (error) {
         console.error(error);
-        messagesContainer.innerHTML = '<p>No se pudo cargar el chat.</p>';
+        mostrarEstadoChat(messagesContainer, 'No se pudo cargar el chat.');
         return;
     }
 
@@ -200,7 +217,7 @@ export async function sendUserMessage() {
 
 export async function loadGrupalChat(rol) {
     const messagesContainer = document.getElementById(`${rol}-chat-grupal-messages`);
-    messagesContainer.innerHTML = '';
+    messagesContainer.replaceChildren();
     const usuarioActual = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual'));
 
     const { data: mensajes, error } = await window.supabaseClient
@@ -211,11 +228,11 @@ export async function loadGrupalChat(rol) {
 
     if (error) {
         console.error(error);
-        messagesContainer.innerHTML = '<p>No se pudo cargar el chat grupal.</p>';
+        mostrarEstadoChat(messagesContainer, 'No se pudo cargar el chat grupal.');
         return;
     }
     if (mensajes.length === 0) {
-        messagesContainer.innerHTML = '<p>Todavía no hay mensajes en el chat grupal. ¡Escribe el primero!</p>';
+        mostrarEstadoChat(messagesContainer, 'Todavía no hay mensajes en el chat grupal. ¡Escribe el primero!');
     } else {
         mensajes.forEach(msg => {
             const esMio = msg.remitente_id === usuarioActual.id;
@@ -297,10 +314,10 @@ export async function loadPrivadoChat() {
     // header (avatar + nombre clickeable, punto 41b) según la
     // selección actual del <select> oculto.
     window.sincronizarVistaChatSegunSeleccion('privado');
-    messagesContainer.innerHTML = '<div class="chat-loading">Cargando mensajes...</div>';
+    mostrarEstadoChat(messagesContainer, 'Cargando mensajes...', 'chat-loading', 'div');
 
     if (!contraparteId) {
-        messagesContainer.innerHTML = '';
+        messagesContainer.replaceChildren();
         return;
     }
 
@@ -315,7 +332,7 @@ export async function loadPrivadoChat() {
 
     if (error) {
         console.error(error);
-        messagesContainer.innerHTML = '<p>No se pudo cargar el chat.</p>';
+        mostrarEstadoChat(messagesContainer, 'No se pudo cargar el chat.');
         return;
     }
     if (chat.length === 0) {
@@ -388,14 +405,14 @@ export async function loadContactosPrivado(preseleccionarId) {
 
     if (error) {
         console.error(error);
-        select.innerHTML = '<option value="">No se pudo cargar la lista</option>';
+        reiniciarSelectChat(select, 'No se pudo cargar la lista');
         window.renderizarContactosChat('privado', [], 'No se pudo cargar la lista de contactos.');
         window.sincronizarVistaChatSegunSeleccion('privado');
         return;
     }
 
     const idsUnicos = [...new Set(transferencias.map(t => t.contraparte_id))];
-    select.innerHTML = '<option value="">Selecciona una persona</option>';
+    reiniciarSelectChat(select, 'Selecciona una persona');
 
     if (idsUnicos.length === 0) {
         window.renderizarContactosChat('privado', [], 'Todavía no te transferiste dinero con nadie. Envía o recibe una transferencia para desbloquear el chat privado con esa persona.');
@@ -409,7 +426,7 @@ export async function loadContactosPrivado(preseleccionarId) {
         .in('id', idsUnicos);
     if (errorContactos) {
         console.error(errorContactos);
-        select.innerHTML = '<option value="">No se pudo cargar la lista</option>';
+        reiniciarSelectChat(select, 'No se pudo cargar la lista');
         window.renderizarContactosChat('privado', [], 'No se pudo cargar la lista de contactos.');
         window.sincronizarVistaChatSegunSeleccion('privado');
         return;
@@ -475,7 +492,7 @@ export function loadChatDestinatarios(usuariosYaCargados) {
             : {};
         const usuarios = window.calcularContactosConNovedad('admin', usuariosOriginal, resumen);
 
-        select.innerHTML = '<option value="">Selecciona un usuario</option>';
+        reiniciarSelectChat(select, 'Selecciona un usuario');
         usuarios.forEach(u => {
             const option = document.createElement('option');
             option.value = u.id;
