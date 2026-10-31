@@ -46,9 +46,9 @@ for (const modulePath of additionalSafeDomModules) {
 
 console.log('PASS — 16 additional admin, finance, chat, notification, profile and app modules contain no HTML parsing sinks or inline handlers');
 
-assert.doesNotMatch(indexSource, /\\binnerHTML\\s*=|\\bouterHTML\\s*=|insertAdjacentHTML\\s*\\(/i,
+assert.doesNotMatch(indexSource, /\binnerHTML\s*=|\bouterHTML\s*=|insertAdjacentHTML\s*\(/i,
     'index.html must not assign untrusted data to HTML parsing APIs');
-assert.match(utilsSource, /toast\\.textContent\\s*=\\s*message/,
+assert.match(utilsSource, /toast\.textContent\s*=\s*message/,
     'showToast must render message text, not interpret it as HTML');
 console.log('PASS — index.html has no HTML-parsing assignments and showToast uses textContent');
 
@@ -318,8 +318,8 @@ async function testChatMessageRendering() {
         true
     );
 
-    const sender = findAll(message, node => node.className.split(/\\s+/).includes('chat-msg-nombre'))[0];
-    const body = findAll(message, node => node.className.split(/\\s+/).includes('chat-msg-texto'))[0];
+    const sender = findAll(message, node => node.className.split(/\s+/).includes('chat-msg-nombre'))[0];
+    const body = findAll(message, node => node.className.split(/\s+/).includes('chat-msg-texto'))[0];
     assert.equal(sender.textContent, maliciousSender, 'chat sender name must render as literal text');
     assert.equal(body.textContent, maliciousMessage, 'chat message body must render as literal text');
     sender.dispatch('click');
