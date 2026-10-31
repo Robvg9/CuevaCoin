@@ -4,6 +4,9 @@ import vm from 'node:vm';
 
 const usersSource = readFileSync('js/admin/finance/usuarios.js', 'utf8');
 const historySource = readFileSync('js/finance/history/historial.js', 'utf8');
+const chatDomSource = readFileSync('js/chat/chat-dom.js', 'utf8');
+const utilsSource = readFileSync('js/core/utils.js', 'utf8');
+const indexSource = readFileSync('index.html', 'utf8');
 
 function assertNoHtmlInjectionSinks(source, label) {
     assert.doesNotMatch(source, /\binnerHTML\s*=|\bouterHTML\s*=|insertAdjacentHTML\s*\(/i,
@@ -27,6 +30,7 @@ const additionalSafeDomModules = [
     'js/chat/chat-messages.js',
     'js/chat/chat-scroll.js',
     'js/core/app.js',
+    'js/core/utils.js',
     'js/ui/notif-panel.js',
     'js/ui/sugerencias-user.js',
     'js/profile/qr-display.js'
@@ -40,7 +44,13 @@ for (const modulePath of additionalSafeDomModules) {
         modulePath + ' must not build inline event handlers');
 }
 
-console.log('PASS — 15 additional admin, finance, chat, notification, profile and app modules contain no HTML parsing sinks or inline handlers');
+console.log('PASS — 16 additional admin, finance, chat, notification, profile and app modules contain no HTML parsing sinks or inline handlers');
+
+assert.doesNotMatch(indexSource, /\\binnerHTML\\s*=|\\bouterHTML\\s*=|insertAdjacentHTML\\s*\\(/i,
+    'index.html must not assign untrusted data to HTML parsing APIs');
+assert.match(utilsSource, /toast\\.textContent\\s*=\\s*message/,
+    'showToast must render message text, not interpret it as HTML');
+console.log('PASS — index.html has no HTML-parsing assignments and showToast uses textContent');
 
 class FakeClassList {
     constructor(element) {
@@ -109,6 +119,11 @@ function makeDom(ids) {
             },
             createElement(tag) {
                 return new FakeElement(tag);
+            },
+            createTextNode(value) {
+                const node = new FakeElement('#text');
+                node.textContent = String(value);
+                return node;
             }
         }
     };
@@ -280,10 +295,44 @@ async function testUserHistoryRendering() {
     assert.equal(window.__xssExecuted, false, 'malicious transaction data must not execute');
 }
 
+async function testChatMessageRendering() {
+    const maliciousSender = '<img src=x onerror="window.__xssExecuted=true">';
+    const maliciousMessage = '<svg onload="window.__xssExecuted=true">hello</svg>';
+    const maliciousSenderId = "sender');window.__xssExecuted=true;//";
+    const dom = makeDom({});
+    const calls = [];
+    const window = {
+        __xssExecuted: false,
+        verPerfilDesdeChat(id) { calls.push(id); }
+    };
+    const sandbox = { window, document: dom.document, console };
+
+    loadClassicCompatibleModule(chatDomSource, sandbox, 'chat-dom.js');
+    const message = window.crearMensajeChatEl(
+        maliciousSender,
+        '2026-10-30T12:00:00.000Z',
+        maliciousMessage,
+        false,
+        false,
+        maliciousSenderId,
+        true
+    );
+
+    const sender = findAll(message, node => node.className.split(/\\s+/).includes('chat-msg-nombre'))[0];
+    const body = findAll(message, node => node.className.split(/\\s+/).includes('chat-msg-texto'))[0];
+    assert.equal(sender.textContent, maliciousSender, 'chat sender name must render as literal text');
+    assert.equal(body.textContent, maliciousMessage, 'chat message body must render as literal text');
+    sender.dispatch('click');
+    assert.deepEqual(calls, [maliciousSenderId], 'profile navigation must receive the exact ID through an event listener');
+    assert.equal(window.__xssExecuted, false, 'malicious chat fields and identifiers must not execute');
+}
+
 assertNoHtmlInjectionSinks(usersSource, 'admin user cards');
+assertNoHtmlInjectionSinks(chatDomSource, 'chat message rendering');
 assertNoHtmlInjectionSinks(historySource, 'user transaction history');
 await testAdminUsersRendering();
 await testUserHistoryRendering();
+await testChatMessageRendering();
 
 console.log('PASS — admin user cards render names, usernames and emails as text');
 console.log('PASS — unsafe avatar protocols are rejected in favor of an HTTPS fallback');
@@ -291,3 +340,4 @@ console.log('PASS — user management actions remain wired through DOM event lis
 console.log('PASS — transaction reasons and administrator identities render as text');
 console.log('PASS — favorite and receipt actions remain wired without inline handlers');
 console.log('PASS — malicious profile and transaction payloads do not execute in the DOM harness');
+console.log('PASS — chat sender and message payloads render as text and profile navigation is preserved');
