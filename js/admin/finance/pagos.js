@@ -98,11 +98,11 @@ export async function pagarSaldoDesdeAdmin(tipo) {
     const amount = parseFloat(document.getElementById('bono-monto')?.value);
     const reason = document.getElementById('bono-motivo')?.value || '';
     const original = window.seleccionDestinatariosBono;
-    const seen = new Set();
+    const idsVistos = new Set();
     const recipients = (Array.isArray(original) ? original : []).filter(user => {
         const id = String(user?.id || '');
-        if (!id || seen.has(id)) return false;
-        seen.add(id);
+        if (!id || idsVistos.has(id)) return false;
+        idsVistos.add(id);
         return true;
     });
     if (!(amount > 0)) { window.showToast('El monto debe ser mayor a 0', 3000); return; }
@@ -116,7 +116,7 @@ export async function pagarSaldoDesdeAdmin(tipo) {
         if (error) throw error;
         const successes = (data || []).filter(row => row.exitoso !== false);
         const failures = (data || []).filter(row => row.exitoso === false);
-        if (failures.length) window.showToast('Bono parcial: ' + successes.length + ' correcto(s), ' + failures.length + ' fallido(s). Revisa el historial antes de repetir.', 6500);
+        if (failures.length) window.showToast('Pago parcial: ' + successes.length + ' correcto(s), ' + failures.length + ' fallido(s). Revisa el historial antes de repetir.', 6500);
         else window.showToast('Bono enviado a ' + successes.length + ' destinataria(s)', 3500);
         (data || []).forEach(row => {
             if (row.exitoso === false) return;
