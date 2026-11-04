@@ -11,13 +11,13 @@ const adminDashboard = read('js/finance/orchestration/show-admin-panel.js');
 const app = read('js/core/app.js');
 const users = read('js/admin/finance/usuarios.js');
 
-assert.match(sw, /cuevacoin-shell-v150/);
-assert.match(index, /VERSION_FALLBACK = 'V\.150'/);
-assert.match(app, /VERSION_FALLBACK = 'V\.150'/);
+assert.match(sw, /cuevacoin-shell-v151/);
+assert.match(index, /VERSION_FALLBACK = 'V\.151'/);
+assert.match(app, /VERSION_FALLBACK = 'V\.151'/);
 assert.match(index, /usuarios\.js\?v=150/);
 assert.match(index, /historial\.js\?v=150/);
 
-// V148 offline-first behavior remains in V150.
+// V148 offline-first behavior remains in V151.
 assert.match(index, /comprobarActualizacionAutomatica/);
 assert.match(index, /registration\.update\(\)/);
 assert.match(index, /60 \* 60 \* 1000/);
@@ -52,7 +52,7 @@ assert.match(index, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
 assert.match(index, /#admin-usuarios-seccion \.usuario-card-archivado \.usuario-card-acciones/);
 assert.match(index, /#admin-usuarios-seccion \.usuario-card-correo/);
 
-console.log('PASS — V150 release/version/cache-busting assets aligned');
+console.log('PASS — V151 release/version/cache-busting assets aligned');
 console.log('PASS — V148 offline dashboard, local history and automatic PWA update checks preserved');
-console.log('PASS — V149 compact user cards preserved in V150 with identity, status, balance, email, activity and savings goal');
-console.log('PASS — V150 preserves history, balance adjustment, activate/deactivate, archive and restore actions');
+console.log('PASS — V149 compact user cards preserved in V151 with identity, status, balance, email, activity and savings goal');
+console.log('PASS — V151 preserves history, balance adjustment, activate/deactivate, archive and restore actions');

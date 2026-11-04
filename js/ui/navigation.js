@@ -101,6 +101,8 @@ export function loadSection(section) {
         } else if (section === 'auditoria') {
             _call('cargarDatalistUsuariosAuditoria');
             _call('loadAdminAuditoria');
+        } else if (section === 'historial-general') {
+            _call('cargarHistorialGeneral');
         } else if (section === 'chat') {
             _call('loadAdminChat');
             _call('marcarNovedadVista', 'chat-grupal-privado-2026-08-03');

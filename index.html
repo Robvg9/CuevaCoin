@@ -1566,6 +1566,25 @@
             font-size: 0.9em;
             opacity: 0.75;
         }
+        .salario-lista-controles{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+        .salario-trabajadoras-lista{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;overscroll-behavior:contain;padding:2px}
+        .salario-trabajadora-row{display:grid;grid-template-columns:minmax(130px,1.1fr) minmax(110px,.7fr) minmax(190px,1.3fr);gap:10px;align-items:start;padding:10px;border:1px solid var(--border-color);border-radius:10px;background:var(--card-bg)}
+        .salario-trabajadora-row.seleccionada{border-color:var(--accent-primary);box-shadow:0 0 0 1px var(--accent-primary)}
+        .salario-trabajadora-identidad{display:flex;align-items:center;gap:9px;min-width:0;padding-top:8px;font-weight:600;overflow-wrap:anywhere}
+        .salario-trabajadora-monto,.salario-trabajadora-dias{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:12px}
+        .salario-trabajadora-monto input,.salario-dias-controles input{width:100%;min-width:0;font-size:14px;padding:8px}
+        .salario-dias-controles{display:flex;gap:5px;align-items:center}
+        .salario-dia-add{white-space:nowrap;padding:8px 9px;font-size:12px}
+        .salario-dias-chips{display:flex;flex-wrap:wrap;gap:5px}
+        .salario-dia-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;background:var(--light-color);font-size:11px}
+        .salario-dia-chip button{border:0;background:transparent;color:inherit;font-size:15px;line-height:1;cursor:pointer}
+        .salario-pendiente-aviso{padding:9px 11px;margin:8px 0;border:1px solid var(--warning-color);border-radius:9px;font-size:13px}
+        .admin-general-history-details{display:flex;flex-direction:column;gap:4px;margin-top:8px;font-size:13px;overflow-wrap:anywhere}
+        .admin-general-history-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0 16px}
+        .admin-history-more-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;margin:14px 0 4px}
+        .admin-history-load-status{min-height:18px;font-size:12px;opacity:.7}
+        @media(max-width:680px){.salario-trabajadora-row{grid-template-columns:minmax(0,1fr) minmax(105px,.65fr)}.salario-trabajadora-dias{grid-column:1/-1}}
+        @media(max-width:430px){.salario-trabajadora-row{grid-template-columns:1fr}.salario-trabajadora-dias{grid-column:auto}.admin-general-history-controls{grid-template-columns:1fr}}
         /* F1 (v63): chips de favoritos arriba del formulario de Transferir */
         .favoritos-chips {
             display: flex;
@@ -3370,6 +3389,11 @@
                     <span id="chat-mensajes-dot" class="novedad-dot-inline hidden" title="Mensajes nuevos sin leer"></span>
                 </a>
             </li>
+            <li id="historial-general-link-item" style="display:none;">
+                <a role="button" tabindex="0" onclick="loadSection('historial-general')" id="historial-general-link">
+                    <i>📚</i> Historial general
+                </a>
+            </li>
             <li>
                 <a role="button" tabindex="0" onclick="loadSection('auditoria')" id="auditoria-link">
                     <i>🔍</i> Auditoría
@@ -3649,10 +3673,33 @@
                             <input type="text" id="audit-filter-texto" placeholder="Palabra clave en la descripción..." oninput="debounceFiltroAuditoria()">
                         </div>
                     </div>
-                    <div class="audit-log" id="audit-log">
-                        <!-- Se llenará con JavaScript -->
+                    <div class="audit-log" id="audit-log"></div>
+                    <div class="admin-history-more-wrap">
+                        <button type="button" id="audit-ver-mas-btn" class="btn btn-secondary hidden" onclick="loadAdminAuditoria({append:true})">Ver más</button>
+                        <p id="audit-load-more-status" class="admin-history-load-status" aria-live="polite"></p>
                     </div>
                     <p id="audit-log-vacio" class="hidden" style="text-align: center; opacity: 0.8; margin-top: 16px;">No hay eventos que coincidan con estos filtros.</p>
+                </div>
+            </div>
+
+            <!-- Historial financiero general: solo administrador. -->
+            <div id="admin-historial-general" class="section hidden">
+                <div class="card">
+                    <h2>📚 Historial general</h2>
+                    <p style="opacity:.75;font-size:13px;">Movimientos de todas las trabajadoras en una sola vista. Primero se cargan los más recientes.</p>
+                    <div class="admin-general-history-controls">
+                        <div class="audit-filtro-campo"><label for="admin-general-history-type">Tipo de movimiento</label>
+                            <select id="admin-general-history-type" onchange="cargarHistorialGeneral()">
+                                <option value="todos">Todos los movimientos</option><option value="salarios">Salarios pagados</option><option value="bonos">Bonos</option><option value="ajustes">Ajustes y descuentos</option><option value="retiros">Retiros</option><option value="transferencias">Transferencias</option>
+                            </select>
+                        </div>
+                        <div class="audit-filtro-campo"><label for="admin-general-history-search">Buscar en el motivo</label><input id="admin-general-history-search" type="search" placeholder="Concepto o motivo..." oninput="debounceHistorialGeneral()"></div>
+                        <div class="audit-filtro-campo"><label for="admin-general-history-from">Desde</label><input id="admin-general-history-from" type="date" onchange="cargarHistorialGeneral()"></div>
+                        <div class="audit-filtro-campo"><label for="admin-general-history-to">Hasta</label><input id="admin-general-history-to" type="date" onchange="cargarHistorialGeneral()"></div>
+                    </div>
+                    <div id="admin-general-history-list" class="solicitudes-cards"></div>
+                    <p id="admin-general-history-empty" class="hidden" style="text-align:center;opacity:.8;margin-top:16px;">No hay movimientos que coincidan con estos filtros.</p>
+                    <div class="admin-history-more-wrap"><button type="button" id="admin-general-history-more" class="btn btn-secondary hidden" onclick="cargarHistorialGeneral({append:true})">Ver más</button><p id="admin-general-history-status" class="admin-history-load-status" aria-live="polite"></p></div>
                 </div>
             </div>
 
@@ -4557,26 +4604,18 @@
     </div>
 
 
-    <!-- Pagar Salario Modal -->
+    <!-- Pago de salario: destinatarias, importes y días trabajados en el mismo modal. -->
     <div id="pagar-salario-modal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('pagar-salario-modal')">&times;</span>
-            <h2>💰 Pagar Salario</h2>
+            <h2>💰 Pagar salarios</h2>
+            <p style="opacity:.78;font-size:13px;margin:4px 0 12px;">Marca cada trabajadora, indica cuánto recibirá y añade sus días trabajados. Cada persona puede tener un importe y fechas diferentes.</p>
             <form id="pagar-salario-form">
-                <div class="form-group">
-                    <label for="salario-monto">Monto del salario:</label>
-                    <input type="number" id="salario-monto" placeholder="Monto" step="1" min="1" required>
-                </div>
-                <div class="form-group">
-                    <label for="salario-motivo">Motivo:</label>
-                    <input type="text" id="salario-motivo" placeholder="Ej: Salario quincenal" required>
-                </div>
-                <div class="form-group">
-                    <label>Destinatarias:</label>
-                    <button type="button" class="btn" onclick="abrirSelectorDestinatarios('salario')">👥 Elegir destinatarias</button>
-                    <p id="salario-destinatarios-resumen" class="selector-destinatarios-resumen">Nadie seleccionado todavía</p>
-                </div>
-                <button type="submit" class="btn btn-success">Pagar</button>
+                <div class="salario-lista-controles"><input type="search" id="salario-buscar-trabajadora" placeholder="Buscar trabajadora..." oninput="aplicarFiltroTrabajadorasSalario()" style="flex:1;min-width:150px;"><button type="button" class="btn btn-secondary" onclick="seleccionarTodasTrabajadorasSalario()">Seleccionar visibles</button></div>
+                <p id="salario-pago-pendiente" class="salario-pendiente-aviso hidden" role="status">⚠️ Hay un lote anterior pendiente de confirmar. No se puede editar. Pulsa «Reintentar el mismo pago» para consultar esa misma operación sin duplicarla.</p>
+                <div id="salario-trabajadoras-lista" class="salario-trabajadoras-lista"><p style="opacity:.7;">Cargando trabajadoras…</p></div>
+                <p id="salario-destinatarios-resumen" class="selector-destinatarios-resumen">Selecciona quién recibirá el salario.</p>
+                <button type="submit" id="salario-submit-btn" class="btn btn-success">Pagar salarios seleccionados</button>
             </form>
         </div>
     </div>
@@ -5025,7 +5064,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.150';
+                const VERSION_FALLBACK = 'V.151';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -5390,10 +5429,11 @@
     <script type="module" src="js/admin/finance/stats.js?v=148"></script>
     <script type="module" src="js/admin/finance/usuarios.js?v=150"></script>
     <script type="module" src="js/admin/finance/historial-trabajadora.js?v=148"></script>
-    <script type="module" src="js/admin/finance/destinatarios.js"></script>
-    <script type="module" src="js/admin/finance/pagos.js"></script>
+    <script type="module" src="js/admin/finance/destinatarios.js?v=151"></script>
+    <script type="module" src="js/admin/finance/pagos.js?v=151"></script>
+    <script type="module" src="js/admin/finance/historial-general.js?v=151"></script>
     <script type="module" src="js/admin/finance/reportes.js"></script>
-    <script type="module" src="js/admin/finance/auditoria.js"></script>
+    <script type="module" src="js/admin/finance/auditoria.js?v=151"></script>
     <script type="module" src="js/admin/finance/solicitudes-realtime.js"></script>
     <!-- Fase 3 / Oleada 9 — orquestación (última) -->
     <script type="module" src="js/finance/orchestration/show-admin-panel.js?v=148"></script>
