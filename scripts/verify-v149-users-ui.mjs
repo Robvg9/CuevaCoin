@@ -12,8 +12,8 @@ const app = read('js/core/app.js');
 const users = read('js/admin/finance/usuarios.js');
 
 assert.match(sw, /cuevacoin-shell-v151/);
-assert.match(index, /VERSION_FALLBACK = 'V\.150'/);
-assert.match(app, /VERSION_FALLBACK = 'V\.150'/);
+assert.match(index, /VERSION_FALLBACK = 'V\.151'/);
+assert.match(app, /VERSION_FALLBACK = 'V\.151'/);
 assert.match(index, /usuarios\.js\?v=150/);
 assert.match(index, /historial\.js\?v=150/);
 
