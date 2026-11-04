@@ -67,7 +67,7 @@ for (const [label, pattern] of [
   ['creates an RLS-protected idempotency ledger', /CREATE TABLE public\.admin_pagos_salario_idempotencia[\s\S]*?ENABLE ROW LEVEL SECURITY[\s\S]*?REVOKE ALL PRIVILEGES/i],
   ['requires an active administrator', /v_admin\.es_admin IS DISTINCT FROM true OR v_admin\.estado IS DISTINCT FROM 'activo'/],
   ['validates individual amounts and work dates', /monto positivo con máximo dos decimales[\s\S]*?días trabajados deben ser fechas válidas/i],
-  ['rejects duplicate recipient IDs', /v_user_id\\s*=\\s*ANY\\(v_ids\\)/],
+  ['rejects duplicate recipient IDs', /v_user_id\s*=\s*ANY\(v_ids\)/],
   ['locks recipient profiles before credit', /FROM public\.perfiles p[\s\S]*?WHERE p\.id=v_user_id[\s\S]*?FOR UPDATE/i],
   ['rejects inactive workers', /v_target\.estado IS DISTINCT FROM 'activo'/],
   ['enables trusted balance write only inside the RPC', /set_config\('cuevacoin\.trusted_balance_write','1',true\)/],
