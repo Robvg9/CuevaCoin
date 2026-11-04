@@ -59,3 +59,27 @@ assert.match(
 console.log('PASS — admin adjustment and batch payout deny archived/inactive accounts; rollback test covers both paths');
 
 console.log('PASS: ' + sqlChecks.length + ' migration invariant groups');
+
+
+const salaryMigration = readFileSync('supabase/migrations/20261104183000_admin_salary_individual_batch.sql', 'utf8');
+const salaryBatchTest = readFileSync('supabase/tests/admin_payroll_batch_atomicity.sql', 'utf8');
+for (const [label, pattern] of [
+  ['creates an RLS-protected idempotency ledger', /CREATE TABLE public\.admin_pagos_salario_idempotencia[\s\S]*?ENABLE ROW LEVEL SECURITY[\s\S]*?REVOKE ALL PRIVILEGES/i],
+  ['requires an active administrator', /v_admin\.es_admin IS DISTINCT FROM true OR v_admin\.estado IS DISTINCT FROM 'activo'/],
+  ['validates individual amounts and work dates', /monto positivo con máximo dos decimales[\s\S]*?días trabajados deben ser fechas válidas/i],
+  ['rejects duplicate recipient IDs', /v_user_id = ANY\(v_ids\)/],
+  ['locks recipient profiles before credit', /FROM public\.perfiles p[\s\S]*?WHERE p\.id=v_user_id[\s\S]*?FOR UPDATE/i],
+  ['rejects inactive workers', /v_target\.estado IS DISTINCT FROM 'activo'/],
+  ['enables trusted balance write only inside the RPC', /set_config\('cuevacoin\.trusted_balance_write','1',true\)/],
+  ['checks the exact payload when replaying a batch', /ON CONFLICT\(idempotency_key\) DO NOTHING[\s\S]*?idempotency_key_payload_mismatch/i],
+  ['writes ledger, notification and audit in one function', /INSERT INTO public\.transacciones[\s\S]*?INSERT INTO public\.notificaciones[\s\S]*?INSERT INTO public\.auditoria/i],
+  ['limits RPC execution to authenticated and service_role', /REVOKE EXECUTE[\s\S]*?FROM PUBLIC,anon[\s\S]*?GRANT EXECUTE[\s\S]*?TO authenticated,service_role/i],
+]) {
+  assert.match(salaryMigration, pattern, 'Missing salary-batch invariant: ' + label);
+  console.log('PASS — ' + label);
+}
+assert.match(salaryBatchTest, /BEGIN;[\s\S]*ROLLBACK;\s*$/i);
+assert.match(salaryBatchTest, /replayed IS DISTINCT FROM true/);
+assert.match(salaryBatchTest, /idempotency_key_payload_mismatch/);
+assert.match(salaryBatchTest, /No se puede pagar a una cuenta no activa/);
+console.log('PASS — salary batch transaction test verifies replay, payload mismatch, inactive-worker rejection and rollback');
