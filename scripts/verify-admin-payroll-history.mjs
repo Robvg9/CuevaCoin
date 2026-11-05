@@ -16,7 +16,7 @@ const salaryRangeSource = [
  "assert.throws(() => buildInclusiveDays('2026-02-30','2026-03-01'), /válidas/);",
  "assert.throws(() => buildInclusiveDays('2026-11-01','2026-12-02'), /31 días/);",
  "console.log('PASS — inclusive payroll date ranges, calendar validation and 31-day cap');"
-].join('\\n');
+].join('\n');
 const salaryRangeTest=spawnSync(process.execPath,['--input-type=module','-e',salaryRangeSource],{encoding:'utf8'});
 assert.equal(salaryRangeTest.status,0,'Salary date-range behavior failed: '+(salaryRangeTest.stderr||salaryRangeTest.stdout));
 console.log(salaryRangeTest.stdout.trim());
