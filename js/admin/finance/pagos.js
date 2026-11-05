@@ -83,7 +83,6 @@ async function pagarSalariosIndividuales() {
         window.resetearFormularioSalario?.();
         window.loadAdminUsuarios?.();
         window.cargarHistorialGeneral?.();
-        window.loadAdminAuditoria?.();
     } catch (error) {
         console.error('[CuevaCoin] No se pudo confirmar el lote salarial:', error);
         window.showToast('No se pudo confirmar el pago. Reintenta el mismo lote; la clave evita duplicarlo.', 6500);
@@ -140,6 +139,8 @@ export function openAjustarSaldoModal(userId) {
     window.openModal('ajustar-saldo-modal');
 }
 export function abrirModalPagoSalario() {
+    // Cada apertura inicia vacía; si hay un lote incierto el reset conserva el bloqueo.
+    window.resetearFormularioSalario?.();
     window.openModal('pagar-salario-modal');
     void window.cargarDestinatariasSalario?.();
 }

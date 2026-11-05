@@ -88,7 +88,7 @@ export async function mostrarVersionApp() {
     const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
     if (els.length === 0) return;
 
-    const VERSION_FALLBACK = 'V.154';
+    const VERSION_FALLBACK = 'V.155';
     const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
 
     try {

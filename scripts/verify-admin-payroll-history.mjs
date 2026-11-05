@@ -8,6 +8,9 @@ const history = read('js/admin/finance/historial-general.js');
 const recipients = read('js/admin/finance/destinatarios.js');
 const payments = read('js/admin/finance/pagos.js');
 const navigation = read('js/ui/navigation.js');
+const modals = read('js/ui/modals.js');
+const adminPanel = read('js/finance/orchestration/show-admin-panel.js');
+const userPanel = read('js/finance/orchestration/show-user-dashboard.js');
 const app = read('js/core/app.js');
 const localDateRange = read('js/utils/local-date-range.js');
 const migration = read('supabase/migrations/20261104183000_admin_salary_individual_batch.sql');
@@ -22,26 +25,53 @@ assert.match(history, /creado_en\.lt\./);
 assert.match(history, /id\.lt\./);
 assert.match(history, /limit\(HISTORY_PAGE_SIZE\)/);
 assert.match(history, /admin-general-history-audit/);
+assert.match(history, /isMirroredAuditEvent/);
+assert.match(history, /\.in\('creado_en', timestamps\)/);
+assert.match(history, /if \(hasMoreHistory\(\)\) continue/);
 assert.match(history, /appendBoldDetail\(details, 'Trabajadora: '/);
 assert.match(history, /appendBoldDetail\(details, 'Motivo: '/);
 assert.match(history, /appendBoldDetail\(details, 'Usuario: '/);
 assert.match(history, /textContent = value/);
 assert.doesNotMatch(history, /\.(insert|update|upsert|delete)\s*\(/);
 console.log('PASS — single chronological feed merges financial transactions and complete audit events; stable keyset pagination; bold safe text.');
+const mirrorTestSource = [
+  "import assert from 'node:assert/strict';",
+  "import { isMirroredAuditEvent } from './js/admin/finance/historial-general.js';",
+  "const at = '2026-11-04T20:00:00.000Z';",
+  "const tx = (name, admin = 'Robert') => ({ creado_en: at, tipo: 'deposito_admin', cantidad: 10, admin: { nombre: admin, usuario: admin.toLowerCase() }, trabajadora: { nombre: name, usuario: name.toLowerCase() }, contraparte: null });",
+  "const dayana = { creado_en: at, usuario_nombre: 'Robert', accion: 'Pagó salario a Dayana: $10.00 (Salario de los días 11/10/2026)' };",
+  "const sheila = { creado_en: at, usuario_nombre: 'Robert', accion: 'Pagó salario a Sheila: $10.00 (Salario de los días 11/10/2026)' };",
+  "assert.equal(isMirroredAuditEvent(dayana, tx('Dayana')), true);",
+  "assert.equal(isMirroredAuditEvent(sheila, tx('Sheila')), true);",
+  "assert.equal(isMirroredAuditEvent(dayana, tx('Sheila')), false);",
+  "assert.equal(isMirroredAuditEvent({ ...dayana, usuario_nombre: 'Otra persona' }, tx('Dayana')), false);",
+  "assert.equal(isMirroredAuditEvent({ ...dayana, creado_en: '2026-11-04T20:00:01.000Z' }, tx('Dayana')), false);",
+  "assert.equal(isMirroredAuditEvent({ ...dayana, accion: 'Inició sesión correctamente' }, tx('Dayana')), false);",
+  "console.log('PASS — mirror matching is constrained by timestamp, actor, operation category, amount and recipient.');"
+].join('\n');
+const mirrorTest = spawnSync(process.execPath, ['--input-type=module', '-e', mirrorTestSource], { encoding: 'utf8' });
+assert.equal(mirrorTest.status, 0, 'Audit/transaction mirror test failed: ' + (mirrorTest.stderr || mirrorTest.stdout));
+console.log(mirrorTest.stdout.trim());
 
 assert.match(index, /Todos los movimientos financieros y eventos de auditoría/);
 assert.match(index, /Todos los movimientos y eventos/);
 assert.match(index, /Buscar en historial/);
 assert.match(index, /id="admin-general-history-list"/);
 assert.match(navigation, /section === 'auditoria'\) section = 'historial-general'/);
-console.log('PASS — both admin history/audit navigation paths resolve to the unified history.');
+assert.match(navigation, /loadSection\('historial-general'\)/);
+assert.doesNotMatch(navigation, /loadAdminAuditoria/);
+assert.doesNotMatch(index, /id="auditoria-link"/);
+assert.doesNotMatch(index, /Ver Auditoría Completa/);
+assert.doesNotMatch(adminPanel, /auditoria-link/);
+assert.doesNotMatch(userPanel, /auditoria-link/);
+console.log('PASS — one admin History General entry; legacy audit routes redirect without a duplicate menu item.');
 
 assert.match(index, /id="salario-trabajadoras-lista"/);
 assert.match(index, /id="salario-selector-buscar"/);
 assert.match(index, /id="salario-selector-panel"/);
 assert.match(index, /id="salario-selector-lista"/);
 assert.match(index, /Seleccionar trabajadoras/);
-assert.match(index, /cuevacoin-v154-unified-admin-history-layout/);
+assert.match(index, /cuevacoin-v155-admin-history-layout/);
 assert.match(recipients, /function salaryMotive\(days\)/);
 assert.match(recipients, /Motivo/);
 assert.match(recipients, /from\.type = 'date'/);
@@ -50,11 +80,18 @@ assert.match(recipients, /buildInclusiveDays/);
 assert.match(recipients, /count > 31/);
 assert.match(recipients, /salario-trabajadora-monto/);
 assert.match(recipients, /salario-trabajadora-motivo/);
+assert.match(recipients, /if \(pendingSalary\(\)\)/);
+assert.match(modals, /modalId === 'pagar-salario-modal'/);
+assert.match(modals, /window\.resetearFormularioSalario/);
+assert.match(payments, /window\.resetearFormularioSalario\?\.\(\)/);
+assert.doesNotMatch(payments, /loadAdminAuditoria/);
+assert.match(index, /grid-template-areas: "identity identity" "amount motive"/);
+assert.match(index, /salario-motivo-ayuda \{ display: none/);
 assert.match(payments, /admin_pagar_salarios_individuales/);
 assert.match(payments, /cuevacoin_salary_batch_pending/);
 assert.match(payments, /Reintentar el mismo pago/);
 assert.match(payments, /newIdempotencyKey/);
-assert.match(index, /cuevacoin-v154-unified-admin-history/);
+assert.match(index, /cuevacoin-v155-admin-history-cleanup/);
 console.log('PASS — vertical per-worker salary form, individual amount and calendar-generated reason; atomic/idempotent RPC path retained.');
 
 const salaryRangeSource = [
@@ -98,11 +135,11 @@ const invalidDate = spawnSync(process.execPath, ['--input-type=module', '-e', "i
 assert.notEqual(invalidDate.status, 0, 'Invalid calendar dates must be rejected');
 console.log('PASS — local date boundaries cover Puerto Rico and 23/25-hour DST days.');
 
-assert.match(app, /VERSION_FALLBACK = 'V\.154'/);
-assert.match(sw, /cuevacoin-shell-v154/);
-assert.match(index, /destinatarios\.js\?v=154/);
-assert.match(index, /historial-general\.js\?v=154/);
-assert.match(index, /cuevacoin-v154-unified-admin-history/);
+assert.match(app, /VERSION_FALLBACK = 'V\.155'/);
+assert.match(sw, /cuevacoin-shell-v155/);
+assert.match(index, /destinatarios\.js\?v=155/);
+assert.match(index, /historial-general\.js\?v=155/);
+assert.match(index, /cuevacoin-v155-admin-history-cleanup/);
 for (const path of [
   'js/utils/local-date-range.js',
   'js/admin/finance/historial-general.js',
@@ -114,4 +151,4 @@ for (const path of [
   const syntax = spawnSync(process.execPath, ['--input-type=module', '--check'], { input: read(path), encoding: 'utf8' });
   assert.equal(syntax.status, 0, 'Invalid JavaScript syntax in ' + path + ': ' + (syntax.stderr || ''));
 }
-console.log('PASS — V154 PWA references and changed JavaScript syntax.');
+console.log('PASS — V155 PWA references and changed JavaScript syntax.');
