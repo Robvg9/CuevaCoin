@@ -11,13 +11,14 @@ const adminDashboard = read('js/finance/orchestration/show-admin-panel.js');
 const app = read('js/core/app.js');
 const users = read('js/admin/finance/usuarios.js');
 
-assert.match(sw, /cuevacoin-shell-v152/);
-assert.match(index, /VERSION_FALLBACK = 'V\.152'/);
-assert.match(app, /VERSION_FALLBACK = 'V\.152'/);
+const releaseVersion = index.match(/VERSION_FALLBACK = 'V\.(\d+)'/)?.[1];
+assert.ok(releaseVersion, 'HTML must declare the release version');
+assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], releaseVersion, 'Service worker cache must match the HTML version');
+assert.equal(app.match(/VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], releaseVersion, 'App fallback must match the HTML version');
 assert.match(index, /usuarios\.js\?v=150/);
 assert.match(index, /historial\.js\?v=150/);
 
-// V148 offline-first behavior remains in V152.
+// V148 offline-first behavior remains in the current release.
 assert.match(index, /comprobarActualizacionAutomatica/);
 assert.match(index, /registration\.update\(\)/);
 assert.match(index, /60 \* 60 \* 1000/);
@@ -52,7 +53,7 @@ assert.match(index, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
 assert.match(index, /#admin-usuarios-seccion \.usuario-card-archivado \.usuario-card-acciones/);
 assert.match(index, /#admin-usuarios-seccion \.usuario-card-correo/);
 
-console.log('PASS — V152 release/version/cache-busting assets aligned');
+console.log('PASS — PWA release/version/cache assets aligned dynamically');
 console.log('PASS — V148 offline dashboard, local history and automatic PWA update checks preserved');
-console.log('PASS — V149 compact user cards preserved in V152 with identity, status, balance, email, activity and savings goal');
-console.log('PASS — V152 preserves history, balance adjustment, activate/deactivate, archive and restore actions');
+console.log('PASS — V149 compact user cards preserved in current release with identity, status, balance, email, activity and savings goal');
+console.log('PASS — current release preserves history, balance adjustment, activate/deactivate, archive and restore actions');

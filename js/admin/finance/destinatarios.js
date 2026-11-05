@@ -45,6 +45,9 @@ function formatSalaryRange(days) {
         const date = new Date(value + 'T12:00:00');
         return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('es-ES');
     };
+    const contiguous = days.every((day, index) => index === 0 ||
+        Date.parse(day + 'T00:00:00.000Z') - Date.parse(days[index - 1] + 'T00:00:00.000Z') === 86400000);
+    if (!contiguous) return days.map(format).join(', ') + ' · ' + days.length + ' días';
     return days.length === 1
         ? format(days[0]) + ' · 1 día'
         : format(days[0]) + ' — ' + format(days[days.length - 1]) + ' · ' + days.length + ' días';
