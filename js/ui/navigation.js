@@ -71,7 +71,7 @@ export function loadSection(section) {
     actualizarConfigTabsBar(section);
 
     if (isAdmin) {
-        // V154: Auditoría es parte de la cronología global; ambos accesos abren la misma vista.
+        // V155: los enlaces antiguos de Auditoría redirigen al Historial general unificado.
         if (section === 'auditoria') section = 'historial-general';
         const adminPanel = document.getElementById('admin-panel');
         if (adminPanel) adminPanel.classList.remove('hidden');
@@ -81,7 +81,7 @@ export function loadSection(section) {
             return;
         }
         if (section === 'historial') {
-            loadSection('auditoria');
+            loadSection('historial-general');
             return;
         }
 
@@ -100,9 +100,6 @@ export function loadSection(section) {
             _call('loadAdminSolicitudesCorreo');
         } else if (section === 'recuperacion') {
             _call('loadAdminRecoveryRequests');
-        } else if (section === 'auditoria') {
-            _call('cargarDatalistUsuariosAuditoria');
-            _call('loadAdminAuditoria');
         } else if (section === 'historial-general') {
             _call('cargarHistorialGeneral');
         } else if (section === 'chat') {
