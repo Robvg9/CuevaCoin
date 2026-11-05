@@ -22,7 +22,7 @@ export function showAdminPanel(admin) {
         document.getElementById('topbar-user').textContent = admin.nombre || admin.usuario;
         document.getElementById('topbar-avatar').src = admin.foto || `https://ui-avatars.com/api/?name=${admin.usuario}&background=0F172A&color=fff`;
         // Restaurar los contenedores <li> también al cambiar de rol en la sesión.
-        ['auditoria-link', 'usuarios-link', 'solicitudes-link', 'historial-general-link'].forEach(id => {
+        ['usuarios-link', 'solicitudes-link', 'historial-general-link'].forEach(id => {
             const link = document.getElementById(id);
             if (link) {
                 link.style.display = '';
