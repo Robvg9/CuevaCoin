@@ -1,4 +1,5 @@
 /** CuevaCoin — Auditoría administrativa con paginación real desde Supabase. */
+import { getLocalDateRange } from '../../utils/local-date-range.js?v=152';
 const AUDIT_PAGE_SIZE = 25;
 let auditOffset = 0, auditHasMore = false, auditLoading = false, auditToken = 0, auditDebounce = null, auditUsersLoaded = false;
 
@@ -22,12 +23,9 @@ function applyAuditFilters(query, filters) {
     if (filters.tipo === 'saldo') query = query.ilike('accion', '%saldo%');
     if (filters.tipo === 'usuario') query = query.ilike('accion', '%usuario%');
     if (filters.tipo === 'login') query = query.or('accion.ilike.%sesion%,accion.ilike.%sesión%');
-    if (filters.desde) query = query.gte('creado_en', new Date(filters.desde + 'T00:00:00.000Z').toISOString());
-    if (filters.hasta) {
-        const end = new Date(filters.hasta + 'T00:00:00.000Z');
-        end.setUTCDate(end.getUTCDate() + 1);
-        query = query.lt('creado_en', end.toISOString());
-    }
+    const dateRange = getLocalDateRange(filters.desde, filters.hasta);
+    if (dateRange.start) query = query.gte('creado_en', dateRange.start);
+    if (dateRange.endExclusive) query = query.lt('creado_en', dateRange.endExclusive);
     if (filters.usuario) query = query.ilike('usuario_nombre', '%' + filters.usuario + '%');
     if (filters.texto) query = query.ilike('accion', '%' + filters.texto + '%');
     return query;
@@ -86,6 +84,7 @@ export async function loadAdminAuditoria(options = {}) {
         let query = window.supabaseClient.from('auditoria')
             .select('id, usuario_nombre, accion, creado_en')
             .order('creado_en', { ascending: false })
+            .order('id', { ascending: false })
             .range(auditOffset, auditOffset + AUDIT_PAGE_SIZE - 1);
         query = applyAuditFilters(query, auditFilters());
         const { data, error } = await query;
