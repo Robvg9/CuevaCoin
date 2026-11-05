@@ -1,5 +1,5 @@
 /** CuevaCoin — historial financiero general de solo lectura para administración. */
-import { getLocalDateRange } from '../../utils/local-date-range.js?v=152';
+import { getLocalDateRange } from '../../utils/local-date-range.js?v=153';
 const HISTORY_PAGE_SIZE=20;
 let historyOffset=0,historyHasMore=false,historyLoading=false,historyToken=0,historyDebounce=null;
 function histText(tag,cls,value){const el=document.createElement(tag);if(cls)el.className=cls;el.textContent=value==null?'':String(value);return el;}
@@ -18,8 +18,8 @@ function historyCard(tx){
  title.append(histText('span','tx-card-tipo '+info.key,info.label),histText('span','tx-card-fecha',Number.isNaN(date.getTime())?'Fecha desconocida':date.toLocaleString()));
  const signed=(amount>0?'+':amount<0?'−':'')+'$'+Math.abs(amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
  header.append(histText('span','tx-card-icono tx-card-icono-'+info.key,info.icon),title,histText('strong','tx-card-monto '+(amount>=0?'positivo':'negativo'),signed));card.appendChild(header);
- const details=document.createElement('div');details.className='admin-general-history-details';details.appendChild(histText('span','','Trabajadora: '+(personName(tx.trabajadora)||'Cuenta no disponible')));
- const admin=personName(tx.admin),other=personName(tx.contraparte);if(admin)details.appendChild(histText('span','','Por: '+admin));if(other)details.appendChild(histText('span','','Contraparte: '+other));if(tx.motivo)details.appendChild(histText('span','admin-history-motivo','Motivo: '+tx.motivo));card.appendChild(details);return card;
+ const details=document.createElement('div');details.className='admin-general-history-details';details.appendChild(histText('span','admin-history-detail-worker','Trabajadora: '+(personName(tx.trabajadora)||'Cuenta no disponible')));
+ const admin=personName(tx.admin),other=personName(tx.contraparte);if(admin)details.appendChild(histText('span','admin-history-detail-admin','Por: '+admin));if(other)details.appendChild(histText('span','admin-history-detail-counterpart','Contraparte: '+other));if(tx.motivo)details.appendChild(histText('span','admin-history-motivo','Motivo: '+tx.motivo));card.appendChild(details);return card;
 }
 function updateHistoryMore(){const b=document.getElementById('admin-general-history-more'),s=document.getElementById('admin-general-history-status');if(b){b.classList.toggle('hidden',!historyHasMore);b.disabled=historyLoading;b.textContent=historyLoading?'Cargando…':'Ver más';}if(s&&historyLoading)s.textContent='Cargando movimientos…';}
 export async function cargarHistorialGeneral(options={}){

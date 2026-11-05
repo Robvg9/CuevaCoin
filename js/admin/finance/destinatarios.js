@@ -1,7 +1,8 @@
-/** CuevaCoin — selección para bonos + destinatarias inline y montos por trabajadora para salario. */
+/** CuevaCoin — selección explícita de destinatarias y rangos de días para salarios. */
 let salaryWorkers = [];
 let salaryRows = new Map();
 let salaryLocked = false;
+let salaryPickerDraft = new Set();
 
 function recipientText(tag, className, value) {
     const el = document.createElement(tag);
@@ -17,62 +18,128 @@ function pendingSalary() {
         return parsed && typeof parsed.key === 'string' && Array.isArray(parsed.payload) ? parsed : null;
     } catch (_error) { return null; }
 }
+function validDateOnly(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
+    const [year, month, day] = value.split('-').map(Number);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
+}
+/** Retorna os días calendario inclusivos sin depender de la zona horaria local. */
+export function buildInclusiveDays(desde, hasta) {
+    if (!desde || !hasta) return [];
+    if (!validDateOnly(desde) || !validDateOnly(hasta)) {
+        throw new Error('Selecciona fechas válidas en Desde y Hasta.');
+    }
+    const start = Date.parse(desde + 'T00:00:00.000Z');
+    const end = Date.parse(hasta + 'T00:00:00.000Z');
+    if (end < start) throw new Error('La fecha Hasta no puede ser anterior a Desde.');
+    const count = Math.floor((end - start) / 86400000) + 1;
+    if (count > 31) throw new Error('El rango no puede superar 31 días trabajados por persona.');
+    return Array.from({ length: count }, (_, index) =>
+        new Date(start + index * 86400000).toISOString().slice(0, 10)
+    );
+}
+function formatSalaryRange(days) {
+    if (!Array.isArray(days) || !days.length) return 'Sin días seleccionados';
+    const format = value => {
+        const date = new Date(value + 'T12:00:00');
+        return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('es-ES');
+    };
+    return days.length === 1
+        ? format(days[0]) + ' · 1 día'
+        : format(days[0]) + ' — ' + format(days[days.length - 1]) + ' · ' + days.length + ' días';
+}
 function syncSalarySelection() {
-    const selected = [...salaryRows.values()].filter(row => row.selected).map(row => ({
+    const selected = [...salaryRows.values()].map(row => ({
         id: row.id, nombre: row.nombre, monto: row.amount, dias: [...row.days].sort()
     }));
     window.seleccionDestinatariosSalario = selected;
     const summary = document.getElementById('salario-destinatarios-resumen');
     if (summary) summary.textContent = selected.length
         ? selected.length + (selected.length === 1 ? ' trabajadora seleccionada' : ' trabajadoras seleccionadas')
-        : 'Selecciona las trabajadoras y define su monto y días trabajados.';
+        : 'Aún no has seleccionado trabajadoras.';
+    const button = document.getElementById('salario-selector-open-btn');
+    if (button && !salaryLocked) button.textContent = selected.length ? 'Cambiar selección' : 'Seleccionar';
 }
-function renderDays(state, container) {
-    container.replaceChildren();
-    state.days.forEach(day => {
-        const chip = document.createElement('span');
-        chip.className = 'salario-dia-chip';
-        const date = new Date(day + 'T12:00:00');
-        chip.appendChild(recipientText('span', '', Number.isNaN(date.getTime()) ? day : date.toLocaleDateString('es-ES')));
-        const remove = recipientText('button', '', '×');
+function setSelectorVisible(visible) {
+    const panel = document.getElementById('salario-selector-panel');
+    const button = document.getElementById('salario-selector-open-btn');
+    if (panel) panel.classList.toggle('hidden', !visible);
+    if (button) button.setAttribute('aria-expanded', visible ? 'true' : 'false');
+}
+function renderSalaryPicker() {
+    const list = document.getElementById('salario-selector-lista');
+    if (!list) return;
+    list.replaceChildren();
+    if (!salaryWorkers.length) {
+        list.appendChild(recipientText('p', 'salario-lista-vacia', 'No hay trabajadoras activas disponibles.'));
+        return;
+    }
+    const fragment = document.createDocumentFragment();
+    salaryWorkers.forEach(worker => {
+        const id = String(worker.id);
+        const label = document.createElement('label');
+        label.className = 'salario-selector-item';
+        label.dataset.search = (worker.nombre + ' ' + (worker.usuario || '')).toLowerCase();
+        const check = document.createElement('input');
+        check.type = 'checkbox';
+        check.value = id;
+        check.checked = salaryPickerDraft.has(id);
+        check.disabled = salaryLocked;
+        check.addEventListener('change', () => {
+            if (check.checked) salaryPickerDraft.add(id);
+            else salaryPickerDraft.delete(id);
+        });
+        label.append(check, recipientText('span', '', worker.nombre || worker.usuario || 'Trabajadora'));
+        fragment.appendChild(label);
+    });
+    list.appendChild(fragment);
+    aplicarFiltroSelectorSalario();
+}
+function renderSalaryRows(pendingPayload = null) {
+    const list = document.getElementById('salario-trabajadoras-lista');
+    if (!list) return;
+    list.replaceChildren();
+    if (pendingPayload) {
+        salaryRows = new Map();
+        const known = new Map(salaryWorkers.map(worker => [String(worker.id), worker]));
+        pendingPayload.forEach(item => {
+            const id = String(item.usuario_id);
+            const worker = known.get(id) || { id, nombre: 'Cuenta no disponible', usuario: '' };
+            salaryRows.set(id, {
+                id, nombre: worker.nombre || worker.usuario || 'Trabajadora',
+                amount: String(item.monto), days: [...new Set((item.dias || []).map(String))].sort(),
+                from: '', to: ''
+            });
+        });
+    }
+    if (!salaryRows.size) {
+        list.appendChild(recipientText('p', 'salario-lista-vacia', 'Aún no has seleccionado trabajadoras.'));
+        syncSalarySelection();
+        return;
+    }
+    salaryRows.forEach(state => list.appendChild(buildSalaryRow(state)));
+    syncSalarySelection();
+}
+function buildSalaryRow(state) {
+    const row = document.createElement('article');
+    row.className = 'salario-trabajadora-row seleccionada';
+    row.dataset.workerId = String(state.id);
+
+    const identity = document.createElement('div');
+    identity.className = 'salario-trabajadora-identidad';
+    identity.appendChild(recipientText('strong', 'salario-trabajadora-nombre', state.nombre));
+    if (!salaryLocked) {
+        const remove = recipientText('button', 'salario-quitar-trabajadora', 'Quitar');
         remove.type = 'button';
-        remove.disabled = salaryLocked;
-        remove.setAttribute('aria-label', 'Quitar día ' + day);
+        remove.setAttribute('aria-label', 'Quitar ' + state.nombre + ' de este pago');
         remove.addEventListener('click', () => {
             if (salaryLocked) return;
-            state.days = state.days.filter(value => value !== day);
-            renderDays(state, container);
-            syncSalarySelection();
+            salaryRows.delete(String(state.id));
+            renderSalaryRows();
         });
-        chip.appendChild(remove);
-        container.appendChild(chip);
-    });
-}
-function buildSalaryRow(worker, initial) {
-    const state = {
-        id: worker.id,
-        nombre: worker.nombre || worker.usuario || 'Trabajadora',
-        selected: Boolean(initial),
-        amount: initial ? String(initial.monto) : '',
-        days: initial && Array.isArray(initial.dias) ? initial.dias.map(String).sort() : []
-    };
-    salaryRows.set(String(state.id), state);
-    const row = document.createElement('article');
-    row.className = 'salario-trabajadora-row';
-    row.dataset.search = (state.nombre + ' ' + (worker.usuario || '')).toLowerCase();
-
-    const identity = document.createElement('label');
-    identity.className = 'salario-trabajadora-identidad';
-    const check = document.createElement('input');
-    check.type = 'checkbox';
-    check.checked = state.selected;
-    check.disabled = salaryLocked;
-    check.addEventListener('change', () => {
-        state.selected = check.checked;
-        row.classList.toggle('seleccionada', state.selected);
-        syncSalarySelection();
-    });
-    identity.append(check, recipientText('span', 'salario-trabajadora-nombre', state.nombre));
+        identity.appendChild(remove);
+    }
 
     const amountLabel = document.createElement('label');
     amountLabel.className = 'salario-trabajadora-monto';
@@ -95,53 +162,48 @@ function buildSalaryRow(worker, initial) {
     const daysSection = document.createElement('div');
     daysSection.className = 'salario-trabajadora-dias';
     daysSection.appendChild(recipientText('span', 'salario-dias-label', 'Días trabajados'));
-    const controls = document.createElement('div');
-    controls.className = 'salario-dias-controles';
-    const date = document.createElement('input');
-    date.type = 'date';
-    date.disabled = salaryLocked;
-    date.setAttribute('aria-label', 'Añadir día trabajado para ' + state.nombre);
-    const add = recipientText('button', 'btn btn-secondary salario-dia-add', 'Añadir día');
-    add.type = 'button';
-    add.disabled = salaryLocked;
-    const chips = document.createElement('div');
-    chips.className = 'salario-dias-chips';
-    add.addEventListener('click', () => {
-        if (salaryLocked || !date.value) return;
-        if (!state.days.includes(date.value)) state.days.push(date.value);
-        state.days.sort();
-        date.value = '';
-        renderDays(state, chips);
-        syncSalarySelection();
-    });
-    controls.append(date, add);
-    renderDays(state, chips);
-    daysSection.append(controls, chips);
-    row.append(identity, amountLabel, daysSection);
-    row.classList.toggle('seleccionada', state.selected);
-    return row;
-}
-function renderSalaryRows(pendingPayload = null) {
-    const list = document.getElementById('salario-trabajadoras-lista');
-    if (!list) return;
-    salaryRows = new Map();
-    list.replaceChildren();
-    const pending = new Map((pendingPayload || []).map(item => [String(item.usuario_id), item]));
-    const known = new Set(salaryWorkers.map(worker => String(worker.id)));
-    const workers = [...salaryWorkers];
-    pending.forEach((_item, id) => {
-        if (!known.has(id)) workers.push({ id, nombre: 'Cuenta no disponible', usuario: '' });
-    });
-    if (!workers.length) {
-        list.appendChild(recipientText('p', 'salario-lista-vacia', 'No hay trabajadoras activas disponibles.'));
-        syncSalarySelection();
-        return;
+    if (salaryLocked) {
+        daysSection.appendChild(recipientText('span', 'salario-rango-resumen', formatSalaryRange(state.days)));
+    } else {
+        const controls = document.createElement('div');
+        controls.className = 'salario-rango-controles';
+        const fromLabel = document.createElement('label');
+        fromLabel.appendChild(recipientText('span', '', 'Desde'));
+        const from = document.createElement('input');
+        from.type = 'date';
+        from.value = state.from || (state.days.length ? state.days[0] : '');
+        from.setAttribute('aria-label', 'Desde para ' + state.nombre);
+        fromLabel.appendChild(from);
+        const toLabel = document.createElement('label');
+        toLabel.appendChild(recipientText('span', '', 'Hasta'));
+        const to = document.createElement('input');
+        to.type = 'date';
+        to.value = state.to || (state.days.length ? state.days[state.days.length - 1] : '');
+        to.setAttribute('aria-label', 'Hasta para ' + state.nombre);
+        toLabel.appendChild(to);
+        const rangeStatus = recipientText('span', 'salario-rango-resumen', formatSalaryRange(state.days));
+        const updateRange = () => {
+            const previous = { from: state.from, to: state.to, days: [...state.days] };
+            try {
+                const days = buildInclusiveDays(from.value, to.value);
+                state.from = from.value;
+                state.to = to.value;
+                state.days = days;
+                rangeStatus.textContent = days.length ? formatSalaryRange(days) : 'Completa Desde y Hasta.';
+                syncSalarySelection();
+            } catch (error) {
+                from.value = previous.from || (previous.days[0] || '');
+                to.value = previous.to || (previous.days.length ? previous.days[previous.days.length - 1] : '');
+                window.showToast?.(error.message || 'Revisa el rango de fechas.', 4000);
+            }
+        };
+        from.addEventListener('change', updateRange);
+        to.addEventListener('change', updateRange);
+        controls.append(fromLabel, toLabel);
+        daysSection.append(controls, rangeStatus);
     }
-    workers.forEach(worker => list.appendChild(buildSalaryRow(worker, pending.get(String(worker.id)) || null)));
-    syncSalarySelection();
-    const search = document.getElementById('salario-buscar-trabajadora');
-    if (search) search.value = '';
-    aplicarFiltroTrabajadorasSalario();
+    row.append(identity, amountLabel, daysSection);
+    return row;
 }
 export async function cargarDestinatariasSalario() {
     const list = document.getElementById('salario-trabajadoras-lista');
@@ -152,12 +214,16 @@ export async function cargarDestinatariasSalario() {
     if (warning) warning.classList.toggle('hidden', !pending);
     const button = document.getElementById('salario-submit-btn');
     if (button) button.textContent = pending ? 'Reintentar el mismo pago' : 'Pagar salarios seleccionados';
+    const selectorButton = document.getElementById('salario-selector-open-btn');
+    if (selectorButton) selectorButton.disabled = salaryLocked;
+    const panel = document.getElementById('salario-selector-panel');
+    if (panel) panel.classList.toggle('hidden', salaryLocked);
     if (!salaryWorkers.length) {
         list.replaceChildren(recipientText('p', '', 'Cargando trabajadoras…'));
         try {
             const users = await window.obtenerTrabajadoras();
             salaryWorkers = (users || []).filter(worker => worker.estado === 'activo' && worker.id)
-                .map(worker => ({ id: worker.id, nombre: worker.nombre, usuario: worker.usuario }));
+                .map(worker => ({ id: worker.id, nombre: worker.nombre || '', usuario: worker.usuario || '' }));
         } catch (error) {
             console.error('[CuevaCoin] No se pudieron cargar destinatarias salariales:', error);
             list.replaceChildren(recipientText('p', 'salario-lista-vacia', 'No se pudieron cargar las trabajadoras. Comprueba la conexión.'));
@@ -165,18 +231,55 @@ export async function cargarDestinatariasSalario() {
         }
     }
     renderSalaryRows(pending ? pending.payload : null);
+    if (!salaryLocked) {
+        salaryPickerDraft = new Set(salaryRows.keys());
+        renderSalaryPicker();
+    }
+}
+export function toggleSelectorSalario() {
+    if (salaryLocked) return;
+    const panel = document.getElementById('salario-selector-panel');
+    const visible = Boolean(panel && panel.classList.contains('hidden'));
+    if (visible) {
+        salaryPickerDraft = new Set(salaryRows.keys());
+        renderSalaryPicker();
+    }
+    setSelectorVisible(visible);
+}
+export function aplicarFiltroSelectorSalario() {
+    const query = (document.getElementById('salario-selector-buscar')?.value || '').trim().toLowerCase();
+    document.querySelectorAll('#salario-selector-lista .salario-selector-item').forEach(item => {
+        item.classList.toggle('hidden', Boolean(query) && !item.dataset.search.includes(query));
+    });
+}
+export function cancelarSelectorSalario() {
+    salaryPickerDraft = new Set(salaryRows.keys());
+    setSelectorVisible(false);
+}
+export function confirmarSeleccionSalario() {
+    if (salaryLocked) return;
+    const selected = new Set(salaryPickerDraft);
+    [...salaryRows.keys()].forEach(id => { if (!selected.has(id)) salaryRows.delete(id); });
+    salaryWorkers.forEach(worker => {
+        const id = String(worker.id);
+        if (selected.has(id) && !salaryRows.has(id)) {
+            salaryRows.set(id, {
+                id: worker.id, nombre: worker.nombre || worker.usuario || 'Trabajadora',
+                amount: '', days: [], from: '', to: ''
+            });
+        }
+    });
+    setSelectorVisible(false);
+    renderSalaryRows();
 }
 export function aplicarFiltroTrabajadorasSalario() {
-    const query = (document.getElementById('salario-buscar-trabajadora')?.value || '').trim().toLowerCase();
-    document.querySelectorAll('#salario-trabajadoras-lista .salario-trabajadora-row').forEach(row => {
-        row.classList.toggle('hidden', Boolean(query) && !row.dataset.search.includes(query));
-    });
+    aplicarFiltroSelectorSalario();
 }
 export function seleccionarTodasTrabajadorasSalario() {
     if (salaryLocked) return;
-    document.querySelectorAll('#salario-trabajadoras-lista .salario-trabajadora-row:not(.hidden) input[type="checkbox"]').forEach(input => {
+    document.querySelectorAll('#salario-selector-lista .salario-selector-item:not(.hidden) input[type="checkbox"]').forEach(input => {
         input.checked = true;
-        input.dispatchEvent(new Event('change'));
+        salaryPickerDraft.add(String(input.value));
     });
 }
 export function bloquearEdicionSalarioPendiente(blocked = true) {
@@ -191,14 +294,15 @@ export function resetearFormularioSalario() {
     sessionStorage.removeItem('cuevacoin_salary_batch_pending');
     salaryLocked = false;
     salaryRows = new Map();
+    salaryPickerDraft = new Set();
     window.seleccionDestinatariosSalario = [];
     document.getElementById('pagar-salario-form')?.reset();
-    void cargarDestinatariasSalario();
+    setSelectorVisible(false);
+    renderSalaryRows();
+    syncSalarySelection();
 }
-
-// The older recipient selector is now used only for bonuses.
 export async function abrirSelectorDestinatarios(contexto) {
-    if (contexto === 'salario') { await cargarDestinatariasSalario(); return; }
+    if (contexto === 'salario') { toggleSelectorSalario(); return; }
     window.contextoSeleccionDestinatarios = contexto;
     const users = await window.obtenerTrabajadoras();
     const active = users.filter(user => user.estado === 'activo');
@@ -259,6 +363,10 @@ export function confirmarSelectorDestinatarios() {
 }
 if (typeof window !== 'undefined') {
     window.cargarDestinatariasSalario = cargarDestinatariasSalario;
+    window.toggleSelectorSalario = toggleSelectorSalario;
+    window.aplicarFiltroSelectorSalario = aplicarFiltroSelectorSalario;
+    window.cancelarSelectorSalario = cancelarSelectorSalario;
+    window.confirmarSeleccionSalario = confirmarSeleccionSalario;
     window.aplicarFiltroTrabajadorasSalario = aplicarFiltroTrabajadorasSalario;
     window.seleccionarTodasTrabajadorasSalario = seleccionarTodasTrabajadorasSalario;
     window.bloquearEdicionSalarioPendiente = bloquearEdicionSalarioPendiente;

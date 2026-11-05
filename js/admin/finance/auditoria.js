@@ -1,5 +1,5 @@
 /** CuevaCoin — Auditoría administrativa con paginación real desde Supabase. */
-import { getLocalDateRange } from '../../utils/local-date-range.js?v=152';
+import { getLocalDateRange } from '../../utils/local-date-range.js?v=153';
 const AUDIT_PAGE_SIZE = 25;
 let auditOffset = 0, auditHasMore = false, auditLoading = false, auditToken = 0, auditDebounce = null, auditUsersLoaded = false;
 

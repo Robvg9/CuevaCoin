@@ -3268,6 +3268,225 @@
          debe bloquear el arranque tampoco. -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css"></noscript>
+
+    <style id="cuevacoin-v153-compact-admin-ui">
+        /* V153: densidad visual de historial/auditoría y modal salarial */
+        .admin-history-compact-controls {
+            gap: 8px !important;
+            margin: 8px 0 10px !important;
+            align-items: end;
+        }
+        .admin-general-history-controls.admin-history-compact-controls {
+            grid-template-columns: minmax(135px,.8fr) minmax(170px,1.15fr) minmax(220px,1.4fr) !important;
+        }
+        .audit-filtros-grid.admin-history-compact-controls {
+            grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+        }
+        .admin-history-compact-controls .audit-filtro-campo { gap: 3px; min-width: 0; }
+        .admin-history-compact-controls .audit-filtro-campo label {
+            font-size: 11px;
+            line-height: 1.15;
+            margin: 0;
+        }
+        .admin-history-compact-controls .audit-filtro-campo input,
+        .admin-history-compact-controls .audit-filtro-campo select {
+            box-sizing: border-box;
+            min-width: 0;
+            min-height: 34px;
+            padding: 6px 8px;
+            border-radius: 7px;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+        .admin-history-compact-controls .audit-filtro-fechas { gap: 6px; min-width: 0; }
+        .admin-history-compact-controls .audit-filtro-fechas input { flex: 1 1 0; min-width: 0; }
+        .admin-general-history-controls .history-date-filter { min-width: 0; }
+        .audit-filtros-grid .audit-date-filter { min-width: 0; }
+        .admin-general-history-card {
+            padding: 8px 10px !important;
+            margin: 0;
+            gap: 4px !important;
+            border-radius: 10px !important;
+        }
+        .admin-general-history-card .tx-card-header { gap: 7px !important; min-width: 0; }
+        .admin-general-history-card .tx-card-icono {
+            width: 28px !important;
+            height: 28px !important;
+            flex: 0 0 28px;
+            font-size: 14px !important;
+        }
+        .admin-general-history-card .tx-card-titulo {
+            gap: 2px 6px !important;
+            min-width: 0;
+        }
+        .admin-general-history-card .tx-card-tipo {
+            font-size: 10px !important;
+            line-height: 1.15;
+            padding: 2px 5px !important;
+        }
+        .admin-general-history-card .tx-card-fecha {
+            font-size: 10px !important;
+            line-height: 1.2;
+        }
+        .admin-general-history-card .tx-card-monto {
+            font-size: 13px !important;
+            line-height: 1.15;
+            white-space: nowrap;
+        }
+        .admin-general-history-details {
+            display: grid !important;
+            grid-template-columns: repeat(2,minmax(0,1fr));
+            gap: 2px 8px !important;
+            margin-top: 4px !important;
+            padding-top: 4px;
+            border-top: 1px solid var(--border-color);
+            font-size: 10px !important;
+            line-height: 1.25;
+        }
+        .admin-general-history-details > span { min-width: 0; overflow-wrap: anywhere; }
+        .admin-general-history-details .admin-history-motivo {
+            grid-column: 1 / -1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .admin-general-history-controls + .solicitudes-cards { gap: 7px !important; margin-top: 8px !important; }
+        #audit-log { display: flex; flex-direction: column; gap: 7px; }
+        .audit-entry {
+            gap: 8px !important;
+            padding: 8px 10px !important;
+            border-radius: 9px !important;
+        }
+        .audit-entry-icon {
+            width: 28px !important;
+            height: 28px !important;
+            font-size: 13px !important;
+        }
+        .audit-entry-accion { font-size: 12px !important; line-height: 1.3 !important; }
+        .audit-entry-meta { gap: 4px !important; margin-top: 2px !important; font-size: 10px !important; line-height: 1.2; }
+        .admin-history-more-wrap { margin: 8px 0 2px !important; gap: 2px !important; }
+        .admin-history-load-status { min-height: 14px; font-size: 10px !important; }
+        .salario-modal-compact {
+            width: min(94%, 740px) !important;
+            max-width: 740px !important;
+            max-height: calc(100dvh - 24px);
+            overflow-y: auto;
+            padding: 18px 20px !important;
+            border-radius: 16px !important;
+        }
+        .salario-modal-compact h2 { margin: 0 24px 6px !important; font-size: 19px !important; }
+        .salario-modal-intro { margin: 0 0 10px; font-size: 12px; line-height: 1.35; opacity: .76; }
+        .salario-selector-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 8px 0;
+            flex-wrap: wrap;
+        }
+        .salario-selector-toolbar .selector-destinatarios-resumen {
+            flex: 1 1 180px;
+            margin: 0;
+            font-size: 12px;
+        }
+        .salario-selector-toolbar button { min-height: 36px; padding: 7px 14px; }
+        .salario-selector-panel {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px;
+            margin: 8px 0 10px;
+            background: var(--light-color);
+        }
+        .salario-selector-search-label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+        #salario-selector-buscar {
+            box-sizing: border-box;
+            width: 100%;
+            min-height: 36px;
+            padding: 7px 9px;
+            font-size: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 7px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+        }
+        .salario-selector-lista {
+            display: grid;
+            grid-template-columns: repeat(2,minmax(0,1fr));
+            gap: 5px 8px;
+            max-height: 230px;
+            overflow-y: auto;
+            margin: 8px 0;
+        }
+        .salario-selector-item {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            min-width: 0;
+            padding: 6px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 7px;
+            font-size: 12px;
+            overflow-wrap: anywhere;
+        }
+        .salario-selector-item input { flex: 0 0 auto; }
+        .salario-selector-actions { display: flex; justify-content: flex-end; gap: 8px; }
+        .salario-selector-actions .btn { min-height: 34px; padding: 6px 12px; font-size: 12px; }
+        .salario-trabajadoras-lista {
+            gap: 6px !important;
+            max-height: 360px !important;
+            margin: 8px 0 !important;
+            padding: 0 !important;
+        }
+        .salario-trabajadora-row {
+            grid-template-columns: minmax(130px,1fr) minmax(115px,.65fr) minmax(190px,1.2fr) !important;
+            align-items: center !important;
+            gap: 8px !important;
+            padding: 8px !important;
+            border-radius: 9px !important;
+        }
+        .salario-trabajadora-identidad { padding: 0 !important; gap: 7px !important; font-size: 12px; }
+        .salario-trabajadora-nombre { min-width: 0; overflow-wrap: anywhere; }
+        .salario-quitar-trabajadora {
+            flex: 0 0 auto;
+            border: 0;
+            background: transparent;
+            color: var(--error-color);
+            font-size: 10px;
+            cursor: pointer;
+            padding: 3px;
+        }
+        .salario-trabajadora-monto, .salario-trabajadora-dias { gap: 3px !important; font-size: 11px !important; }
+        .salario-trabajadora-monto input,
+        .salario-rango-controles input {
+            min-height: 34px;
+            padding: 6px 7px !important;
+            border-radius: 7px;
+            font-size: 12px !important;
+        }
+        .salario-rango-controles { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+        .salario-rango-controles label { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 10px; }
+        .salario-rango-resumen { display: block; font-size: 10px; line-height: 1.2; opacity: .72; }
+        .salario-pendiente-aviso { padding: 7px 9px !important; margin: 6px 0 !important; font-size: 11px !important; }
+        #salario-submit-btn { width: 100%; min-height: 40px; margin-top: 6px; }
+        @media (max-width: 760px) {
+            .admin-general-history-controls.admin-history-compact-controls {
+                grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+            }
+            .admin-general-history-controls .history-date-filter { grid-column: 1 / -1; }
+            .salario-trabajadora-row {
+                grid-template-columns: minmax(0,1fr) minmax(110px,.7fr) !important;
+            }
+            .salario-trabajadora-dias { grid-column: 1 / -1; }
+        }
+        @media (max-width: 430px) {
+            .salario-modal-compact { width: 96% !important; padding: 16px 12px !important; }
+            .salario-selector-lista { grid-template-columns: 1fr; max-height: 210px; }
+            .salario-trabajadora-row { grid-template-columns: 1fr !important; }
+            .salario-trabajadora-dias { grid-column: auto; }
+            .admin-general-history-card .tx-card-fecha { white-space: normal; }
+        }
+    </style>
+
 </head>
 <body>
     <!-- F4 (2026-08-07): splash de arranque, visible por defecto ANTES de
@@ -3645,7 +3864,7 @@
                          encima de cada campo, para que se entienda para qué es
                          cada uno de un vistazo (antes eran 5 campos sueltos en
                          una sola fila fría, sin indicar su función). -->
-                    <div class="audit-filtros-grid">
+                    <div class="audit-filtros-grid admin-history-compact-controls">
                         <div class="audit-filtro-campo">
                             <label for="audit-filter-tipo">Tipo de evento</label>
                             <select id="audit-filter-tipo" onchange="loadAdminAuditoria()">
@@ -3656,7 +3875,7 @@
                                 <option value="login">Inicios de sesión</option>
                             </select>
                         </div>
-                        <div class="audit-filtro-campo">
+                        <div class="audit-filtro-campo audit-date-filter">
                             <label>Rango de fechas</label>
                             <div class="audit-filtro-fechas">
                                 <input type="date" id="audit-filter-fecha-desde" title="Desde" onchange="loadAdminAuditoria()">
@@ -3687,16 +3906,25 @@
                 <div class="card">
                     <h2>📚 Historial general</h2>
                     <p style="opacity:.75;font-size:13px;">Movimientos de todas las trabajadoras en una sola vista. Primero se cargan los más recientes.</p>
-                    <div class="admin-general-history-controls">
-                        <div class="audit-filtro-campo"><label for="admin-general-history-type">Tipo de movimiento</label>
-                            <select id="admin-general-history-type" onchange="cargarHistorialGeneral()">
-                                <option value="todos">Todos los movimientos</option><option value="salarios">Salarios pagados</option><option value="bonos">Bonos</option><option value="ajustes">Ajustes y descuentos</option><option value="retiros">Retiros</option><option value="transferencias">Transferencias</option>
-                            </select>
-                        </div>
-                        <div class="audit-filtro-campo"><label for="admin-general-history-search">Buscar en el motivo</label><input id="admin-general-history-search" type="search" placeholder="Concepto o motivo..." oninput="debounceHistorialGeneral()"></div>
-                        <div class="audit-filtro-campo"><label for="admin-general-history-from">Desde</label><input id="admin-general-history-from" type="date" onchange="cargarHistorialGeneral()"></div>
-                        <div class="audit-filtro-campo"><label for="admin-general-history-to">Hasta</label><input id="admin-general-history-to" type="date" onchange="cargarHistorialGeneral()"></div>
+                    <div class="admin-general-history-controls admin-history-compact-controls">
+                    <div class="audit-filtro-campo">
+                        <label for="admin-general-history-type">Tipo</label>
+                        <select id="admin-general-history-type" onchange="cargarHistorialGeneral()">
+                            <option value="todos">Todos los movimientos</option><option value="salarios">Salarios pagados</option><option value="bonos">Bonos</option><option value="ajustes">Ajustes y descuentos</option><option value="retiros">Retiros</option><option value="transferencias">Transferencias</option>
+                        </select>
                     </div>
+                    <div class="audit-filtro-campo">
+                        <label for="admin-general-history-search">Buscar en el motivo</label>
+                        <input id="admin-general-history-search" type="search" placeholder="Concepto o motivo..." oninput="debounceHistorialGeneral()">
+                    </div>
+                    <div class="audit-filtro-campo history-date-filter">
+                        <label>Fechas · Desde / Hasta</label>
+                        <div class="audit-filtro-fechas">
+                            <input id="admin-general-history-from" type="date" title="Desde" aria-label="Desde" onchange="cargarHistorialGeneral()">
+                            <input id="admin-general-history-to" type="date" title="Hasta" aria-label="Hasta" onchange="cargarHistorialGeneral()">
+                        </div>
+                    </div>
+                </div>
                     <div id="admin-general-history-list" class="solicitudes-cards"></div>
                     <p id="admin-general-history-empty" class="hidden" style="text-align:center;opacity:.8;margin-top:16px;">No hay movimientos que coincidan con estos filtros.</p>
                     <div class="admin-history-more-wrap"><button type="button" id="admin-general-history-more" class="btn btn-secondary hidden" onclick="cargarHistorialGeneral({append:true})">Ver más</button><p id="admin-general-history-status" class="admin-history-load-status" aria-live="polite"></p></div>
@@ -4604,17 +4832,28 @@
     </div>
 
 
-    <!-- Pago de salario: destinatarias, importes y días trabajados en el mismo modal. -->
+    <!-- Pago salarial: selector de destinatarias separado del formulario principal. -->
     <div id="pagar-salario-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content salario-modal-compact">
             <span class="close" onclick="closeModal('pagar-salario-modal')">&times;</span>
             <h2>💰 Pagar salarios</h2>
-            <p style="opacity:.78;font-size:13px;margin:4px 0 12px;">Marca cada trabajadora, indica cuánto recibirá y añade sus días trabajados. Cada persona puede tener un importe y fechas diferentes.</p>
+            <p class="salario-modal-intro">Selecciona primero a quiénes vas a pagar. Solo esas trabajadoras aparecerán aquí para definir su monto y rango de días.</p>
             <form id="pagar-salario-form">
-                <div class="salario-lista-controles"><input type="search" id="salario-buscar-trabajadora" placeholder="Buscar trabajadora..." oninput="aplicarFiltroTrabajadorasSalario()" style="flex:1;min-width:150px;"><button type="button" class="btn btn-secondary" onclick="seleccionarTodasTrabajadorasSalario()">Seleccionar visibles</button></div>
+                <div class="salario-selector-toolbar">
+                    <p id="salario-destinatarios-resumen" class="selector-destinatarios-resumen">Aún no has seleccionado trabajadoras.</p>
+                    <button type="button" id="salario-selector-open-btn" class="btn btn-secondary" aria-expanded="false" onclick="toggleSelectorSalario()">Seleccionar</button>
+                </div>
+                <section id="salario-selector-panel" class="salario-selector-panel hidden" aria-label="Seleccionar trabajadoras para el salario">
+                    <label class="salario-selector-search-label" for="salario-selector-buscar">Buscar trabajadora</label>
+                    <input type="search" id="salario-selector-buscar" placeholder="Nombre de la trabajadora..." oninput="aplicarFiltroSelectorSalario()" autocomplete="off">
+                    <div id="salario-selector-lista" class="salario-selector-lista"></div>
+                    <div class="salario-selector-actions">
+                        <button type="button" class="btn btn-secondary" onclick="cancelarSelectorSalario()">Cancelar</button>
+                        <button type="button" class="btn btn-primary" onclick="confirmarSeleccionSalario()">Aplicar selección</button>
+                    </div>
+                </section>
                 <p id="salario-pago-pendiente" class="salario-pendiente-aviso hidden" role="status">⚠️ Hay un lote anterior pendiente de confirmar. No se puede editar. Pulsa «Reintentar el mismo pago» para consultar esa misma operación sin duplicarla.</p>
-                <div id="salario-trabajadoras-lista" class="salario-trabajadoras-lista"><p style="opacity:.7;">Cargando trabajadoras…</p></div>
-                <p id="salario-destinatarios-resumen" class="selector-destinatarios-resumen">Selecciona quién recibirá el salario.</p>
+                <div id="salario-trabajadoras-lista" class="salario-trabajadoras-lista"><p class="salario-lista-vacia">Aún no has seleccionado trabajadoras.</p></div>
                 <button type="submit" id="salario-submit-btn" class="btn btn-success">Pagar salarios seleccionados</button>
             </form>
         </div>
@@ -5064,7 +5303,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.152';
+                const VERSION_FALLBACK = 'V.153';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -5429,11 +5668,11 @@
     <script type="module" src="js/admin/finance/stats.js?v=148"></script>
     <script type="module" src="js/admin/finance/usuarios.js?v=150"></script>
     <script type="module" src="js/admin/finance/historial-trabajadora.js?v=148"></script>
-    <script type="module" src="js/admin/finance/destinatarios.js?v=151"></script>
+    <script type="module" src="js/admin/finance/destinatarios.js?v=153"></script>
     <script type="module" src="js/admin/finance/pagos.js?v=151"></script>
-    <script type="module" src="js/admin/finance/historial-general.js?v=152"></script>
+    <script type="module" src="js/admin/finance/historial-general.js?v=153"></script>
     <script type="module" src="js/admin/finance/reportes.js"></script>
-    <script type="module" src="js/admin/finance/auditoria.js?v=152"></script>
+    <script type="module" src="js/admin/finance/auditoria.js?v=153"></script>
     <script type="module" src="js/admin/finance/solicitudes-realtime.js"></script>
     <!-- Fase 3 / Oleada 9 — orquestación (última) -->
     <script type="module" src="js/finance/orchestration/show-admin-panel.js?v=148"></script>
