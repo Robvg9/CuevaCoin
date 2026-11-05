@@ -4888,7 +4888,7 @@
     </div>
 
 
-    <!-- V154: flujo salarial vertical por trabajadora; selección y edición en el mismo modal. -->
+    <!-- V155: selección reiniciable y fichas salariales compactas por trabajadora. -->
     <div id="pagar-salario-modal" class="modal">
         <div class="modal-content salario-modal-compact">
             <span class="close" onclick="closeModal('pagar-salario-modal')">&times;</span>
@@ -5359,7 +5359,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.154';
+                const VERSION_FALLBACK = 'V.155';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
