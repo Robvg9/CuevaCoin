@@ -92,12 +92,55 @@ async function fetchNextStream(kind, filters) {
     const { data, error } = await query;
     if (error) throw error;
     const rows = Array.isArray(data) ? data : [];
-    rows.forEach(row => state.buffer.push({ ...row, __kind: kind }));
+    if (kind === 'audit' && rows.length) {
+        const timestamps = [...new Set(rows.map(row => row.creado_en).filter(Boolean))];
+        let mirrorTransactions = [];
+        if (timestamps.length) {
+            const { data: candidates, error: mirrorError } = await window.supabaseClient.from('transacciones')
+                .select('id,tipo,cantidad,motivo,creado_en,trabajadora:perfiles!transacciones_usuario_id_fkey(nombre, usuario),admin:perfiles!transacciones_admin_id_fkey(nombre, usuario),contraparte:perfiles!transacciones_contraparte_id_fkey(nombre, usuario)')
+                .in('creado_en', timestamps)
+                .limit(1000);
+            if (mirrorError) throw mirrorError;
+            mirrorTransactions = Array.isArray(candidates) ? candidates : [];
+        }
+        rows.forEach(row => {
+            const alreadyInLedger = mirrorTransactions.some(tx => isMirroredAuditEvent(row, tx));
+            if (!alreadyInLedger) state.buffer.push({ ...row, __kind: kind });
+        });
+    } else {
+        rows.forEach(row => state.buffer.push({ ...row, __kind: kind }));
+    }
     if (rows.length) {
         const last = rows[rows.length - 1];
         state.cursor = { creado_en: last.creado_en, id: last.id };
     }
     if (rows.length < HISTORY_PAGE_SIZE) state.done = true;
+}
+function normalizeHistoryMatch(value) {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().replace(/\s+/g, ' ').trim();
+}
+export function isMirroredAuditEvent(event, transaction) {
+    if (!event || !transaction || String(event.creado_en || '') !== String(transaction.creado_en || '')) return false;
+    const action = normalizeHistoryMatch(event.accion);
+    const category = auditCategory(event.accion);
+    const info = movementInfo(transaction);
+    const depositAdjustment = transaction.tipo === 'deposito_admin' && category === 'ajuste' && action.includes('saldo');
+    if (info.key !== category && !depositAdjustment) return false;
+    const amount = Math.abs(Number(transaction.cantidad || 0));
+    if (!Number.isFinite(amount) || amount <= 0 || !action.includes(amount.toFixed(2))) return false;
+    const targetNames = [
+        transaction.trabajadora?.nombre, transaction.trabajadora?.usuario,
+        transaction.contraparte?.nombre, transaction.contraparte?.usuario
+    ].map(normalizeHistoryMatch).filter(name => name.length >= 2);
+    if (!targetNames.some(name => action.includes(name))) return false;
+    const actor = normalizeHistoryMatch(event.usuario_nombre);
+    const transactionActors = [
+        transaction.admin?.nombre, transaction.admin?.usuario,
+        transaction.trabajadora?.nombre, transaction.trabajadora?.usuario,
+        transaction.contraparte?.nombre, transaction.contraparte?.usuario
+    ].map(normalizeHistoryMatch).filter(Boolean);
+    return Boolean(actor && transactionActors.includes(actor));
 }
 function compareRecent(left, right) {
     const leftTime = Date.parse(left.creado_en) || 0;
@@ -116,7 +159,10 @@ async function takeMergedPage(filters) {
         ]);
         const tx = streams.transactions.buffer[0];
         const audit = streams.audit.buffer[0];
-        if (!tx && !audit) break;
+        if (!tx && !audit) {
+            if (hasMoreHistory()) continue;
+            break;
+        }
         if (!audit || (tx && compareRecent(tx, audit) <= 0)) {
             page.push(streams.transactions.buffer.shift());
         } else {
