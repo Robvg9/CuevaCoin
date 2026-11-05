@@ -24,7 +24,7 @@ export function showUserDashboard(usuario) {
         document.getElementById('topbar-user').textContent = usuario.nombre || usuario.usuario;
         document.getElementById('topbar-avatar').src = usuario.foto || `https://ui-avatars.com/api/?name=${usuario.usuario}&background=2563EB&color=fff`;
         // Ocultar el <li> completo: esconder solo el enlace dejaba huecos grandes.
-        ['auditoria-link', 'usuarios-link', 'solicitudes-link', 'historial-general-link'].forEach(id => {
+        ['usuarios-link', 'solicitudes-link', 'historial-general-link'].forEach(id => {
             const link = document.getElementById(id);
             if (link) {
                 link.style.display = 'none';
