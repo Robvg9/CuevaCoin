@@ -5064,7 +5064,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.151';
+                const VERSION_FALLBACK = 'V.152';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -5431,9 +5431,9 @@
     <script type="module" src="js/admin/finance/historial-trabajadora.js?v=148"></script>
     <script type="module" src="js/admin/finance/destinatarios.js?v=151"></script>
     <script type="module" src="js/admin/finance/pagos.js?v=151"></script>
-    <script type="module" src="js/admin/finance/historial-general.js?v=151"></script>
+    <script type="module" src="js/admin/finance/historial-general.js?v=152"></script>
     <script type="module" src="js/admin/finance/reportes.js"></script>
-    <script type="module" src="js/admin/finance/auditoria.js?v=151"></script>
+    <script type="module" src="js/admin/finance/auditoria.js?v=152"></script>
     <script type="module" src="js/admin/finance/solicitudes-realtime.js"></script>
     <!-- Fase 3 / Oleada 9 — orquestación (última) -->
     <script type="module" src="js/finance/orchestration/show-admin-panel.js?v=148"></script>
