@@ -10,6 +10,11 @@ export function openModal(modalId) {
 }
 
 export function closeModal(modalId) {
+    if (modalId === 'pagar-salario-modal' && typeof window !== 'undefined'
+        && typeof window.resetearFormularioSalario === 'function') {
+        try { window.resetearFormularioSalario(); }
+        catch (error) { console.warn('[CuevaCoin] No se pudo limpiar el formulario salarial:', error); }
+    }
     const el = document.getElementById(modalId);
     if (el) el.style.display = 'none';
 }
