@@ -124,6 +124,20 @@ function renderSalaryRows(pendingPayload = null) {
     salaryRows.forEach(state => list.appendChild(buildSalaryRow(state)));
     syncSalarySelection();
 }
+function salaryMotive(days) {
+    if (!Array.isArray(days) || !days.length) {
+        return 'Selecciona Desde y Hasta para completar el motivo del salario.';
+    }
+    const format = value => {
+        const date = new Date(value + 'T12:00:00');
+        return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('es-ES', {
+            day: 'numeric', month: 'long', year: 'numeric'
+        });
+    };
+    return days.length === 1
+        ? 'Salario por el día ' + format(days[0]) + '.'
+        : 'Salario por los días del ' + format(days[0]) + ' al ' + format(days[days.length - 1]) + '.';
+}
 function buildSalaryRow(state) {
     const row = document.createElement('article');
     row.className = 'salario-trabajadora-row seleccionada';
@@ -146,7 +160,7 @@ function buildSalaryRow(state) {
 
     const amountLabel = document.createElement('label');
     amountLabel.className = 'salario-trabajadora-monto';
-    amountLabel.appendChild(recipientText('span', '', 'Monto ($)'));
+    amountLabel.appendChild(recipientText('span', 'salario-campo-label', 'Monto ($)'));
     const amount = document.createElement('input');
     amount.type = 'number';
     amount.min = '0.01';
@@ -162,11 +176,12 @@ function buildSalaryRow(state) {
     });
     amountLabel.appendChild(amount);
 
-    const daysSection = document.createElement('div');
-    daysSection.className = 'salario-trabajadora-dias';
-    daysSection.appendChild(recipientText('span', 'salario-dias-label', 'Días trabajados'));
+    const motiveSection = document.createElement('section');
+    motiveSection.className = 'salario-trabajadora-dias salario-trabajadora-motivo';
+    motiveSection.appendChild(recipientText('span', 'salario-campo-label', 'Motivo'));
+    motiveSection.appendChild(recipientText('p', 'salario-motivo-ayuda', 'Selecciona en el calendario los días que trabajó esta persona.'));
     if (salaryLocked) {
-        daysSection.appendChild(recipientText('span', 'salario-rango-resumen', formatSalaryRange(state.days)));
+        motiveSection.appendChild(recipientText('p', 'salario-rango-resumen', salaryMotive(state.days)));
     } else {
         const controls = document.createElement('div');
         controls.className = 'salario-rango-controles';
@@ -177,6 +192,7 @@ function buildSalaryRow(state) {
         from.value = state.from || (state.days.length ? state.days[0] : '');
         from.setAttribute('aria-label', 'Desde para ' + state.nombre);
         fromLabel.appendChild(from);
+
         const toLabel = document.createElement('label');
         toLabel.appendChild(recipientText('span', '', 'Hasta'));
         const to = document.createElement('input');
@@ -184,7 +200,8 @@ function buildSalaryRow(state) {
         to.value = state.to || (state.days.length ? state.days[state.days.length - 1] : '');
         to.setAttribute('aria-label', 'Hasta para ' + state.nombre);
         toLabel.appendChild(to);
-        const rangeStatus = recipientText('span', 'salario-rango-resumen', formatSalaryRange(state.days));
+
+        const motivePreview = recipientText('p', 'salario-rango-resumen', salaryMotive(state.days));
         const updateRange = () => {
             const previous = { from: state.from, to: state.to, days: [...state.days] };
             try {
@@ -192,7 +209,7 @@ function buildSalaryRow(state) {
                 state.from = from.value;
                 state.to = to.value;
                 state.days = days;
-                rangeStatus.textContent = days.length ? formatSalaryRange(days) : 'Completa Desde y Hasta.';
+                motivePreview.textContent = salaryMotive(days);
                 syncSalarySelection();
             } catch (error) {
                 from.value = previous.from || (previous.days[0] || '');
@@ -203,9 +220,10 @@ function buildSalaryRow(state) {
         from.addEventListener('change', updateRange);
         to.addEventListener('change', updateRange);
         controls.append(fromLabel, toLabel);
-        daysSection.append(controls, rangeStatus);
+        motiveSection.append(controls, motivePreview);
     }
-    row.append(identity, amountLabel, daysSection);
+
+    row.append(identity, amountLabel, motiveSection);
     return row;
 }
 export async function cargarDestinatariasSalario() {

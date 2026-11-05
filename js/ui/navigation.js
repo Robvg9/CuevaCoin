@@ -71,6 +71,8 @@ export function loadSection(section) {
     actualizarConfigTabsBar(section);
 
     if (isAdmin) {
+        // V154: Auditoría es parte de la cronología global; ambos accesos abren la misma vista.
+        if (section === 'auditoria') section = 'historial-general';
         const adminPanel = document.getElementById('admin-panel');
         if (adminPanel) adminPanel.classList.remove('hidden');
 
