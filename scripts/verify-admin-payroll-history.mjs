@@ -20,7 +20,7 @@ testLocalDate('America/New_York','2026-11-01','2026-11-01T04:00:00.000Z','2026-1
 const invalidDate=spawnSync(process.execPath,['--input-type=module','-e',"import { getLocalDateRange } from './js/utils/local-date-range.js'; getLocalDateRange('2026-02-30','');"],{encoding:'utf8'});
 assert.notEqual(invalidDate.status,0,'Invalid calendar dates must be rejected');
 console.log('PASS — local date boundaries cover Puerto Rico and 23/25-hour DST days');
-assert.match(index,/VERSION_FALLBACK = 'V\\.152'/);assert.match(sw,/cuevacoin-shell-v152/);assert.match(index,/historial-general\\.js\\?v=152/);assert.match(index,/auditoria\\.js\\?v=152/);console.log('PASS — versioned V152 PWA assets');
+assert.match(index,/VERSION_FALLBACK = 'V\.152'/);assert.match(sw,/cuevacoin-shell-v152/);assert.match(index,/historial-general\.js\\?v=152/);assert.match(index,/auditoria\.js\\?v=152/);console.log('PASS — versioned V152 PWA assets');
 
 for (const path of [
  'js/utils/local-date-range.js',
