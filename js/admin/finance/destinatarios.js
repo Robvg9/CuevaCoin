@@ -312,12 +312,20 @@ export function bloquearEdicionSalarioPendiente(blocked = true) {
     void cargarDestinatariasSalario();
 }
 export function resetearFormularioSalario() {
+    // Un resultado incierto conserva su clave y destinatarias para reintentar el mismo lote.
+    if (pendingSalary()) {
+        salaryLocked = true;
+        setSelectorVisible(false);
+        return;
+    }
     sessionStorage.removeItem('cuevacoin_salary_batch_pending');
     salaryLocked = false;
     salaryRows = new Map();
     salaryPickerDraft = new Set();
     window.seleccionDestinatariosSalario = [];
     document.getElementById('pagar-salario-form')?.reset();
+    const search = document.getElementById('salario-selector-buscar');
+    if (search) search.value = '';
     setSelectorVisible(false);
     renderSalaryRows();
     syncSalarySelection();
