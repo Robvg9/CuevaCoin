@@ -1,4 +1,5 @@
 /** CuevaCoin — historial financiero general de solo lectura para administración. */
+import { getLocalDateRange } from '../../utils/local-date-range.js?v=152';
 const HISTORY_PAGE_SIZE=20;
 let historyOffset=0,historyHasMore=false,historyLoading=false,historyToken=0,historyDebounce=null;
 function histText(tag,cls,value){const el=document.createElement(tag);if(cls)el.className=cls;el.textContent=value==null?'':String(value);return el;}
@@ -8,7 +9,7 @@ function personName(p){return p?.nombre||p?.usuario||'';}
 function applyHistoryFilters(q){
  const type=document.getElementById('admin-general-history-type')?.value||'todos',from=document.getElementById('admin-general-history-from')?.value||'',to=document.getElementById('admin-general-history-to')?.value||'',search=(document.getElementById('admin-general-history-search')?.value||'').trim();
  if(type==='salarios')q=q.eq('tipo','deposito_admin').or('motivo.is.null,motivo.not.ilike.Bono:%');else if(type==='bonos')q=q.eq('tipo','deposito_admin').ilike('motivo','Bono:%');else if(type==='ajustes')q=q.eq('tipo','retiro_admin');else if(type==='retiros')q=q.eq('tipo','retiro');else if(type==='transferencias')q=q.eq('tipo','transferencia');
- if(from)q=q.gte('creado_en',new Date(from+'T00:00:00.000Z').toISOString());if(to){const end=new Date(to+'T00:00:00.000Z');end.setUTCDate(end.getUTCDate()+1);q=q.lt('creado_en',end.toISOString());}
+ const dateRange=getLocalDateRange(from,to);if(dateRange.start)q=q.gte('creado_en',dateRange.start);if(dateRange.endExclusive)q=q.lt('creado_en',dateRange.endExclusive);
  if(search)q=q.ilike('motivo','%'+search.replace(/[%_]/g,'\\$&')+'%');return q;
 }
 function historyCard(tx){
@@ -27,7 +28,7 @@ export async function cargarHistorialGeneral(options={}){
  if(!append){historyToken++;historyOffset=0;historyHasMore=false;list.replaceChildren();}
  const token=historyToken;historyLoading=true;updateHistoryMore();
  try{
-  let q=window.supabaseClient.from('transacciones').select('id,usuario_id,admin_id,contraparte_id,tipo,cantidad,motivo,creado_en,trabajadora:perfiles!transacciones_usuario_id_fkey(nombre, usuario),admin:perfiles!transacciones_admin_id_fkey(nombre, usuario),contraparte:perfiles!transacciones_contraparte_id_fkey(nombre, usuario)').order('creado_en',{ascending:false}).range(historyOffset,historyOffset+HISTORY_PAGE_SIZE-1);
+  let q=window.supabaseClient.from('transacciones').select('id,usuario_id,admin_id,contraparte_id,tipo,cantidad,motivo,creado_en,trabajadora:perfiles!transacciones_usuario_id_fkey(nombre, usuario),admin:perfiles!transacciones_admin_id_fkey(nombre, usuario),contraparte:perfiles!transacciones_contraparte_id_fkey(nombre, usuario)').order('creado_en',{ascending:false}).order('id',{ascending:false}).range(historyOffset,historyOffset+HISTORY_PAGE_SIZE-1);
   const {data,error}=await applyHistoryFilters(q);if(token!==historyToken)return;if(error)throw error;
   const rows=data||[];rows.forEach(row=>list.appendChild(historyCard(row)));historyOffset+=rows.length;historyHasMore=rows.length===HISTORY_PAGE_SIZE;
   list.classList.toggle('hidden',historyOffset===0);if(empty)empty.classList.toggle('hidden',historyOffset>0);
