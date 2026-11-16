@@ -4,7 +4,6 @@ import { createHash } from 'node:crypto';
 const base = 'https://cuevacoin.robvg9.workers.dev';
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const live = new Map();
-const timeout = AbortSignal.timeout(20000);
 
 for (const path of ['/', '/service-worker.js']) {
   const url = new URL(path, base);
@@ -12,7 +11,7 @@ for (const path of ['/', '/service-worker.js']) {
   const response = await fetch(url, {
     cache: 'no-store',
     headers: { 'cache-control': 'no-cache', pragma: 'no-cache' },
-    signal: timeout,
+    signal: AbortSignal.timeout(20000),
   });
   assert.equal(response.status, 200, `LIVE ${path} returned HTTP ${response.status}`);
   const bytes = Buffer.from(await response.arrayBuffer());
