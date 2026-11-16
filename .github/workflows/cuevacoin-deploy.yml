@@ -49,12 +49,15 @@ jobs:
 
       - name: Check exact Worker identity and asset target
         run: node scripts/verify-cuevacoin-worker-target.mjs
+        shell: cmd
 
       - name: Validate bundle without production credentials
         run: npx.cmd --yes wrangler@4 deploy --dry-run --config wrangler.jsonc
+        shell: cmd
 
       - name: Verify LIVE route health and reject leaked internal assets (release parity is checked after deploy)
         run: node scripts/verify-cuevacoin-live-assets.mjs
+        shell: cmd
 
   deploy-worker:
     name: Deploy and verify CuevaCoin Worker
@@ -81,23 +84,27 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CUEVACOIN_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CUEVACOIN_CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/verify-cuevacoin-production-deploy-gate.mjs
+        shell: cmd
 
       - name: Validate Worker deployment bundle
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CUEVACOIN_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CUEVACOIN_CLOUDFLARE_ACCOUNT_ID }}
         run: npx.cmd --yes wrangler@4 deploy --dry-run --config wrangler.jsonc
+        shell: cmd
 
       - name: Deploy CuevaCoin Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CUEVACOIN_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CUEVACOIN_CLOUDFLARE_ACCOUNT_ID }}
         run: npx.cmd --yes wrangler@4 deploy --config wrangler.jsonc
+        shell: cmd
 
       - name: Verify LIVE frontend exactly matches the deployed source
         env:
           RELEASE_SHA: ${{ github.sha }}
         run: node scripts/verify-cuevacoin-release-parity.mjs
+        shell: cmd
 
 # Supabase Edge Functions are intentionally not deployed from GitHub Actions.
 # ARIA must inspect/deploy them separately through the fixed-project,
