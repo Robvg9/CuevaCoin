@@ -3551,6 +3551,105 @@
     </style>
 
 
+
+    <style id="cuevacoin-v156-visual-navigation">
+        :root {
+            --cc-surface-outline: rgba(100, 116, 139, 0.16);
+            --cc-surface-shadow: 0 2px 12px rgba(15, 23, 42, 0.045);
+            --cc-focus-ring: rgba(255, 105, 180, 0.22);
+        }
+        [data-theme="dark"] {
+            --cc-surface-outline: rgba(226, 232, 240, 0.12);
+            --cc-surface-shadow: 0 4px 18px rgba(0, 0, 0, 0.20);
+            --cc-focus-ring: rgba(255, 182, 193, 0.20);
+        }
+        .main-content .card,
+        .main-content .stat-card {
+            border: 1px solid var(--cc-surface-outline);
+            border-radius: 16px;
+            box-shadow: var(--cc-surface-shadow);
+        }
+        .main-content input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+        .main-content select,
+        .main-content textarea {
+            border-radius: 10px;
+            transition: border-color .16s ease, box-shadow .16s ease;
+        }
+        .main-content input:focus-visible,
+        .main-content select:focus-visible,
+        .main-content textarea:focus-visible,
+        .main-content button:focus-visible,
+        .topbar-logout-btn:focus-visible {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--cc-focus-ring);
+        }
+        .topbar-logout-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 36px;
+            padding: 0 11px;
+            border: 1px solid var(--cc-surface-outline);
+            border-radius: 999px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            box-shadow: 0 1px 5px rgba(15, 23, 42, 0.06);
+            font: inherit;
+            font-size: 12px;
+            font-weight: 650;
+            line-height: 1;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: background-color .16s ease, transform .16s ease, box-shadow .16s ease;
+        }
+        .topbar-logout-btn:hover {
+            background: var(--light-color);
+            transform: translateY(-1px);
+            box-shadow: var(--cc-surface-shadow);
+        }
+        .topbar-logout-icon {
+            font-size: 15px;
+            line-height: 1;
+        }
+        .topbar-logout-label { line-height: 1; }
+        @media (max-width: 560px) {
+            .top-bar { padding-left: 8px; padding-right: 8px; }
+            .user-info { gap: 6px; }
+            #topbar-user { display: none !important; }
+            .js-app-version {
+                margin-right: 0 !important;
+                font-size: 10px !important;
+            }
+            .user-info img { width: 34px; height: 34px; }
+            .notif-bell-btn { width: 34px; height: 34px; }
+            .topbar-logout-btn {
+                width: 34px;
+                min-width: 34px;
+                min-height: 34px;
+                height: 34px;
+                padding: 0;
+                gap: 0;
+            }
+            .topbar-logout-label { display: none; }
+        }
+        @media (max-width: 360px) {
+            .top-bar { padding-left: 5px; padding-right: 5px; }
+            .user-info { gap: 4px; }
+            .menu-toggle { width: 36px; }
+            .js-app-version { font-size: 9px !important; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .topbar-logout-btn,
+            .main-content input,
+            .main-content select,
+            .main-content textarea {
+                transition: none !important;
+            }
+        }
+    </style>
+
 </head>
 <body>
     <!-- F4 (2026-08-07): splash de arranque, visible por defecto ANTES de
@@ -3690,11 +3789,6 @@
                     </a>
                 </div>
             </li>
-            <li>
-                <a role="button" tabindex="0" onclick="openModal('confirmar-logout-modal')">
-                    <i>🚪</i> Cerrar Sesión
-                </a>
-            </li>
         </ul>
     </div>
 
@@ -3723,6 +3817,10 @@
             <span id="topbar-user"></span>
             <span class="js-app-version" style="font-size: 11px; opacity: 0.7; font-family: sans-serif; margin-right: 8px; white-space: nowrap; font-weight: 500; letter-spacing: 0.02em;" title="Versión de CuevaCoin"></span>
             <img src="https://ui-avatars.com/api/?name=Usuario&background=2563EB&color=fff" alt="Usuario" id="topbar-avatar" onclick="loadSection('perfil')" style="cursor: pointer;" title="Ir a Mi Perfil">
+            <button type="button" class="topbar-logout-btn" onclick="openModal('confirmar-logout-modal')" aria-label="Cerrar sesión" title="Cerrar sesión">
+                <span class="topbar-logout-icon" aria-hidden="true">🚪</span>
+                <span class="topbar-logout-label">Salir</span>
+            </button>
         </div>
     </div>
 
@@ -5359,7 +5457,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.155';
+                const VERSION_FALLBACK = 'V.156';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -5640,14 +5738,14 @@
     <script type="module" src="js/data/supabase.js"></script>
     <script type="module" src="js/core/state.js"></script>
     <script type="module" src="js/data/profiles.js?v=143"></script>
-    <script type="module" src="js/data/notifications.js"></script>
-    <script type="module" src="js/core/app.js?v=144"></script>
+    <script type="module" src="js/data/notifications.js?v=156"></script>
+    <script type="module" src="js/core/app.js?v=156"></script>
     <!-- Fase 3 / Oleada 2: UI general (ES modules, diferidos, tras core+data) -->
     <script type="module" src="js/ui/modals.js?v=155"></script>
     <script type="module" src="js/ui/sidebar.js"></script>
     <script type="module" src="js/ui/connection-strip.js"></script>
     <script type="module" src="js/ui/clipboard.js"></script>
-    <script type="module" src="js/ui/menu-dots.js"></script>
+    <script type="module" src="js/ui/menu-dots.js?v=156"></script>
     <script type="module" src="js/ui/sound.js"></script>
     <script type="module" src="js/ui/push-helpers.js"></script>
     <script type="module" src="js/ui/theme.js"></script>
@@ -5657,7 +5755,7 @@
     <script type="module" src="js/profile/view-from-chat.js"></script>
     <script type="module" src="js/profile/qr-display.js"></script>
     <script type="module" src="js/profile/photo.js"></script>
-    <script type="module" src="js/ui/notif-panel.js"></script>
+    <script type="module" src="js/ui/notif-panel.js?v=156"></script>
     <script type="module" src="js/ui/push.js"></script>
     <script type="module" src="js/auth/google-ui.js"></script>
     <script defer src="js/auth/login-hardening.js?v=143"></script>
