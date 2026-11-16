@@ -1,6 +1,6 @@
 /**
  * CuevaCoin — js/ui/menu-dots.js
- * Puntos rojos de novedades del menú y del botón ☰ (Fase 3 / Oleada 2).
+ * Puntos individuales de novedades y badge global de notificaciones sin leer.
  * No incluye dots de chat (chat intacto en legacy).
  */
 

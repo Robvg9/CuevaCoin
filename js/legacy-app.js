@@ -560,13 +560,11 @@
         // que se agregue una función nueva a la app, sumarla acá Y
         // agregar su explicación en #shared-como-usar.
 
-        // Punto 40 (revisado 2026-08-06): antes .notif-dot-menu (real) y
-        // .novedad-dot-menu (novedades de menú) eran independientes y podían
-        // mostrarse los 2 a la vez en el mismo botón. Ahora se combinan acá:
-        // solo hay 1 punto visual en el botón ☰, que se muestra si CUALQUIERA
-        // de los dos motivos está activo. hayNovedadMenuGlobal la actualiza
-        // actualizarPuntosRojosMenu(); hayNotifSinLeerGlobal la actualiza
-        // actualizarBadgeNotificaciones().
+        // Punto 40 (V156): los avisos de novedades se muestran junto a su
+        // sección concreta dentro del menú. El indicador global del botón ☰
+        // depende exclusivamente de hayNotifSinLeerGlobal, que actualiza
+        // actualizarBadgeNotificaciones(); actualizarPuntosRojosMenu() conserva
+        // su función de mostrar/ocultar los puntos individuales por sección.
 
 
 

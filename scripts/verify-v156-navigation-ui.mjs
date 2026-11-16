@@ -35,6 +35,10 @@ for (const path of ['js/core/app.js?v=156','js/data/notifications.js?v=156','js/
 assert.match(dots, /const hayAviso = !!hayNotif;/, 'Global hamburger dot must depend only on real unread notifications');
 assert.doesNotMatch(dots, /const hayAviso = !!hayNovedad \|\| !!hayNotif/, 'Legacy product-announcement flags must not keep the global dot lit');
 assert.match(dots, /NOVEDADES_MENU/, 'Per-section announcement badges must remain available');
+assert.match(dots, /badge global de notificaciones sin leer/i, 'Module documentation must describe the global unread-only badge');
+assert.doesNotMatch(index, /notificaciones reales sin leer O novedades de menú sin ver/i, 'HTML CSS documentation must not describe stale novelty as a global badge trigger');
+const legacy = read('js/legacy-app.js');
+assert.doesNotMatch(legacy, /se muestra si CUALQUIERA[\s\S]{0,150}dos motivos está activo/i, 'Legacy documentation must not claim novelty activates the global badge');
 assert.match(notifications, /\.eq\('leida', false\)/, 'Unread notification count must stay scoped to unread records');
 
 assert.match(panel, /\.update\(\{ leida: true \}\)[\s\S]*?\.eq\('usuario_id', usuarioId\)[\s\S]*?\.eq\('leida', false\)/, 'Opening notification panel must clear all unread records for the active user');

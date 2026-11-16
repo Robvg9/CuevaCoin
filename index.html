@@ -554,15 +554,11 @@
             box-shadow: 0 0 0 2px var(--card-bg), 0 0 6px rgba(255, 23, 68, 0.7);
         }
 
-        /* Punto 40 (revisado 2026-08-06): antes había un segundo punto azul
-           (#novedad-dot-menu) que a veces se mostraba junto al rojo,
-           dando la impresión de 2 burbujas en el mismo botón. Ahora hay
-           un solo punto (.notif-dot dentro de #notif-dot-menu) que se
-           muestra si hay notificaciones reales sin leer O novedades de
-           menú sin ver (ver actualizarDotMenuUnico() en el JS). Esta
-           clase da además un realce al botón completo (no solo al
-           punto) para que quede claro a cuál botón corresponde el
-           aviso. */
+        /* Punto 40 (V156): el botón ☰ solo se ilumina si hay notificaciones
+           reales sin leer. Las novedades de producto mantienen sus puntos
+           individuales junto a la sección correspondiente del menú lateral.
+           Así se evita que un aviso antiguo deje encendido el indicador global.
+           El realce visual del botón acompaña exclusivamente al badge real. */
         .menu-toggle-wrap.tiene-aviso .menu-toggle {
             background: rgba(255, 23, 68, 0.12);
             box-shadow: 0 0 0 2px rgba(255, 23, 68, 0.35);
