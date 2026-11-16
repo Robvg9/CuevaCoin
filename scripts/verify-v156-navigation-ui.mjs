@@ -76,6 +76,78 @@ menuDots.actualizarDotMenuUnico();
 assert.equal(dotMenu.classList.contains('hidden'), true, 'Badge must clear when no unread notifications remain');
 assert.equal(wrap.classList.contains('tiene-aviso'), false, 'Highlight must clear with the badge');
 
+
+
+// Exercise the notification panel with a Supabase-like thenable query builder.
+// The bulk read update must be restricted to the active account and unread rows.
+const notificationQueries = [];
+const notificationList = {
+  children: [],
+  replaceChildren(...nodes) {
+    this.children = nodes.flatMap((node) => Array.isArray(node?.children) ? node.children : [node]);
+  }
+};
+const makeNode = () => ({
+  className: '',
+  dataset: {},
+  textContent: '',
+  children: [],
+  classList: { add(name) { this.owner.className += ' ' + name; }, owner: null },
+  appendChild(node) { this.children.push(node); }
+});
+const notificationClient = {
+  from(table) {
+    const query = { table, filters: [], kind: null, values: null };
+    const builder = {
+      select(columns) { query.kind = 'select'; query.columns = columns; return this; },
+      update(values) { query.kind = 'update'; query.values = values; return this; },
+      eq(column, value) { query.filters.push([column, value]); return this; },
+      order() { return this; },
+      limit() { return this; },
+      then(resolve, reject) {
+        const result = query.kind === 'select'
+          ? { data: [{ id: 'notification-1', mensaje: 'Aviso de prueba', leida: false, creado_en: '2026-11-16T12:00:00.000Z', tipo_evento: 'pago_admin' }], error: null }
+          : { error: null };
+        return Promise.resolve(result).then(resolve, reject);
+      }
+    };
+    notificationQueries.push(query);
+    return builder;
+  }
+};
+let badgeRefreshUser = null;
+globalThis.document = {
+  getElementById(id) {
+    if (id === 'notif-dot-menu') return dotMenu;
+    if (id === 'notif-panel-lista') return notificationList;
+    return null;
+  },
+  querySelector(selector) { return selector === '.menu-toggle-wrap' ? wrap : null; },
+  createElement() {
+    const node = makeNode();
+    node.classList.owner = node;
+    return node;
+  },
+  createDocumentFragment() {
+    return { children: [], appendChild(node) { this.children.push(node); } };
+  }
+};
+globalThis.window = {
+  hayNovedadMenuGlobal: true,
+  hayNotifSinLeerGlobal: false,
+  supabaseClient: notificationClient,
+  actualizarBadgeNotificaciones: async (userId) => { badgeRefreshUser = userId; }
+};
+const notifModuleUrl = pathToFileURL(resolve('js/ui/notif-panel.js')).href + '?v156-notification-regression';
+const { cargarPanelNotificaciones } = await import(notifModuleUrl);
+await cargarPanelNotificaciones('user-A');
+const selectQuery = notificationQueries.find((query) => query.kind === 'select');
+const updateQuery = notificationQueries.find((query) => query.kind === 'update');
+assert.deepEqual(selectQuery.filters, [['usuario_id', 'user-A']], 'Notification list must be scoped to the active user');
+assert.deepEqual(updateQuery.values, { leida: true }, 'Read update must only set leida=true');
+assert.deepEqual(updateQuery.filters, [['usuario_id', 'user-A'], ['leida', false]], 'Bulk update must affect only unread rows belonging to the active user');
+assert.equal(badgeRefreshUser, 'user-A', 'Badge must refresh only for the active user after successful update');
+
 console.log('PASS — V156 header logout placement and responsive styles');
 console.log('PASS — global hamburger badge ignores stale feature-announcement state');
 console.log('PASS — real unread notifications still light the bell and hamburger');
