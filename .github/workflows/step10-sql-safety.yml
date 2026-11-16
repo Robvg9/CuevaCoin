@@ -21,9 +21,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: cuevacoin-sql-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   migration-invariants:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64, cuevacoin]
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,3 +36,4 @@ jobs:
           node-version: "22"
       - name: Verify Step 10 SQL security invariants
         run: node scripts/verify-step10-migration.mjs
+        shell: cmd

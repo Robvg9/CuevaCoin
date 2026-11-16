@@ -1,6 +1,6 @@
 /**
  * CuevaCoin — js/ui/menu-dots.js
- * Puntos rojos de novedades del menú y del botón ☰ (Fase 3 / Oleada 2).
+ * Puntos individuales de novedades y badge global de notificaciones sin leer.
  * No incluye dots de chat (chat intacto en legacy).
  */
 
@@ -12,9 +12,10 @@ export const NOVEDADES_MENU = {
 export function actualizarDotMenuUnico() {
     const dotMenu = document.getElementById('notif-dot-menu');
     const wrap = document.querySelector('.menu-toggle-wrap');
-    const hayNovedad = (typeof window !== 'undefined') ? window.hayNovedadMenuGlobal : false;
+    // El aviso global del botón ☰ refleja solo notificaciones reales sin leer.
+    // Las novedades de producto conservan sus puntos individuales dentro del menú.
     const hayNotif = (typeof window !== 'undefined') ? window.hayNotifSinLeerGlobal : false;
-    const hayAviso = !!hayNovedad || !!hayNotif;
+    const hayAviso = !!hayNotif;
     if (dotMenu) dotMenu.classList.toggle('hidden', !hayAviso);
     if (wrap) wrap.classList.toggle('tiene-aviso', hayAviso);
 }

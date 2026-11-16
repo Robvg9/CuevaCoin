@@ -101,18 +101,19 @@ export async function cargarPanelNotificaciones(usuarioId) {
     });
     lista.replaceChildren(fragment);
 
-    const idsNoLeidas = data.filter(n => !n.leida).map(n => n.id);
-    if (idsNoLeidas.length > 0) {
-        client
-            .from('notificaciones')
-            .update({ leida: true })
-            .in('id', idsNoLeidas)
-            .then(({ error: errorUpdate }) => {
-                if (errorUpdate) console.error('Error marcando notificaciones como leídas:', errorUpdate);
-                if (typeof window.actualizarBadgeNotificaciones === 'function') {
-                    window.actualizarBadgeNotificaciones(usuarioId);
-                }
-            });
+    // Abrir la campanita representa revisar las notificaciones pendientes del usuario.
+    // No limitar el marcado a las 20 tarjetas visibles: eso dejaba un badge perpetuo
+    // cuando existían notificaciones sin leer más antiguas que la página mostrada.
+    const { error: errorUpdate } = await client
+        .from('notificaciones')
+        .update({ leida: true })
+        .eq('usuario_id', usuarioId)
+        .eq('leida', false);
+
+    if (errorUpdate) {
+        console.error('Error marcando notificaciones pendientes como leídas:', errorUpdate);
+    } else if (typeof window.actualizarBadgeNotificaciones === 'function') {
+        await window.actualizarBadgeNotificaciones(usuarioId);
     }
 }
 

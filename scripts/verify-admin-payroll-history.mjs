@@ -135,8 +135,8 @@ const invalidDate = spawnSync(process.execPath, ['--input-type=module', '-e', "i
 assert.notEqual(invalidDate.status, 0, 'Invalid calendar dates must be rejected');
 console.log('PASS — local date boundaries cover Puerto Rico and 23/25-hour DST days.');
 
-assert.match(app, /VERSION_FALLBACK = 'V\.155'/);
-assert.match(sw, /cuevacoin-shell-v155/);
+assert.match(app, /VERSION_FALLBACK = 'V\.156'/);
+assert.match(sw, /cuevacoin-shell-v156/);
 assert.match(index, /destinatarios\.js\?v=155/);
 assert.match(index, /historial-general\.js\?v=155/);
 assert.match(index, /cuevacoin-v155-admin-history-cleanup/);
@@ -151,4 +151,4 @@ for (const path of [
   const syntax = spawnSync(process.execPath, ['--input-type=module', '--check'], { input: read(path), encoding: 'utf8' });
   assert.equal(syntax.status, 0, 'Invalid JavaScript syntax in ' + path + ': ' + (syntax.stderr || ''));
 }
-console.log('PASS — V155 PWA references and changed JavaScript syntax.');
+console.log('PASS — V156 PWA release references and unchanged payroll module cache references.');
