@@ -36,3 +36,4 @@ jobs:
           node-version: "22"
       - name: Verify Step 10 SQL security invariants
         run: node scripts/verify-step10-migration.mjs
+        shell: cmd
