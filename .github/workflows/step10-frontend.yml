@@ -121,13 +121,19 @@ jobs:
 
       - name: Verify password recovery and startup connectivity regression
         run: node scripts/verify-password-recovery.mjs
+        shell: cmd
       - name: Verify atomic financial UI and release assets
         run: node scripts/verify-step10-release.mjs
+        shell: cmd
       - name: Verify V148 offline behavior and V149 compact admin users list
         run: node scripts/verify-v149-users-ui.mjs
+        shell: cmd
       - name: Verify P1-01 safe DOM rendering for untrusted profile and history data
         run: node scripts/verify-p1-01-xss.mjs
+        shell: cmd
       - name: Verify salary batches, global history and paginated audit
         run: node scripts/verify-admin-payroll-history.mjs
+        shell: cmd
       - name: Verify V156 header, unread badge, and responsive UI
         run: node scripts/verify-v156-navigation-ui.mjs
+        shell: cmd
