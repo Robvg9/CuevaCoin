@@ -26,6 +26,10 @@ CREATE TABLE fortuna_private.financial_contacts (
   UNIQUE (book_id, id)
 );
 
+CREATE UNIQUE INDEX financial_contacts_linked_profile_unique_idx
+  ON fortuna_private.financial_contacts (book_id, linked_profile_id)
+  WHERE linked_profile_id IS NOT NULL;
+
 CREATE TABLE fortuna_private.financial_currencies (
   code text PRIMARY KEY CHECK (code ~ '^[A-Z]{3}$'),
   display_name text NOT NULL CHECK (length(btrim(display_name)) > 0),
@@ -41,6 +45,8 @@ CREATE TABLE fortuna_private.financial_obligations (
   currency_code text NOT NULL REFERENCES fortuna_private.financial_currencies(code) ON DELETE RESTRICT,
   direction text NOT NULL CHECK (direction IN ('receivable', 'payable')),
   principal_minor bigint NOT NULL CHECK (principal_minor > 0),
+  description text NOT NULL CHECK (length(btrim(description)) > 0),
+  due_at timestamptz NULL,
   opened_at timestamptz NOT NULL DEFAULT now(),
   created_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -60,6 +66,7 @@ CREATE TABLE fortuna_private.financial_events (
   ),
   actor_user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   reverses_event_id uuid NULL,
+  reversal_reason text NULL,
   metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
   occurred_at timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -67,6 +74,9 @@ CREATE TABLE fortuna_private.financial_events (
   FOREIGN KEY (book_id, reverses_event_id, contact_id, currency_code)
     REFERENCES fortuna_private.financial_events(book_id, id, contact_id, currency_code) ON DELETE RESTRICT,
   CHECK ((event_type = 'reversal') = (reverses_event_id IS NOT NULL)),
+  CHECK ((event_type = 'reversal') = (reversal_reason IS NOT NULL)),
+  CHECK (reversal_reason IS NULL OR length(btrim(reversal_reason)) > 0),
+  CHECK (reverses_event_id IS NULL OR reverses_event_id <> id),
   UNIQUE (book_id, id),
   UNIQUE (book_id, id, contact_id, currency_code)
 );
@@ -108,6 +118,7 @@ CREATE TABLE fortuna_private.financial_allocations (
 CREATE TABLE fortuna_private.financial_idempotency (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   book_id uuid NOT NULL REFERENCES fortuna_private.financial_books(id) ON DELETE RESTRICT,
+  actor_user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   idempotency_key text NOT NULL CHECK (length(btrim(idempotency_key)) BETWEEN 8 AND 200),
   payload_sha256 text NOT NULL CHECK (payload_sha256 ~ '^[0-9a-f]{64}$'),
   status text NOT NULL DEFAULT 'processing' CHECK (status IN ('processing', 'committed')),
@@ -120,7 +131,7 @@ CREATE TABLE fortuna_private.financial_idempotency (
     (status = 'processing' AND event_id IS NULL AND response IS NULL AND committed_at IS NULL)
     OR (status = 'committed' AND event_id IS NOT NULL AND response IS NOT NULL AND committed_at IS NOT NULL)
   ),
-  UNIQUE (book_id, idempotency_key)
+  UNIQUE (book_id, actor_user_id, idempotency_key)
 );
 
 CREATE TABLE fortuna_private.financial_audit (
@@ -207,6 +218,7 @@ BEGIN
   END IF;
 
   IF NEW.book_id IS DISTINCT FROM OLD.book_id
+     OR NEW.actor_user_id IS DISTINCT FROM OLD.actor_user_id
      OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
      OR NEW.payload_sha256 IS DISTINCT FROM OLD.payload_sha256
      OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
