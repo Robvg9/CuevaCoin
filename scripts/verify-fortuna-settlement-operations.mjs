@@ -151,12 +151,24 @@ try {
         'authenticated',
         'fortuna_private.test_commit_settlement_atomic(uuid,uuid,text,uuid,text,text,text,text,bigint,jsonb,boolean,text)',
         'EXECUTE'
-      ) AS authenticated_can_execute
+      ) AS authenticated_can_execute,
+      has_table_privilege(
+        'service_role',
+        'fortuna_private.financial_obligations',
+        'UPDATE'
+      ) AS service_can_update_obligations,
+      (
+        SELECT prosecdef
+          FROM pg_proc
+         WHERE oid = 'fortuna_private.test_commit_settlement_atomic(uuid,uuid,text,uuid,text,text,text,text,bigint,jsonb,boolean,text)'::regprocedure
+      ) AS function_is_security_definer
   `);
   assert.equal(privilege.rows[0].service_can_execute, true);
   assert.equal(privilege.rows[0].anon_can_execute, false);
   assert.equal(privilege.rows[0].authenticated_can_execute, false);
-  console.log('PASS — only service_role can execute the isolated settlement helper');
+  assert.equal(privilege.rows[0].service_can_update_obligations, false);
+  assert.equal(privilege.rows[0].function_is_security_definer, true);
+  console.log('PASS — restricted SECURITY DEFINER helper can lock rows without granting direct UPDATE to service_role');
 
   await db.query('INSERT INTO auth.users (id) VALUES ($1)', [ids.owner]);
   await db.query(
