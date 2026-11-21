@@ -92,7 +92,9 @@ const migrationFiles = readdirSync('supabase/migrations').filter(name => name.le
 assert.deepEqual(migrationFiles, [...ledgerManifest.expected_files].sort(), 'Tracked migration filenames must match all 65 LIVE ledger versions');
 for (const entry of ledgerManifest.recovered) {
   const source = readFileSync('supabase/migrations/' + entry.file, 'utf8');
-  const actual = createHash('sha256').update(source, 'utf8').digest('hex');
+  // Git for Windows may check out LF files as CRLF; normalize before provenance hashing.
+  const normalizedSource = source.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const actual = createHash('sha256').update(normalizedSource, 'utf8').digest('hex');
   assert.equal(actual, entry.sha256, 'Recovered SQL must match the original Supabase ledger statement: ' + entry.file);
 }
 console.log('PASS — all 65 migration filenames match LIVE ledger; all 58 recovered SQL files match their ledger SHA-256');
