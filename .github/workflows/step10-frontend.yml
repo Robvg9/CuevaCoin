@@ -60,6 +60,8 @@ on:
       - "supabase/migrations/**"
       - "supabase/tests/**"
       - "scripts/verify-step10-release.mjs"
+      - "scripts/verify-fortuna-ledger-contract.mjs"
+      - "docs/fortuna/**"
       - ".github/workflows/step10-frontend.yml"
   push:
     branches:
@@ -122,6 +124,8 @@ on:
       - "supabase/migrations/**"
       - "supabase/tests/**"
       - "scripts/verify-step10-release.mjs"
+      - "scripts/verify-fortuna-ledger-contract.mjs"
+      - "docs/fortuna/**"
       - ".github/workflows/step10-frontend.yml"
 
 permissions:
@@ -164,4 +168,7 @@ jobs:
         shell: cmd
       - name: Verify recipient-ID privacy and active-admin withdrawal guards
         run: node scripts/verify-transfer-recipient-security.mjs
+        shell: cmd
+      - name: Verify MISIÓN FORTUNA v1 accounting contract (pure model)
+        run: node scripts/verify-fortuna-ledger-contract.mjs
         shell: cmd
