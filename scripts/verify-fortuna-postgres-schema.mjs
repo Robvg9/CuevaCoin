@@ -203,8 +203,8 @@ try {
 
   await db.query(
     `INSERT INTO fortuna_private.financial_events
-      (id, book_id, contact_id, currency_code, event_type, actor_user_id)
-     VALUES ($1, $2, $3, 'CUP', 'obligation_opened', $4)`,
+      (id, book_id, contact_id, currency_code, event_type, total_amount_minor, actor_user_id)
+     VALUES ($1, $2, $3, 'CUP', 'obligation_opened', 12540, $4)`,
     [openingEvent, book1, contact1, owner1]
   );
   await db.query(
@@ -216,8 +216,8 @@ try {
 
   await db.query(
     `INSERT INTO fortuna_private.financial_events
-      (id, book_id, contact_id, currency_code, event_type, actor_user_id)
-     VALUES ($1, $2, $3, 'CUP', 'cash_received', $4)`,
+      (id, book_id, contact_id, currency_code, event_type, total_amount_minor, actor_user_id)
+     VALUES ($1, $2, $3, 'CUP', 'cash_received', 2540, $4)`,
     [cashEvent, book1, contact1, owner1]
   );
   await db.query(
@@ -232,14 +232,44 @@ try {
      VALUES ($1, $2, $3, 'CUP', $4, 'cash_received', -2540)`,
     [book1, cashEvent, contact1, obligation1]
   );
-  console.log('PASS — opening, cash-event, ledger and allocation rows satisfy relational constraints');
+  await expectFailure(
+    'event amount must be positive',
+    () => db.query(
+      `INSERT INTO fortuna_private.financial_events
+        (book_id, contact_id, currency_code, event_type, total_amount_minor, actor_user_id)
+       VALUES ($1, $2, 'CUP', 'adjustment', 0, $3)`,
+      [book1, contact1, owner1]
+    ),
+    /check constraint/i
+  );
+  await expectFailure(
+    'every ledger entry must reference an obligation',
+    () => db.query(
+      `INSERT INTO fortuna_private.financial_ledger_entries
+        (book_id, event_id, contact_id, currency_code, entry_kind, signed_minor)
+       VALUES ($1, $2, $3, 'CUP', 'adjustment', 100)`,
+      [book1, cashEvent, contact1]
+    ),
+    /not-null constraint/i
+  );
+  await expectFailure(
+    'one event may have only one aggregated ledger line per obligation',
+    () => db.query(
+      `INSERT INTO fortuna_private.financial_ledger_entries
+        (book_id, event_id, contact_id, currency_code, obligation_id, entry_kind, signed_minor)
+       VALUES ($1, $2, $3, 'CUP', $4, 'cash_received', -100)`,
+      [book1, cashEvent, contact1, obligation1]
+    ),
+    /unique/i
+  );
+  console.log('PASS — event amount and one-line-per-obligation ledger constraints');
 
   await expectFailure(
     'reversal cannot cross currencies',
     () => db.query(
       `INSERT INTO fortuna_private.financial_events
-        (book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id, reversal_reason)
-       VALUES ($1, $2, 'USD', 'reversal', $3, $4, 'currency mismatch fixture')`,
+        (book_id, contact_id, currency_code, event_type, total_amount_minor, actor_user_id, reverses_event_id, reversal_reason)
+       VALUES ($1, $2, 'USD', 'reversal', 100, $3, $4, 'currency mismatch fixture')`,
       [book1, contact1, owner1, cashEvent]
     ),
     /foreign key/i
@@ -248,24 +278,24 @@ try {
     'reversal cannot cross contacts',
     () => db.query(
       `INSERT INTO fortuna_private.financial_events
-        (book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id, reversal_reason)
-       VALUES ($1, $2, 'CUP', 'reversal', $3, $4, 'contact mismatch fixture')`,
+        (book_id, contact_id, currency_code, event_type, total_amount_minor, actor_user_id, reverses_event_id, reversal_reason)
+       VALUES ($1, $2, 'CUP', 'reversal', 100, $3, $4, 'contact mismatch fixture')`,
       [book1, contact2, owner1, cashEvent]
     ),
     /foreign key/i
   );
   await db.query(
     `INSERT INTO fortuna_private.financial_events
-      (id, book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id, reversal_reason)
-     VALUES ($1, $2, $3, 'CUP', 'reversal', $4, $5, 'Partial correction fixture')`,
+      (id, book_id, contact_id, currency_code, event_type, total_amount_minor, actor_user_id, reverses_event_id, reversal_reason)
+     VALUES ($1, $2, $3, 'CUP', 'reversal', 2540, $4, $5, 'Partial correction fixture')`,
     [reversalEvent, book1, contact1, owner1, cashEvent]
   );
   await expectFailure(
     'a reversal cannot reverse another reversal',
     () => db.query(
       `INSERT INTO fortuna_private.financial_events
-        (book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id, reversal_reason)
-       VALUES ($1, $2, 'CUP', 'reversal', $3, $4, 'invalid second reversal fixture')`,
+        (book_id, contact_id, currency_code, event_type, total_amount_minor, actor_user_id, reverses_event_id, reversal_reason)
+       VALUES ($1, $2, 'CUP', 'reversal', 100, $3, $4, 'invalid second reversal fixture')`,
       [book1, contact1, owner1, reversalEvent]
     ),
     /fortuna_invalid_reversal_target/i
@@ -274,8 +304,8 @@ try {
     'reversal must provide a non-empty reason',
     () => db.query(
       `INSERT INTO fortuna_private.financial_events
-        (book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id)
-       VALUES ($1, $2, 'CUP', 'reversal', $3, $4)`,
+        (book_id, contact_id, currency_code, event_type, total_amount_minor, actor_user_id, reverses_event_id)
+       VALUES ($1, $2, 'CUP', 'reversal', 100, $3, $4)`,
       [book1, contact1, owner1, cashEvent]
     ),
     /check constraint/i
@@ -284,8 +314,8 @@ try {
     'event cannot reverse itself',
     () => db.query(
       `INSERT INTO fortuna_private.financial_events
-        (id, book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id, reversal_reason)
-       VALUES ($1, $2, $3, 'CUP', 'reversal', $4, $1, 'self reversal fixture')`,
+        (id, book_id, contact_id, currency_code, event_type, total_amount_minor, actor_user_id, reverses_event_id, reversal_reason)
+       VALUES ($1, $2, $3, 'CUP', 'reversal', 100, $4, $1, 'self reversal fixture')`,
       [selfReversalEvent, book1, contact1, owner1]
     ),
     /check constraint/i
