@@ -1,0 +1,1 @@
+ALTER TABLE public.transferencias_idempotencia NO FORCE ROW LEVEL SECURITY;
