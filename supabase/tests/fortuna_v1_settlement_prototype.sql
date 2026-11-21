@@ -30,7 +30,6 @@ DECLARE
   v_cash_sign bigint;
   v_event_id uuid;
   v_allocations jsonb := '[]'::jsonb;
-  v_allocation jsonb;
   v_item record;
   v_requested_count integer := 0;
   v_distinct_count integer := 0;
@@ -168,7 +167,7 @@ BEGIN
       WHERE o.book_id = p_book_id
         AND o.contact_id = p_contact_id
         AND o.currency_code = p_currency_code
-        AND o.direction = v_direction
+        AND o.direction = v_expected_direction
       GROUP BY o.id, o.direction, o.opened_at
       ORDER BY o.opened_at, o.id
     LOOP
