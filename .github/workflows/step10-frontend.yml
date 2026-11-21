@@ -176,7 +176,7 @@ jobs:
           if not exist "%RUNNER_TEMP%\fortuna-pglite" mkdir "%RUNNER_TEMP%\fortuna-pglite"
           cd /d "%RUNNER_TEMP%\fortuna-pglite"
           echo {"private":true,"type":"module"}>package.json
-          npm install --no-audit --no-fund --save-exact @electric-sql/pglite@0.5.17
+          npm install --no-audit --no-fund --save-exact @electric-sql/pglite@0.4.6
         shell: cmd
       - name: Verify FORTUNA schema and constraints in isolated PostgreSQL 17
         run: |
