@@ -186,8 +186,8 @@ try {
     'obligation amount must be positive',
     () => db.query(
       `INSERT INTO fortuna_private.financial_obligations
-        (book_id, contact_id, currency_code, direction, principal_minor, created_by)
-       VALUES ($1, $2, 'CUP', 'receivable', 0, $3)`,
+        (book_id, contact_id, currency_code, direction, principal_minor, description, created_by)
+       VALUES ($1, $2, 'CUP', 'receivable', 0, 'invalid amount fixture', $3)`,
       [book1, contact1, owner1]
     ),
     /check constraint/i
