@@ -1,0 +1,2 @@
+ALTER TABLE anuncio_app ADD COLUMN IF NOT EXISTS duracion_horas integer NULL;
+COMMENT ON COLUMN anuncio_app.duracion_horas IS 'E6: horas de vigencia del cartel desde creado_en. NULL = sin vencimiento (el admin lo quita a mano). Reemplaza a dias_vigencia (se deja esa columna sin usar por compatibilidad, no se borra).';
