@@ -64,6 +64,7 @@ CREATE TABLE fortuna_private.financial_events (
   event_type text NOT NULL CHECK (
     event_type IN ('obligation_opened', 'cash_received', 'cash_paid', 'compensation', 'reversal', 'adjustment')
   ),
+  total_amount_minor bigint NOT NULL CHECK (total_amount_minor > 0),
   actor_user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   reverses_event_id uuid NULL,
   reversal_reason text NULL,
@@ -87,7 +88,7 @@ CREATE TABLE fortuna_private.financial_ledger_entries (
   event_id uuid NOT NULL,
   contact_id uuid NOT NULL,
   currency_code text NOT NULL,
-  obligation_id uuid NULL,
+  obligation_id uuid NOT NULL,
   entry_kind text NOT NULL CHECK (
     entry_kind IN ('obligation_opened', 'cash_received', 'cash_paid', 'compensation', 'reversal', 'adjustment')
   ),
@@ -96,7 +97,8 @@ CREATE TABLE fortuna_private.financial_ledger_entries (
   FOREIGN KEY (book_id, event_id, contact_id, currency_code)
     REFERENCES fortuna_private.financial_events(book_id, id, contact_id, currency_code) ON DELETE RESTRICT,
   FOREIGN KEY (book_id, obligation_id, contact_id, currency_code)
-    REFERENCES fortuna_private.financial_obligations(book_id, id, contact_id, currency_code) ON DELETE RESTRICT
+    REFERENCES fortuna_private.financial_obligations(book_id, id, contact_id, currency_code) ON DELETE RESTRICT,
+  UNIQUE (book_id, event_id, obligation_id)
 );
 
 CREATE TABLE fortuna_private.financial_allocations (
