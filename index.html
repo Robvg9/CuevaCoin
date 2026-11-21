@@ -3644,7 +3644,97 @@
                 transition: none !important;
             }
         }
-    </style>
+     
+        /* V158 — interfaz compacta, icon-first y accesible */
+        .transfer-recipient-actions {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin: 0 0 1rem;
+        }
+        .transfer-recipient-action {
+            min-width: 0;
+            min-height: 76px;
+            padding: 10px 6px !important;
+            border: 1px solid color-mix(in srgb, var(--accent-primary) 18%, transparent);
+            border-radius: 16px !important;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            box-shadow: 0 3px 10px rgba(31, 41, 55, .07) !important;
+            font-size: 12px;
+            line-height: 1.15;
+            font-weight: 650;
+            white-space: nowrap;
+        }
+        .transfer-action-icon {
+            display: grid;
+            place-items: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 10px;
+            background: rgba(255,255,255,.55);
+            font-size: 23px;
+            line-height: 1;
+            font-weight: 700;
+        }
+        .transfer-recipient-action:focus-visible,
+        .admin-quick-action:focus-visible {
+            outline: 3px solid var(--accent-primary);
+            outline-offset: 3px;
+        }
+        .admin-quick-action {
+            min-height: 82px;
+            padding: 12px 8px !important;
+            border-width: 1px !important;
+            border-radius: 16px !important;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            font-size: 12px !important;
+            line-height: 1.2;
+        }
+        .admin-quick-icon {
+            display: grid;
+            place-items: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 11px;
+            background: rgba(255,255,255,.35);
+            font-size: 22px;
+            font-weight: 700;
+        }
+        .quick-actions-grid { gap: 10px; }
+        .quick-actions-grid button { border-radius: 14px; }
+        .quick-actions .btn {
+            min-height: 54px;
+            padding: 11px 9px;
+            border-radius: 14px;
+            font-size: 12px;
+            white-space: normal;
+            gap: 6px;
+        }
+        .sidebar-menu a {
+            min-height: 44px;
+            padding: 10px 14px;
+            border-radius: 14px;
+        }
+        .sidebar-menu a i { margin-right: 10px; }
+        @media (max-width: 380px) {
+            .transfer-recipient-actions { gap: 7px; }
+            .transfer-recipient-action { min-height: 70px; font-size: 11px; }
+            .admin-quick-action { min-height: 76px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .transfer-recipient-action,
+            .admin-quick-action,
+            .sidebar-menu a { transition: none !important; }
+        }
+</style>
 
 </head>
 <body>
@@ -3943,10 +4033,10 @@
                 <div class="card">
                     <h2>Acciones Rápidas</h2>
                     <div class="quick-actions-grid">
-                        <button class="btn btn-success" onclick="abrirModalPagoSalario()">💰 Pagar Salario</button>
-                        <button class="btn btn-warning" onclick="abrirModalDarBono()">🎁 Dar Bono</button>
-                        <button class="btn btn-info" onclick="abrirModalAnuncio()">📢 Enviar Anuncio</button>
-                        <button class="btn btn-secondary" onclick="abrirModalReporte()">📊 Reporte Diario</button>
+                        <button class="btn btn-success admin-quick-action" title="Pagar salario" onclick="abrirModalPagoSalario()"><span class="admin-quick-icon" aria-hidden="true">＄</span><span>Pagar salario</span></button>
+                        <button class="btn btn-warning admin-quick-action" title="Dar bono" onclick="abrirModalDarBono()"><span class="admin-quick-icon" aria-hidden="true">✦</span><span>Dar bono</span></button>
+                        <button class="btn btn-info admin-quick-action" title="Enviar anuncio" onclick="abrirModalAnuncio()"><span class="admin-quick-icon" aria-hidden="true">◉</span><span>Anuncio</span></button>
+                        <button class="btn btn-secondary admin-quick-action" title="Reporte diario" onclick="abrirModalReporte()"><span class="admin-quick-icon" aria-hidden="true">▤</span><span>Reporte</span></button>
                     </div>
                 </div>
             </div>
@@ -4856,10 +4946,10 @@
                  resolver-cuenta-qr - service_role del lado del servidor,
                  porque la policy SELECT de "perfiles" no deja ver el perfil
                  de un desconocido desde el cliente). -->
-            <div style="display: flex; gap: 8px; margin-bottom: 0.75rem;">
-                <button type="button" id="btn-escanear-qr-transferir" class="btn btn-secondary" style="flex: 1;" onclick="abrirScannerQR('escanear')">📷 Escanear código QR</button>
-                <button type="button" id="btn-mi-qr-transferir" class="btn btn-secondary" style="flex: 1;" onclick="abrirScannerQR('mi-qr')">📱 Mi QR</button>
-                <button type="button" id="btn-buscar-usuario-transferir" class="btn btn-secondary" style="flex: 1;" onclick="abrirBuscarUsuarioTransferir()">🔎 Por usuario</button>
+            <div class="transfer-recipient-actions" role="group" aria-label="Método para elegir destinatario">
+                <button type="button" id="btn-escanear-qr-transferir" class="btn btn-secondary transfer-recipient-action" title="Escanear código QR" aria-label="Escanear código QR" onclick="abrirScannerQR('escanear')"><span class="transfer-action-icon" aria-hidden="true">▦</span><span class="transfer-action-label">Escanear</span></button>
+                <button type="button" id="btn-mi-qr-transferir" class="btn btn-secondary transfer-recipient-action" title="Mostrar mi código QR" aria-label="Mostrar mi código QR" onclick="abrirScannerQR('mi-qr')"><span class="transfer-action-icon" aria-hidden="true">▣</span><span class="transfer-action-label">Mi QR</span></button>
+                <button type="button" id="btn-buscar-usuario-transferir" class="btn btn-secondary transfer-recipient-action" title="Buscar por nombre de usuario" aria-label="Buscar por nombre de usuario" onclick="abrirBuscarUsuarioTransferir()"><span class="transfer-action-icon" aria-hidden="true">⌕</span><span class="transfer-action-label">Usuario</span></button>
             </div>
             <form id="transferir-form">
                 <div class="form-group">
@@ -5453,7 +5543,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.157';
+                const VERSION_FALLBACK = 'V.158';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
