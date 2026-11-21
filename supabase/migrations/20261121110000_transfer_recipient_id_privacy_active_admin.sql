@@ -160,10 +160,34 @@ AS $function$
 DECLARE
   v text := NULLIF(trim(p_identificador), '');
   v_lc text;
+  v_name_matches integer;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'No autenticado'; END IF;
   IF v IS NULL THEN RAISE EXCEPTION 'Identificador requerido'; END IF;
   v_lc := lower(v);
+
+  -- Exact username/email is unambiguous. A display name may not be:
+  -- never select an arbitrary account when several active profiles share it.
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.perfiles p
+    WHERE p.estado = 'activo'
+      AND p.es_admin = false
+      AND (
+        lower(trim(p.usuario)) = v_lc
+        OR lower(trim(p.correo)) = v_lc
+      )
+  ) THEN
+    SELECT count(*) INTO v_name_matches
+    FROM public.perfiles p
+    WHERE p.estado = 'activo'
+      AND p.es_admin = false
+      AND lower(trim(p.nombre)) = v_lc;
+
+    IF v_name_matches > 1 THEN
+      RAISE EXCEPTION 'Nombre ambiguo. Busca por usuario o correo electrónico.';
+    END IF;
+  END IF;
 
   RETURN QUERY
   SELECT p.id, p.usuario, p.nombre, p.apellido, p.estado

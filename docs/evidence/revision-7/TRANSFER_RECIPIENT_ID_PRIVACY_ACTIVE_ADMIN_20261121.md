@@ -13,7 +13,7 @@ The two recipient lookup Edge Functions are changed in this branch to select and
 
 ## Frontend contract
 - Recipient search uses the additive `resolver_destinatario_transferencia_v2(text)` RPC.
-- The new resolver returns `id, usuario, nombre, apellido, estado`; it never returns email.
+- The new resolver returns `id, usuario, nombre, apellido, estado`; it never returns email. Duplicate display-name matches are rejected; users must enter an exact username or email rather than risk selecting an arbitrary recipient.
 - QR, username lookup, favorites, password confirmation, and online transfer execution carry the stable profile ID.
 - New offline queue entries store the profile ID. Existing email-only queue records retain a compatibility replay route.
 - The visible transfer field accepts an identifier but shows the recipient's display name/username after resolution.

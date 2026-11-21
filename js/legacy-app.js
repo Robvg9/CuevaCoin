@@ -2180,13 +2180,9 @@
             await ejecutarTransferencia(destinatarioId, cantidad, motivo, destinatarioNombre);
         });
 
-        // Punto 8 (2026-08-09): buscar destinatario por nombre de usuario,
-        // vía la Edge Function resolver-cuenta-usuario (mismo motivo que
-        // resolver-cuenta-qr - RLS no deja ver el perfil de un desconocido
-        // desde el cliente). Al encontrar la cuenta, prellena el correo en
-        // Transferir igual que hace un QR escaneado (sin marcar
-        // transferenciaViaQR, porque acá la persona sí puede revisar/editar
-        // el correo resultante a mano si quiere, a diferencia del QR).
+        // Búsqueda de destinatario por correo, usuario o nombre.
+        // La resolución devuelve ID interno y nombre visible, nunca el correo
+        // del destinatario. La transferencia posterior se ejecuta por ID.
 
 
         document.getElementById('buscar-usuario-transferir-form').addEventListener('submit', async function (e) {

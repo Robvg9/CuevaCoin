@@ -56,6 +56,8 @@ assert.match(migration, /admin_resolver_retiro\(p_solicitud_id uuid, p_accion te
 assert.equal((migration.match(/IS DISTINCT FROM 'activo'/g) || []).length, 2, 'Both admin overloads must enforce active status');
 assert.match(migration, /CREATE OR REPLACE FUNCTION public\.resolver_destinatario_transferencia_v2/);
 assert.match(migration, /RETURNS TABLE\(id uuid, usuario text, nombre text, apellido text, estado text\)/);
+assert.match(migration, /v_name_matches > 1/);
+assert.match(migration, /Nombre ambiguo/);
 assert.doesNotMatch(migration, /REVOKE EXECUTE ON FUNCTION public\.resolver_destinatario_transferencia\(text\)/, 'Legacy RPC stays available during controlled rollout');
 assert.match(sqlTest, /resolver_destinatario_transferencia_v2/);
 assert.match(sqlTest, /admin_resolver_retiro\(uuid,boolean\)/);

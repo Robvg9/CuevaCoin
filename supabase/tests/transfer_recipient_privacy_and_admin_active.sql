@@ -12,6 +12,9 @@ BEGIN
   IF v_def NOT ILIKE '%p.correo%' OR v_def NOT ILIKE '%p.estado = ''activo''%' THEN
     RAISE EXCEPTION 'Recipient lookup must preserve email matching and active-recipient filtering';
   END IF;
+  IF v_def NOT ILIKE '%v_name_matches > 1%' OR v_def NOT ILIKE '%Nombre ambiguo%' THEN
+    RAISE EXCEPTION 'Ambiguous display names must be rejected rather than selecting an arbitrary recipient';
+  END IF;
   IF has_function_privilege('anon', v_sig, 'EXECUTE') THEN
     RAISE EXCEPTION 'Anonymous role must not execute recipient resolver';
   END IF;
