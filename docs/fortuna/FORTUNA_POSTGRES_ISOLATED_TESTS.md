@@ -11,11 +11,11 @@ The SQL fixture at supabase/tests/fortuna_v1_schema_prototype.sql is loaded only
 ## Prototype boundaries
 
 - One personal financial book per owner is the current simplifying assumption; it is not yet a final product approval.
-- Contacts are owned by the book. An optional link to public.perfiles is represented, but the application must verify identity and active-account state before setting it.
+- Contacts are owned by the book. An optional link to public.perfiles is unique per book and must only be set after the application verifies identity and active-account state.
 - The financial_currencies catalogue is configurable. CUP/USD/EUR with scale 2 are fixtures in the test only, not a production seed decision.
-- Amounts are signed integer minor units. Positive means the contact owes the owner; negative means the owner owes the contact.
-- The original obligation, event, ledger, allocation and audit records are append-only in this prototype. Corrections use new reversal events and inverse ledger entries.
-- Every FORTUNA table has RLS enabled and is placed in the non-exposed fortuna_private schema. anon and authenticated receive no direct schema/table privileges. Only the trusted server role receives table access.
+- Obligations retain a non-empty description and optional due date. Amounts are signed integer minor units. Positive means the contact owes the owner; negative means the owner owes the contact.
+- The original obligation, event, ledger, allocation and audit records are append-only in this prototype. Corrections use new reversal events with a required reason and inverse ledger entries; a reversal must stay on the same book/contact/currency and cannot point to itself or another reversal.
+- Every FORTUNA table has RLS enabled and is placed in the non-exposed fortuna_private schema. anon and authenticated receive no direct schema/table privileges. Only the trusted server role receives table access, with UPDATE limited to selected contact and idempotency columns.
 - Server code must still authenticate the caller, resolve the caller's book, and verify book ownership before using its privileged database connection. service_role must never enter browser code.
 
 ## Automated checks
