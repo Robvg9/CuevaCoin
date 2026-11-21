@@ -64,7 +64,8 @@ CREATE TABLE fortuna_private.financial_events (
   occurred_at timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now(),
   FOREIGN KEY (book_id, contact_id) REFERENCES fortuna_private.financial_contacts(book_id, id) ON DELETE RESTRICT,
-  FOREIGN KEY (book_id, reverses_event_id) REFERENCES fortuna_private.financial_events(book_id, id) ON DELETE RESTRICT,
+  FOREIGN KEY (book_id, reverses_event_id, contact_id, currency_code)
+    REFERENCES fortuna_private.financial_events(book_id, id, contact_id, currency_code) ON DELETE RESTRICT,
   CHECK ((event_type = 'reversal') = (reverses_event_id IS NOT NULL)),
   UNIQUE (book_id, id),
   UNIQUE (book_id, id, contact_id, currency_code)
@@ -116,8 +117,8 @@ CREATE TABLE fortuna_private.financial_idempotency (
   committed_at timestamptz NULL,
   FOREIGN KEY (book_id, event_id) REFERENCES fortuna_private.financial_events(book_id, id) ON DELETE RESTRICT,
   CHECK (
-    (status = 'processing' AND committed_at IS NULL)
-    OR (status = 'committed' AND event_id IS NOT NULL AND committed_at IS NOT NULL)
+    (status = 'processing' AND event_id IS NULL AND response IS NULL AND committed_at IS NULL)
+    OR (status = 'committed' AND event_id IS NOT NULL AND response IS NOT NULL AND committed_at IS NOT NULL)
   ),
   UNIQUE (book_id, idempotency_key)
 );
@@ -167,6 +168,68 @@ $$;
 REVOKE ALL ON FUNCTION fortuna_private.reject_immutable_financial_data() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION fortuna_private.reject_immutable_financial_data() TO service_role;
 
+CREATE OR REPLACE FUNCTION fortuna_private.validate_financial_reversal()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $
+DECLARE
+  referenced_event_type text;
+BEGIN
+  SELECT event_type
+    INTO referenced_event_type
+    FROM fortuna_private.financial_events
+   WHERE book_id = NEW.book_id
+     AND id = NEW.reverses_event_id;
+
+  IF referenced_event_type = 'reversal' THEN
+    RAISE EXCEPTION 'fortuna_invalid_reversal_target: reversals cannot target another reversal';
+  END IF;
+
+  RETURN NEW;
+END;
+$;
+
+REVOKE ALL ON FUNCTION fortuna_private.validate_financial_reversal() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION fortuna_private.validate_financial_reversal() TO service_role;
+
+CREATE OR REPLACE FUNCTION fortuna_private.guard_idempotency_transition()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $
+BEGIN
+  IF NEW.book_id IS DISTINCT FROM OLD.book_id
+     OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
+     OR NEW.payload_sha256 IS DISTINCT FROM OLD.payload_sha256
+     OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION 'fortuna_idempotency_identity_immutable: request identity cannot be changed';
+  END IF;
+
+  IF OLD.status = 'committed' THEN
+    RAISE EXCEPTION 'fortuna_idempotency_committed_immutable: committed results cannot be changed';
+  END IF;
+
+  IF NEW.status <> 'committed' THEN
+    RAISE EXCEPTION 'fortuna_idempotency_transition_invalid: processing may only transition to committed';
+  END IF;
+
+  RETURN NEW;
+END;
+$;
+
+REVOKE ALL ON FUNCTION fortuna_private.guard_idempotency_transition() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION fortuna_private.guard_idempotency_transition() TO service_role;
+
+CREATE TRIGGER financial_events_validate_reversal
+  BEFORE INSERT ON fortuna_private.financial_events
+  FOR EACH ROW WHEN (NEW.event_type = 'reversal')
+  EXECUTE FUNCTION fortuna_private.validate_financial_reversal();
+
+CREATE TRIGGER financial_idempotency_guard_transition
+  BEFORE UPDATE ON fortuna_private.financial_idempotency
+  FOR EACH ROW EXECUTE FUNCTION fortuna_private.guard_idempotency_transition();
+
 CREATE TRIGGER financial_obligations_immutable
   BEFORE UPDATE OR DELETE ON fortuna_private.financial_obligations
   FOR EACH ROW EXECUTE FUNCTION fortuna_private.reject_immutable_financial_data();
@@ -186,5 +249,7 @@ CREATE TRIGGER financial_audit_immutable
 REVOKE ALL ON ALL TABLES IN SCHEMA fortuna_private FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON ALL TABLES IN SCHEMA fortuna_private FROM service_role;
 GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA fortuna_private TO service_role;
-GRANT UPDATE ON fortuna_private.financial_contacts, fortuna_private.financial_idempotency
-  TO service_role;
+GRANT UPDATE (display_name, linked_profile_id, phone, notes, updated_at)
+  ON fortuna_private.financial_contacts TO service_role;
+GRANT UPDATE (status, event_id, response, committed_at)
+  ON fortuna_private.financial_idempotency TO service_role;
