@@ -16,12 +16,11 @@ The following are contract rules, not proposals:
 - Compensation is explicit and limited to the same contact and same currency.
 - Confirmed events and ledger entries are immutable. Corrections use linked reversal events with a non-empty reason.
 - Financial commands are authorized and idempotent, server-side and atomic. Browser code never receives a service-role secret.
+- A contact is represented by one card. In each currency, gross receivable (**Te debe**) and gross payable (**Le debes**) remain separately visible. If both are positive in the same currency, show **Posición mixta en [currency]**; never duplicate the contact, hide one side, or replace gross values with a net balance.
+- The v1 currency allowlist is **CUP, USD, EUR**, each with **scale 2**. Reject unlisted currencies and precision beyond two decimal places; do not silently round or convert.
+- V1 is **owner-only**. Only the authenticated owner of a book may read or mutate it. Delegated members and membership roles are excluded.
 
-The following decisions remain open and must not be treated as approved by this design:
-
-1. How the UI classifies a contact with simultaneous receivable and payable obligations in the **same** currency. Both gross obligations must remain visible in the data model; no silent netting or hidden side.
-2. The initial supported currency catalogue and minor-unit scale for each currency. CUP/USD/EUR with scale 2 are test fixtures only.
-3. Whether v1 is owner-only or supports delegated book members. The one-book-per-owner prototype is a simplifying assumption, not approval of the permission model.
+These three product decisions were explicitly approved by the owner on **2026-11-21** and are binding for v1 unless a later owner decision changes them.
 
 ## 2. Server trust boundary
 
@@ -29,12 +28,12 @@ All write operations pass through a trusted server boundary (for example, an aut
 
 1. Obtain the authenticated user from a verified Supabase session/token. Never accept actor_user_id, owner_user_id, or book_id as authorization evidence from the request body.
 2. Resolve the actor's book on the server.
-3. Run an explicit authorization decision for the requested action. The v1 policy function should be replaceable so the product can choose owner-only or membership without rewriting ledger logic.
-4. Only after authentication and authorization, use the trusted server database connection. Its service-role credential stays server-side.
-5. Keep all FORTUNA objects in a non-exposed schema. anon and authenticated get no direct schema/table grants. RLS remains enabled as defense in depth; it is not a substitute for checking owner/membership in the server operation.
+3. Resolve the target book by its owner relation and require `auth.uid() = financial_books.owner_user_id`. Reject a caller who is authenticated but is not the owner, including global CuevaCoin administrators. Do not accept actor, owner or book IDs from the request body as authorization evidence.
+4. Only after authentication and owner authorization, use the trusted server database connection. Its service-role credential stays server-side.
+5. Keep all FORTUNA objects in a non-exposed schema. anon and authenticated get no direct schema/table grants. RLS remains enabled as defense in depth and must scope any permitted read to the owner. V1 has no membership table or member-based policy.
 6. Return a minimal result: event ID, resulting per-currency positions, allocations, excess classification, and idempotency replay indicator. Never return secrets or unrelated profile data.
 
-A privileged function must not rely on SECURITY DEFINER as a shortcut. If a later implementation genuinely requires one, isolate it in the private schema, pin the search path, check the authenticated actor and book authorization inside its body, minimize grants, and run Supabase advisors.
+A privileged function must not rely on SECURITY DEFINER as a shortcut. If a later implementation genuinely requires one, isolate it in the private schema, pin the search path, check inside its body that `auth.uid()` owns the target book, minimize grants, and run Supabase advisors.
 
 ## 3. Command surface proposal
 
@@ -79,7 +78,7 @@ Every financial write follows the same sequence:
 3. Reserve or replay the idempotency key.
 4. Lock the book/contact and then all affected obligations in deterministic order (for example, UUID ascending). Every writer must use the same lock order.
 5. Recompute balances from committed ledger rows after locks are acquired. Never trust an old preview as the final balance.
-6. Validate currency precision, positive integer minor units, ownership, event semantics, remaining obligation, allocations, excess confirmation and reversal limits.
+6. Validate the currency against the v1 allowlist (CUP/USD/EUR, scale 2), parse exact integer minor units, and reject extra precision or unsupported currencies. Then validate positive amounts, ownership, event semantics, remaining obligation, allocations, excess confirmation and reversal limits.
 7. Insert the event header, allocation rows, signed ledger entries, and audit evidence.
 8. Reconcile each affected obligation and the contact/currency position from the ledger.
 9. Store the idempotent response and mark the key committed.
@@ -161,7 +160,7 @@ For each obligation, derive remaining signed amount by summing its ledger entrie
 - gross payable = absolute sum of negative open obligation balances;
 - signed position = receivables minus payables.
 
-Book summary groups by currency and direction. Do not produce a cross-currency net amount or infer a conversion rate.
+Book summary groups by currency and direction. A contact read model returns one contact card with separate gross receivable and gross payable amounts for every currency. If both sides are positive in one currency, label that currency row **Posición mixta en [currency]**; do not duplicate the contact or present a net amount as a substitute. Do not produce a cross-currency net amount or infer a conversion rate.
 
 ## 8. Prototype refinements required before migration
 
@@ -181,12 +180,14 @@ The PGlite single-connection harness proves DDL and local constraints but cannot
 
 Before a real migration/API is considered ready, add an isolated integration suite for:
 
-- owner A cannot read or mutate owner B's book; a non-member is denied; revoked membership is denied if membership is chosen;
+- owner A can read and mutate only owner A's book; owner B, any authenticated non-owner (including global admin), and anon are denied;
 - same key + same payload returns one original result and creates no second event;
 - same key + different payload returns conflict;
 - two concurrent settlements against the same obligation cannot apply more than its remaining amount;
 - concurrent retry of the same idempotency key creates exactly one financial event;
 - stale settlement preview is rejected and requires reconfirmation;
+- CUP, USD and EUR accept at most two decimal places; unsupported currencies and higher precision are rejected without silent rounding;
+- a same-currency mixed contact is returned as one card with separate gross receivable/payable values, never a hidden or netted side;
 - overpayment without explicit acknowledgement creates no records;
 - compensation validates same contact/currency and updates both obligations atomically;
 - partial reversal is bounded per source event/obligation; full reversal cannot flip an outstanding obligation through zero;
@@ -197,12 +198,22 @@ Before a real migration/API is considered ready, add an isolated integration sui
 
 Use a free isolated PostgreSQL/Supabase test target if available. Do not use CuevaCoin LIVE as a test database, do not open a paid Supabase branch, and do not use real financial records as test fixtures.
 
-## 10. Open product gates — no approval inferred
+## 10. Approved product decisions and remaining engineering gates
 
-- Same-currency mixed receivable/payable presentation remains undecided.
-- Initial currency list and each minor-unit scale remain undecided; CUP/USD/EUR with scale 2 are fixture values only.
-- Owner-only versus delegated members remains undecided. The transaction design deliberately keeps the authorization function replaceable.
-- Retention, reports, reminders and cash-register integration are outside this transaction-contract PR.
+The owner explicitly approved these v1 product decisions on **2026-11-21**:
+
+1. **Same-currency mixed obligations:** one card per contact, with gross receivable (**Te debe**) and gross payable (**Le debes**) shown separately per currency. When both exist for the same currency, label that row **Posición mixta en [currency]**. Never duplicate the contact or silently net/hide either side. Compensation is always a separate explicit operation.
+2. **Currency allowlist:** CUP, USD and EUR only, each at scale 2. Amounts use exact integer minor units; reject unsupported currencies and precision beyond two decimals without silent rounding. No FX conversion.
+3. **Authorization:** owner-only. Resolve the owner from the verified session and the book row; other authenticated users, global CuevaCoin admins who are not the book owner, and anon are denied. No membership table, operator role or read-only delegate in v1.
+
+These are closed product gates. The following are still engineering prerequisites before production schema/API work:
+
+- A real PostgreSQL multi-connection integration suite must demonstrate two concurrent settlements cannot over-apply the same obligation and concurrent retries of one idempotency key create exactly one event. PGlite's single connection does not prove this.
+- An isolated Supabase integration suite must verify verified-session identity, owner-only authorization, RLS/grants, private-schema behavior, Data API exposure and the actual Edge/server trust boundary.
+- The final schema and indexes require review, executable tests and Supabase advisors before a migration PR is considered ready.
+- Production deployment or LIVE DDL requires a separate explicit Human Gate.
+
+Retention, reports, reminders and cash-register integration remain outside v1.
 
 ## 11. Safety scope
 

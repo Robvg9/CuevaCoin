@@ -29,7 +29,9 @@ Para cada contacto y moneda, la posición derivada del libro usa:
 
 No hay conversión automática ni compensación entre monedas. Los totales del panel global se muestran por separado —por cobrar y por pagar— y desglosados por moneda. Nunca se presenta un único total global neteado entre monedas.
 
-La excepción de posición mixta por monedas aprobada por el propietario se muestra en una sección neutral **«Posición mixta por monedas»**: una sola ficha por persona, con cada moneda y sentido separados.
+La excepción de posición mixta entre monedas se muestra en una sección neutral **«Posición mixta por monedas»**: una sola ficha por contacto, con cada moneda y sentido separados.
+
+Cuando el mismo contacto mantiene simultáneamente obligaciones abiertas por cobrar y por pagar **en la misma moneda**, la interfaz también usa una sola ficha para ese contacto. Dentro de la moneda se muestran por separado los importes brutos **«Te debe»** y **«Le debes»**, con la etiqueta **«Posición mixta en [moneda]»**. La ficha no se duplica en dos listas, ninguna de las dos cantidades se oculta y la interfaz no las sustituye por un saldo neto. La compensación sigue siendo una operación explícita, nunca automática.
 
 ### 2.2 Sentido de los pagos y excedentes
 
@@ -77,7 +79,7 @@ Los nombres siguientes son contratos propuestos, no migraciones listas para ejec
 | Entidad propuesta | Responsabilidad |
 |---|---|
 | financial_books | Libro separado del dueño; identifica al propietario y su estado |
-| financial_book_members | Lista explícita de personas autenticadas autorizadas y su permiso (por ejemplo, operador/solo lectura) |
+| (sin tabla de miembros en v1) | El libro es exclusivo de su propietario autenticado; la delegación queda fuera de esta versión |
 | financial_contacts | Contrapartes externas o vinculadas de forma verificada a un perfil real |
 | financial_currencies | Códigos de moneda admitidos y precisión decimal; no contiene tasas de cambio |
 | financial_obligations | Obligación individual, contacto, dirección inicial, importe original, moneda, concepto, fechas y estado derivado |
@@ -97,8 +99,10 @@ Los nombres siguientes son contratos propuestos, no migraciones listas para ejec
 ### 3.2 Moneda y precisión
 
 - Cada obligación, evento, línea y asignación lleva moneda explícita.
-- La precisión se define por moneda admitida y se valida en servidor; no asumir que todas las monedas tienen dos decimales.
-- En JavaScript el contrato transporta importes como cadenas decimales (o enteros en unidades menores), no como Number binario.
+- El catálogo permitido para FORTUNA v1 queda cerrado a **CUP, USD y EUR**, cada una con escala de **2 decimales** (100 unidades menores por unidad monetaria).
+- La allowlist y su escala se validan en servidor. Se rechazan monedas no incluidas y cualquier importe con más de 2 decimales; no se redondea silenciosamente.
+- Los importes persistidos y calculados usan enteros en unidades menores; la API transporta cadenas decimales o enteros en unidades menores, nunca `Number` binario como fuente exacta.
+- Añadir monedas o cambiar escalas requiere una versión/cambio controlado, pruebas de precisión y revisión explícita; no se permite configuración arbitraria desde el cliente.
 - No almacenar ni calcular tipos de cambio en esta primera entrega.
 
 ### 3.3 Fuente de verdad y conciliación
@@ -116,10 +120,10 @@ La opción preferida es un esquema interno no expuesto (por ejemplo, private) pa
 Reglas obligatorias para la implementación:
 
 1. Verificar la sesión autenticada con auth.uid() en cada operación; no confiar en datos de identidad enviados por el cliente.
-2. Autorizar por propietario del libro o por membresía explícita y activa. No conceder acceso solo por estar autenticado ni inferirlo del booleano es_admin.
-3. RLS habilitado en todas las tablas como defensa en profundidad, con políticas de mínimo privilegio acordes al modelo de propietario/membresía.
+2. En v1 autorizar exclusivamente al propietario: resolver en servidor el libro cuyo `owner_user_id` coincide con `auth.uid()` de la sesión verificada. Si no existe esa relación, denegar. No aceptar `owner_user_id`, `book_id` ni `actor_user_id` del cuerpo como prueba de autorización; no conceder acceso por `is_admin`.
+3. RLS habilitado en todas las tablas como defensa en profundidad y limitado al propietario del libro. No existe membresía delegada ni tabla de miembros en v1.
 4. No añadir tablas al conjunto de esquemas expuestos sin justificación. Confirmar grants/default privileges y Data API settings antes de la migración.
-5. Si una operación necesita una función SECURITY DEFINER, mantener su lógica mínima, usar search_path vacío/fijo y nombres totalmente cualificados, validar auth.uid() y membresía dentro del cuerpo, revocar EXECUTE a PUBLIC y anon, y concederlo solo al rol esperado.
+5. Si una operación necesita una función SECURITY DEFINER, mantener su lógica mínima en esquema privado, usar search_path vacío/fijo y nombres totalmente cualificados, comprobar dentro del cuerpo que `auth.uid()` es el propietario del libro objetivo, revocar EXECUTE a PUBLIC y anon, y concederlo solo al rol esperado.
 6. No usar user_metadata editable como autorización; no exponer claves service_role en el frontend.
 7. Las operaciones monetarias se ejecutan en una única transacción servidor-side: comprobar permisos, validar payload, aplicar idempotencia, bloquear las obligaciones necesarias, insertar evento/líneas/asignaciones/auditoría y validar conciliación.
 8. No alterar perfiles.saldo, transacciones, RPC de salario, transferencias o retiros existentes.
@@ -138,22 +142,26 @@ Supabase documenta que los grants determinan si un rol puede llegar al objeto po
 
 ## 6. Matriz mínima de permisos
 
-| Actor | Leer libro | Gestionar contactos | Crear obligación/evento | Revertir/compensar | Administrar miembros |
+| Actor | Leer libro | Gestionar contactos | Crear obligación/evento | Revertir/compensar | Administrar libro |
 |---|---:|---:|---:|---:|---:|
-| Propietario del libro | Sí | Sí | Sí | Sí, con motivo/confirmación | Sí |
-| Miembro operador activo | Según permiso | Según permiso | Solo si se concede | Solo si se concede expresamente | No |
-| Miembro de solo lectura | Sí | No | No | No | No |
-| Contacto externo | No | No | No | No | No |
-| Usuario autenticado no miembro | No | No | No | No | No |
+| Propietario autenticado del libro (`auth.uid() = owner_user_id`) | Sí | Sí | Sí | Sí, con motivo/confirmación | Sí |
+| Usuario autenticado distinto del propietario | No | No | No | No | No |
+| Administrador de CuevaCoin que no sea propietario del libro | No | No | No | No | No |
+| Contacto externo o perfil vinculado | No | No | No | No | No |
 | anon | No | No | No | No | No |
 
-Los permisos finales del miembro operador se deben elegir antes de migración; la tabla no autoriza a todos los administradores existentes.
+En v1 no hay roles de operador/lector ni delegación de miembros. Ser administrador global de CuevaCoin no concede acceso al libro personal de otra persona.
 
-## 7. Decisión de producto pendiente — obligaciones opuestas en la misma moneda
+## 7. Decisión aprobada — presentación de posiciones mixtas
 
-Está aprobada la ficha neutral **«Posición mixta por monedas»** cuando un contacto tiene signos opuestos en monedas diferentes.
+Decisión aprobada por el propietario el **2026-11-21**:
 
-Aún falta cerrar cómo clasificar en la pantalla a un contacto que, en **la misma moneda**, conserva simultáneamente una obligación por cobrar y otra por pagar que todavía no se han compensado. La implementación no debe ocultar una de ellas, netearla silenciosamente ni mostrar a la persona duplicada en Por cobrar y Por pagar. Hasta definirlo, se conservan ambas obligaciones y se mantiene esta clasificación como gate de producto, sin imponer una regla no aprobada.
+- Un contacto se representa en una sola ficha, aunque tenga varias obligaciones o sentidos abiertos.
+- Para cada moneda, **«Te debe»** (bruto por cobrar) y **«Le debes»** (bruto por pagar) se presentan como cantidades separadas.
+- Si ambos lados son mayores que cero en la misma moneda, la ficha muestra **«Posición mixta en [moneda]»** y conserva ambas cantidades visibles. No duplica el contacto en dos listas, no oculta una cara y no presenta un saldo neto como sustituto.
+- Si los sentidos opuestos se producen en monedas diferentes, la ficha se agrupa en **«Posición mixta por monedas»**, conservando un par de importes separado para cada moneda.
+- El neto firmado sigue siendo una magnitud contable derivada para conciliación; no habilita compensación ni reemplaza la exposición de importes brutos en la interfaz.
+- Solo una acción explícita de compensación, confirmada por el propietario, reduce ambas obligaciones del mismo contacto y moneda.
 
 ## 8. Contrato de cálculo verificable
 
@@ -185,11 +193,14 @@ Aún falta cerrar cómo clasificar en la pantalla a un contacto que, en **la mis
 10. Misma clave/hash idempotente no duplica; misma clave con payload distinto se rechaza.
 11. Conciliación del signo y del pendiente.
 12. Posiciones mixtas por diferentes monedas se mantienen separadas y no se convierten.
+13. Un contacto con deudas por cobrar y por pagar en la misma moneda aparece en una sola ficha, con los dos importes brutos visibles y sin neteo automático.
+14. El catálogo v1 acepta solo CUP/USD/EUR a escala 2 y rechaza cualquier otra moneda o precisión excesiva.
 
 ### Pruebas PostgreSQL/Supabase (solo en entorno aislado antes de considerar LIVE)
 
-- RLS y grants para propietario, miembro autorizado, miembro revocado, usuario autenticado ajeno y anon.
-- No acceso directo a tablas de libro por Data API si se decide API cerrada por RPC.
+- Allowlist de CUP/USD/EUR, escala 2, parseo exacto y rechazo de monedas o precisión no admitidas.
+- RLS y grants para propietario, otro usuario autenticado (incluido un administrador global que no sea propietario) y anon; todos salvo el propietario deben ser denegados.
+- No acceso directo a tablas privadas del libro por Data API; las lecturas/escrituras pasan por la superficie de servidor autorizada.
 - Atomicidad: ningún asiento parcial ante fallo intermedio.
 - Carrera de dos abonos sobre la misma obligación; no sobreaplicar.
 - Replay y conflicto idempotente.
@@ -209,4 +220,6 @@ Aún falta cerrar cómo clasificar en la pantalla a un contacto que, en **la mis
 
 ## 11. Puerta para la siguiente entrega
 
-Esta PR solo establece el contrato y valida la aritmética pura. Antes de la migración Fase 3, revisar los casos aprobados, resolver el punto de obligaciones opuestas en la misma moneda, fijar la lista de monedas y escalas aceptadas, acordar permisos concretos de miembros y comprobar que el contrato coincide con la estructura real de PostgreSQL. La migración será una PR separada, con pruebas SQL, revisión de advisors y un Human Gate independiente para cualquier aplicación LIVE.
+Las tres decisiones de producto quedan cerradas para v1: presentación de obligaciones opuestas con importes brutos separados; catálogo CUP/USD/EUR a escala 2; y acceso owner-only sin miembros delegados. La siguiente etapa ya no debe reabrir esos gates sin una nueva decisión del propietario.
+
+Antes de crear una migración o API productiva todavía se requiere: (1) una suite de integración sobre PostgreSQL real con múltiples conexiones que demuestre las carreras de liquidación e idempotencia; (2) pruebas aisladas de Auth/JWT, ownership, RLS, grants y exposición Data API; (3) revisión del esquema y de los advisors de Supabase; y (4) una PR de implementación separada. Toda aplicación o despliegue en Supabase LIVE necesita su Human Gate independiente. Ninguna de estas decisiones autoriza por sí sola cambios LIVE o movimientos financieros.
