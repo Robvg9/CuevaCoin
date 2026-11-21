@@ -25,9 +25,9 @@ assert.match(topbar, /aria-label="Cerrar sesión"/, 'Topbar logout must be acces
 assert.match(index, /cuevacoin-v156-visual-navigation/, 'V156 responsive visual layer must be present');
 assert.match(index, /@media \(max-width: 560px\)[\s\S]*?\.topbar-logout-label\s*\{\s*display:\s*none/s, 'Logout label must collapse on small screens');
 assert.match(index, /:focus-visible/, 'Visible keyboard/touch focus treatment must be present');
-assert.match(index, /VERSION_FALLBACK = 'V\.157'/, 'HTML fallback must identify V156');
-assert.match(app, /VERSION_FALLBACK = 'V\.157'/, 'App fallback must identify V156');
-assert.match(sw, /cuevacoin-shell-v157/, 'PWA cache must be versioned to V157');
+assert.match(index, /VERSION_FALLBACK = 'V\.158'/, 'HTML fallback must identify current V158');
+assert.match(app, /VERSION_FALLBACK = 'V\.158'/, 'App fallback must identify current V158');
+assert.match(sw, /cuevacoin-shell-v158/, 'PWA cache must be versioned to V158');
 for (const path of ['js/core/app.js?v=156','js/data/notifications.js?v=156','js/ui/menu-dots.js?v=156','js/ui/notif-panel.js?v=156']) {
   assert.ok(index.includes(path), 'Changed module must be cache-busted: ' + path);
 }
@@ -156,4 +156,4 @@ console.log('PASS — V156 header logout placement and responsive styles');
 console.log('PASS — global hamburger badge ignores stale feature-announcement state');
 console.log('PASS — real unread notifications still light the bell and hamburger');
 console.log('PASS — opening notification panel clears all unread records for the active user');
-console.log('PASS — V156 HTML, JS fallback, Service Worker cache and module URLs are aligned');
+console.log('PASS — V156 navigation behavior and V158 release/cache version are aligned');
