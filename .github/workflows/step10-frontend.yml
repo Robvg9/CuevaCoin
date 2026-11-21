@@ -63,6 +63,7 @@ on:
       - "scripts/verify-fortuna-ledger-contract.mjs"
       - "scripts/verify-fortuna-postgres-schema.mjs"
       - "scripts/verify-fortuna-transaction-atomicity.mjs"
+      - "scripts/verify-fortuna-settlement-operations.mjs"
       - "docs/fortuna/**"
       - ".github/workflows/step10-frontend.yml"
   push:
@@ -129,6 +130,7 @@ on:
       - "scripts/verify-fortuna-ledger-contract.mjs"
       - "scripts/verify-fortuna-postgres-schema.mjs"
       - "scripts/verify-fortuna-transaction-atomicity.mjs"
+      - "scripts/verify-fortuna-settlement-operations.mjs"
       - "docs/fortuna/**"
       - ".github/workflows/step10-frontend.yml"
 
@@ -185,6 +187,13 @@ jobs:
           copy /Y scripts\verify-fortuna-postgres-schema.mjs "%RUNNER_TEMP%\fortuna-pglite\verify.mjs"
           set "FORTUNA_SQL_FILE=%GITHUB_WORKSPACE%\supabase\tests\fortuna_v1_schema_prototype.sql"
           node "%RUNNER_TEMP%\fortuna-pglite\verify.mjs"
+        shell: cmd
+      - name: Verify FORTUNA FIFO, manual allocations and confirmed overages in isolated PostgreSQL 17
+        run: |
+          copy /Y scripts\verify-fortuna-settlement-operations.mjs "%RUNNER_TEMP%\fortuna-pglite\verify-settlement.mjs"
+          set "FORTUNA_SQL_FILE=%GITHUB_WORKSPACE%\supabase\tests\fortuna_v1_schema_prototype.sql"
+          set "FORTUNA_SETTLEMENT_SQL_FILE=%GITHUB_WORKSPACE%\supabase\tests\fortuna_v1_settlement_prototype.sql"
+          node "%RUNNER_TEMP%\fortuna-pglite\verify-settlement.mjs"
         shell: cmd
       - name: Verify FORTUNA transaction atomicity and idempotency in isolated PostgreSQL 17
         run: |
