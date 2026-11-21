@@ -26,8 +26,10 @@ DECLARE
   v_status text;
   v_existing_response jsonb;
   v_direction text;
+  v_expected_direction text;
   v_cash_sign bigint;
   v_event_id uuid;
+  v_allocations jsonb := '[]'::jsonb;
   v_allocation jsonb;
   v_item record;
   v_requested_count integer := 0;
@@ -42,11 +44,11 @@ DECLARE
   v_response jsonb;
   v_written_total bigint;
 BEGIN
-  IF p_flow NOT IN ('cash_received', 'cash_paid') THEN
+  IF p_flow IS NULL OR p_flow NOT IN ('cash_received', 'cash_paid') THEN
     RAISE EXCEPTION 'fortuna_settlement_invalid_flow';
   END IF;
 
-  IF p_mode NOT IN ('fifo', 'manual') THEN
+  IF p_mode IS NULL OR p_mode NOT IN ('fifo', 'manual') THEN
     RAISE EXCEPTION 'fortuna_settlement_invalid_mode';
   END IF;
 
@@ -68,7 +70,7 @@ BEGIN
     RAISE EXCEPTION 'fortuna_settlement_invalid_failpoint';
   END IF;
 
-  v_direction := CASE WHEN p_flow = 'cash_received' THEN 'receivable' ELSE 'payable' END;
+  v_expected_direction := CASE WHEN p_flow = 'cash_received' THEN 'receivable' ELSE 'payable' END;
   v_cash_sign := CASE WHEN p_flow = 'cash_received' THEN -1 ELSE 1 END;
 
   IF p_mode = 'manual' THEN
@@ -126,7 +128,7 @@ BEGIN
      WHERE o.book_id = p_book_id
        AND o.contact_id = p_contact_id
        AND o.currency_code = p_currency_code
-       AND o.direction = v_direction
+       AND o.direction = v_expected_direction
      ORDER BY o.id
      FOR UPDATE;
   ELSE
@@ -170,13 +172,13 @@ BEGIN
       GROUP BY o.id, o.direction, o.opened_at
       ORDER BY o.opened_at, o.id
     LOOP
-      IF (v_direction = 'receivable' AND v_item.signed_balance < 0)
-         OR (v_direction = 'payable' AND v_item.signed_balance > 0) THEN
+      IF (v_expected_direction = 'receivable' AND v_item.signed_balance < 0)
+         OR (v_expected_direction = 'payable' AND v_item.signed_balance > 0) THEN
         RAISE EXCEPTION 'fortuna_settlement_obligation_ledger_direction_corrupt';
       END IF;
 
       v_remaining := CASE
-        WHEN v_direction = 'receivable' THEN v_item.signed_balance
+        WHEN v_expected_direction = 'receivable' THEN v_item.signed_balance
         ELSE -v_item.signed_balance
       END;
 
@@ -224,7 +226,7 @@ BEGIN
         RAISE EXCEPTION 'fortuna_settlement_manual_obligation_not_found';
       END IF;
 
-      IF v_direction <> CASE WHEN p_flow = 'cash_received' THEN 'receivable' ELSE 'payable' END THEN
+      IF v_direction <> v_expected_direction THEN
         RAISE EXCEPTION 'fortuna_settlement_manual_direction_mismatch';
       END IF;
 
