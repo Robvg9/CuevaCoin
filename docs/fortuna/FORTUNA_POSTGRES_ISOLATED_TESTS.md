@@ -20,11 +20,11 @@ The SQL fixture at supabase/tests/fortuna_v1_schema_prototype.sql is loaded only
 
 ## Automated checks
 
-The PGlite test verifies PostgreSQL DDL execution, expected tables, RLS enabled on all tables, direct-role grants, owner/book uniqueness, contact/book/currency relational integrity, positive minor amounts, precision bounds, idempotency uniqueness/state, append-only triggers, audit rows, and rollback atomicity.
+The PGlite test verifies PostgreSQL DDL execution, expected tables, RLS enabled on all tables, direct-role grants, column-scoped server UPDATE privileges, owner/book uniqueness, contact/book/currency relational integrity, positive minor amounts, precision bounds, reversal links restricted to the same contact/currency (and not another reversal), immutable idempotency request identity, one-way processing-to-committed state transition, append-only triggers, audit rows, and rollback atomicity.
 
 ## What PGlite does not prove
 
-This is real PostgreSQL execution, but it is not a full Supabase environment. It does not validate Supabase Auth/JWT behavior, the Data API schema exposure settings, Edge Function authorization, Supabase advisors, production grants/default privileges, or live database concurrency under competing connections. The test stubs only the small auth.users and public.perfiles structures needed to compile the schema. Concurrency/idempotency races and owner authorization must be covered in a later integration test against a dedicated isolated Supabase/Postgres environment.
+This is real PostgreSQL 17.5 execution, but it is not a full Supabase environment or an exact patch-version match for CuevaCoin LIVE PostgreSQL 17.11. It does not validate Supabase Auth/JWT behavior, the Data API schema exposure settings, Edge Function authorization, Supabase advisors, production grants/default privileges, or live database concurrency under competing connections. The test stubs only the small auth.users and public.perfiles structures needed to compile the schema. Concurrency/idempotency races and owner authorization must be covered in a later integration test against a dedicated isolated Supabase/Postgres environment.
 
 ## Gates before a real migration
 
