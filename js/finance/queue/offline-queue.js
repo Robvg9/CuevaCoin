@@ -291,9 +291,16 @@ export async function ejecutarAccionDeCola(item) {
         const idempotencyKey = item.datos.idempotencyKey
             || item.datos.idempotency_key
             || ('cola-item-' + item.id);
+        // New queue items store recipient IDs; old email-only items remain replayable.
+        const destinatario = item.datos.destinatarioId
+            ? { destinatarioId: item.datos.destinatarioId }
+            : (item.datos.destinatarioCorreo
+                ? { destinatarioCorreo: item.datos.destinatarioCorreo }
+                : null);
+        if (!destinatario) throw new Error('La transferencia pendiente no tiene un destinatario válido.');
         const { data, error } = await window.supabaseClient.functions.invoke('transferir-saldo', {
             body: {
-                destinatarioCorreo: item.datos.destinatarioCorreo,
+                ...destinatario,
                 cantidad: item.datos.cantidad,
                 motivo: item.datos.motivo,
                 idempotencyKey: idempotencyKey

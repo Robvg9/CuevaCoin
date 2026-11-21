@@ -4863,8 +4863,8 @@
             </div>
             <form id="transferir-form">
                 <div class="form-group">
-                    <label for="transferir-destinatario-correo">Correo electrónico:</label>
-                    <input type="email" id="transferir-destinatario-correo" required>
+                    <label for="transferir-destinatario-correo">Destinatario (correo, usuario o nombre):</label>
+                    <input type="text" id="transferir-destinatario-correo" placeholder="Correo, usuario o nombre" autocomplete="off" required>
                 </div>
                 <input type="number" id="transferir-cantidad" placeholder="Cantidad" step="1" min="1" required>
                 <input type="text" id="transferir-motivo" placeholder="Motivo (opcional)">
@@ -5453,7 +5453,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.156';
+                const VERSION_FALLBACK = 'V.157';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller

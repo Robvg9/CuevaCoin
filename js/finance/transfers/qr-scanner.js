@@ -7,7 +7,7 @@ export async function iniciarCamaraScanner() {
     escanerQRProcesando = false;
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        estado.textContent = 'Este dispositivo/navegador no permite usar la cámara acá. Escribe el correo a mano.';
+        estado.textContent = 'Este dispositivo/navegador no permite usar la cámara acá. Busca por correo, usuario o nombre.';
         return;
     }
 
@@ -20,7 +20,7 @@ export async function iniciarCamaraScanner() {
         escanerQRAnimId = requestAnimationFrame(loopEscanerQR);
     } catch (err) {
         console.error('Error abriendo cámara para escanear QR:', err);
-        estado.textContent = 'No se pudo acceder a la cámara (¿diste permiso?). Escribe el correo a mano.';
+        estado.textContent = 'No se pudo acceder a la cámara (¿diste permiso?). Busca por correo, usuario o nombre.';
     }
 }
 
@@ -115,10 +115,12 @@ export async function procesarQREscaneado(texto) {
             escanerQRAnimId = requestAnimationFrame(loopEscanerQR);
             return;
         }
-        document.getElementById('transferir-destinatario-correo').value = data.correo;
-        window.transferenciaViaQR = true;
+        if (!data.id || typeof window.establecerDestinatarioTransferencia !== 'function') {
+            throw new Error('El QR no devolvió un destinatario válido.');
+        }
+        window.establecerDestinatarioTransferencia({ id: data.id, nombre: data.nombre, apellido: data.apellido, usuario: data.usuario, estado: 'activo' }, true);
         cerrarScannerQR();
-        const nombreMostrado = [data.nombre, data.apellido].filter(Boolean).join(' ') || data.correo;
+        const nombreMostrado = [data.nombre, data.apellido].filter(Boolean).join(' ') || (data.usuario ? '@' + data.usuario : 'Destinatario');
         window.showToast(`Destinatario cargado: ${nombreMostrado}`, 3000);
     } catch (err) {
         console.error('Error resolviendo QR escaneado:', err);

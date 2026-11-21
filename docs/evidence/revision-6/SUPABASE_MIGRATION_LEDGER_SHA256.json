@@ -67,7 +67,8 @@
     "20261020222631_password_recovery_request_tokens.sql",
     "20261030153827_admin_recovery_codes.sql",
     "20261030153927_admin_recovery_approved_by_index.sql",
-    "20261104235424_admin_salary_individual_batch.sql"
+    "20261104235424_admin_salary_individual_batch.sql",
+    "20261121110000_transfer_recipient_id_privacy_active_admin.sql"
   ],
   "recovered": [
     {
@@ -359,6 +360,14 @@
       "file": "20260830160212_fix_resolver_destinatario_identificador_nombre.sql",
       "sha256": "e9163f796b938a42ed4c24f8652be670a21aa423e2d1fa28edd4ba1761d071dd",
       "characters": 1188
+    }
+  ],
+  "baseline_ledger_count": 65,
+  "forward_migrations": [
+    {
+      "file": "20261121110000_transfer_recipient_id_privacy_active_admin.sql",
+      "purpose": "Additive ID-only recipient resolver and active-admin guards on both withdrawal resolver overloads",
+      "captured_from_live": "Read-only function definitions inspected 2026-11-21; not executed"
     }
   ]
 }

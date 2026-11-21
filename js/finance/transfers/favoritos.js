@@ -24,7 +24,7 @@ export async function cargarChipsFavoritos() {
 
     const { data, error } = await window.supabaseClient
         .from('favoritos')
-        .select('favorito_id, favorito:favorito_id(nombre, usuario, correo)')
+        .select('favorito_id, favorito:favorito_id(nombre, usuario, estado)')
         .order('creado_en', { ascending: false });
 
     if (error) {
@@ -34,7 +34,7 @@ export async function cargarChipsFavoritos() {
     }
 
     window.favoritosIdsCache = new Set((data || []).map(f => f.favorito_id));
-    const favoritos = (data || []).filter(f => f.favorito?.correo);
+    const favoritos = (data || []).filter(f => f.favorito?.estado === 'activo');
 
     if (favoritos.length === 0) {
         contenedor.replaceChildren(
@@ -46,18 +46,18 @@ export async function cargarChipsFavoritos() {
     const fragment = document.createDocumentFragment();
     favoritos.forEach(f => {
         const nombre = f.favorito.nombre || f.favorito.usuario || 'Favorito';
-        const correo = String(f.favorito.correo);
+        const destinatarioId = f.favorito_id;
         const button = crearTextoFavorito('button', 'favorito-chip', '⭐ ' + nombre);
         button.type = 'button';
-        button.addEventListener('click', () => usarFavoritoParaTransferir(correo));
+        button.addEventListener('click', () => usarFavoritoParaTransferir(destinatarioId, f.favorito.nombre, f.favorito.usuario));
         fragment.appendChild(button);
     });
     contenedor.replaceChildren(fragment);
 }
 
-export function usarFavoritoParaTransferir(correo) {
-    const input = document.getElementById('transferir-destinatario-correo');
-    if (input) input.value = String(correo || '');
+export function usarFavoritoParaTransferir(destinatarioId, nombre, usuario) {
+    if (!destinatarioId) return;
+    window.establecerDestinatarioTransferencia({ id: destinatarioId, nombre: nombre || '', usuario: usuario || '', estado: 'activo' }, false);
 }
 
 export async function toggleFavorito(contraparteId, nombre, botonEl) {

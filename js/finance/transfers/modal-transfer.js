@@ -14,6 +14,7 @@ export function abrirModalTransaccional(modalId) {
         // Reautenticación QR (2026-08-08): cada apertura "de cero" del
         // modal empieza sin destinatario cargado por QR todavía.
         window.transferenciaViaQR = false;
+        window.transferenciaDestinatarioSeleccionado = null;
     }
 }
 
