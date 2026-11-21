@@ -20,7 +20,7 @@ The SQL fixture at supabase/tests/fortuna_v1_schema_prototype.sql is loaded only
 
 ## Automated checks
 
-The PGlite test verifies PostgreSQL DDL execution, expected tables, RLS enabled on all tables, direct-role grants, column-scoped server UPDATE privileges, owner/book uniqueness, contact/book/currency relational integrity, positive minor amounts, precision bounds, reversal links restricted to the same contact/currency (and not another reversal), immutable idempotency request identity, one-way processing-to-committed state transition, append-only triggers, audit rows, and rollback atomicity.
+The PGlite test verifies PostgreSQL DDL execution, expected tables, RLS enabled on all tables, direct-role grants, column-scoped server UPDATE privileges, owner/book uniqueness, linked-profile uniqueness per book, contact/book/currency relational integrity, non-empty obligation descriptions, positive minor amounts, precision bounds, required reason and same-book/contact/currency reversal links (no self-reversal or reversal-of-reversal), actor-scoped idempotency keys, immutable idempotency identity and committed result, one-way processing-to-committed transition, append-only triggers, audit rows, and rollback atomicity.
 
 ## What PGlite does not prove
 
