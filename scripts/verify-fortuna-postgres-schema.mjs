@@ -97,6 +97,7 @@ try {
       has_column_privilege('service_role', 'fortuna_private.financial_contacts', 'display_name', 'UPDATE') AS update_contact_name,
       has_column_privilege('service_role', 'fortuna_private.financial_contacts', 'linked_profile_id', 'UPDATE') AS update_contact_profile,
       has_column_privilege('service_role', 'fortuna_private.financial_contacts', 'book_id', 'UPDATE') AS update_contact_book,
+      has_column_privilege('service_role', 'fortuna_private.financial_idempotency', 'actor_user_id', 'UPDATE') AS update_idempotency_actor,
       has_column_privilege('service_role', 'fortuna_private.financial_idempotency', 'status', 'UPDATE') AS update_idempotency_status,
       has_column_privilege('service_role', 'fortuna_private.financial_idempotency', 'payload_sha256', 'UPDATE') AS update_idempotency_hash,
       has_column_privilege('service_role', 'fortuna_private.financial_idempotency', 'idempotency_key', 'UPDATE') AS update_idempotency_key,
@@ -119,6 +120,7 @@ try {
     update_contact_name: true,
     update_contact_profile: true,
     update_contact_book: false,
+    update_idempotency_actor: false,
     update_idempotency_status: true,
     update_idempotency_hash: false,
     update_idempotency_key: false,
@@ -137,6 +139,7 @@ try {
   const openingEvent = '60000000-0000-4000-8000-000000000001';
   const cashEvent = '60000000-0000-4000-8000-000000000002';
   const reversalEvent = '60000000-0000-4000-8000-000000000003';
+  const selfReversalEvent = '60000000-0000-4000-8000-000000000004';
 
   await db.query('INSERT INTO auth.users (id) VALUES ($1), ($2)', [owner1, owner2]);
   await db.query('INSERT INTO public.perfiles (id) VALUES ($1)', [linkedProfile]);
@@ -283,7 +286,7 @@ try {
       `INSERT INTO fortuna_private.financial_events
         (id, book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id, reversal_reason)
        VALUES ($1, $2, $3, 'CUP', 'reversal', $4, $1, 'self reversal fixture')`,
-      [reversalEvent, book1, contact1, owner1]
+      [selfReversalEvent, book1, contact1, owner1]
     ),
     /check constraint/i
   );
@@ -337,7 +340,7 @@ try {
     [book1, owner1, key, payloadHash]
   );
   await expectFailure(
-    'idempotency key is unique within the book',
+    'same actor cannot reuse an idempotency key within the book',
     () => db.query(
       `INSERT INTO fortuna_private.financial_idempotency
         (book_id, actor_user_id, idempotency_key, payload_sha256)
@@ -350,8 +353,8 @@ try {
     `UPDATE fortuna_private.financial_idempotency
         SET status = 'committed', event_id = $1, committed_at = now(),
             response = '{"accepted":true}'::jsonb
-      WHERE book_id = $2 AND idempotency_key = $3`,
-    [cashEvent, book1, key]
+      WHERE book_id = $2 AND actor_user_id = $3 AND idempotency_key = $4`,
+    [cashEvent, book1, owner1, key]
   );
   await expectFailure(
     'processing idempotency row cannot contain a result',
@@ -394,8 +397,8 @@ try {
     () => db.query(
       `UPDATE fortuna_private.financial_idempotency
           SET payload_sha256 = $1
-        WHERE book_id = $2 AND idempotency_key = $3`,
-      ['b'.repeat(64), book1, key]
+        WHERE book_id = $2 AND actor_user_id = $3 AND idempotency_key = $4`,
+      ['b'.repeat(64), book1, owner1, key]
     ),
     /fortuna_idempotency_identity_immutable/i
   );
@@ -404,8 +407,8 @@ try {
     () => db.query(
       `UPDATE fortuna_private.financial_idempotency
           SET response = '{"accepted":false}'::jsonb
-        WHERE book_id = $1 AND idempotency_key = $2`,
-      [book1, key]
+        WHERE book_id = $1 AND actor_user_id = $2 AND idempotency_key = $3`,
+      [book1, owner1, key]
     ),
     /fortuna_idempotency_committed_immutable/i
   );
