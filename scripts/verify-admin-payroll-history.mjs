@@ -136,7 +136,7 @@ assert.notEqual(invalidDate.status, 0, 'Invalid calendar dates must be rejected'
 console.log('PASS — local date boundaries cover Puerto Rico and 23/25-hour DST days.');
 
 assert.match(app, /VERSION_FALLBACK = 'V\.156'/);
-assert.match(sw, /cuevacoin-shell-v156/);
+assert.match(sw, /cuevacoin-shell-v157/);
 assert.match(index, /destinatarios\.js\?v=155/);
 assert.match(index, /historial-general\.js\?v=155/);
 assert.match(index, /cuevacoin-v155-admin-history-cleanup/);

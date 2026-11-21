@@ -4,6 +4,17 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "supabase/functions/transferir-saldo/**"
+
+      - "supabase/functions/resolver-cuenta-qr/**"
+
+      - "supabase/functions/resolver-cuenta-usuario/**"
+
+      - "js/finance/transfers/**"
+
+      - "js/finance/withdrawals/admin-retiros.js"
+
+      - "scripts/verify-transfer-recipient-security.mjs"
       - "index.html"
       - "js/legacy-app.js"
       - "js/core/app.js"
@@ -55,6 +66,17 @@ on:
       - "main"
       - "fix/**"
     paths:
+      - "supabase/functions/transferir-saldo/**"
+
+      - "supabase/functions/resolver-cuenta-qr/**"
+
+      - "supabase/functions/resolver-cuenta-usuario/**"
+
+      - "js/finance/transfers/**"
+
+      - "js/finance/withdrawals/admin-retiros.js"
+
+      - "scripts/verify-transfer-recipient-security.mjs"
       - "index.html"
       - "js/legacy-app.js"
       - "js/core/app.js"
@@ -136,4 +158,7 @@ jobs:
         shell: cmd
       - name: Verify V156 header, unread badge, and responsive UI
         run: node scripts/verify-v156-navigation-ui.mjs
+        shell: cmd
+      - name: Verify recipient-ID privacy and active-admin withdrawal guards
+        run: node scripts/verify-transfer-recipient-security.mjs
         shell: cmd

@@ -7,7 +7,9 @@ export async function resolverSolicitudRetiro(solicitudId, accion) {
     });
     if (error) {
         console.error(error);
-        if (error.message && error.message.includes('ya_no_pendiente')) {
+        if (error.message && /administrador activo|admin.*activo/i.test(error.message)) {
+            window.showToast('Tu cuenta administrativa no está activa. No se procesó el retiro.', 4000);
+        } else if (error.message && error.message.includes('ya_no_pendiente')) {
             window.showToast('Esta solicitud ya no estaba pendiente — se refrescó la lista.', 3500);
         } else {
             window.showToast(`No se pudo ${accion === 'aprobar' ? 'aprobar' : 'rechazar'} la solicitud. Intenta de nuevo.`, 3000);

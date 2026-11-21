@@ -27,7 +27,7 @@ assert.match(index, /@media \(max-width: 560px\)[\s\S]*?\.topbar-logout-label\s*
 assert.match(index, /:focus-visible/, 'Visible keyboard/touch focus treatment must be present');
 assert.match(index, /VERSION_FALLBACK = 'V\.156'/, 'HTML fallback must identify V156');
 assert.match(app, /VERSION_FALLBACK = 'V\.156'/, 'App fallback must identify V156');
-assert.match(sw, /cuevacoin-shell-v156/, 'PWA cache must be versioned to V156');
+assert.match(sw, /cuevacoin-shell-v157/, 'PWA cache must be versioned to V156');
 for (const path of ['js/core/app.js?v=156','js/data/notifications.js?v=156','js/ui/menu-dots.js?v=156','js/ui/notif-panel.js?v=156']) {
   assert.ok(index.includes(path), 'Changed module must be cache-busted: ' + path);
 }

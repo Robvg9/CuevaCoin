@@ -2043,97 +2043,99 @@
         // ya no sabemos con certeza que el destinatario sigue siendo el
         // escaneado - se vuelve a pedir confirm() normal en vez de contraseña.
         document.getElementById('transferir-destinatario-correo').addEventListener('input', function() {
-            transferenciaViaQR = false;
+            // Manual edits invalidate the previously selected internal recipient ID.
+            window.transferenciaDestinatarioSeleccionado = null;
+            window.transferenciaViaQR = false;
         });
 
         document.getElementById('transferir-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const destinatarioCorreo = document.getElementById('transferir-destinatario-correo').value.trim();
+            const inputDestinatario = document.getElementById('transferir-destinatario-correo');
+            const textoDestinatario = inputDestinatario.value.trim();
             const valorCantidadTransferir = document.getElementById('transferir-cantidad').value;
             const cantidad = parseInt(valorCantidadTransferir, 10);
             const motivo = document.getElementById('transferir-motivo').value || 'Transferencia';
             let usuarioSesion = null;
             try {
                 usuarioSesion = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual') || 'null');
-            } catch (eSesion) {
-                usuarioSesion = null;
-            }
+            } catch (eSesion) { usuarioSesion = null; }
             if (!usuarioSesion || !usuarioSesion.id) {
                 showToast('Sesión no válida. Vuelve a iniciar sesión.', 3500);
                 return;
             }
-
-            // F8: mismo motivo que en retiro-form - guard a mano porque este
-            // formulario tiene su propia cola offline.
             if (cuentaDesactivadaGlobal) {
                 showToast('❌ Tu cuenta está desactivada. Contacta a soporte para más información.', 3500);
                 closeModal('transferir-modal');
                 return;
             }
-
             if (usuarioSesion && !usuarioSesion.esAdmin && !usuarioSesion.perfilCompleto) {
                 showToast('Completa tu perfil antes de transferir', 4000);
                 closeModal('transferir-modal');
                 return;
             }
-
-            if (!destinatarioCorreo) {
-                showToast('Escribe el correo electrónico del destinatario', 3000);
+            if (!esMontoEnteroValido(valorCantidadTransferir)) {
+                showToast('La cantidad debe ser un número entero mayor a 0, sin decimales', 3500);
                 return;
             }
 
-            // Resolver correo/usuario/nombre vía RPC (no depender de SELECT cliente a perfiles)
-            if (navigator.onLine && typeof resolverDestinatarioTransferencia === 'function') {
+            let destinatarioSeleccionado = window.transferenciaDestinatarioSeleccionado || null;
+            if (!destinatarioSeleccionado || !destinatarioSeleccionado.id) {
+                if (!textoDestinatario) {
+                    showToast('Busca o selecciona un destinatario antes de transferir.', 3000);
+                    return;
+                }
+                if (!navigator.onLine) {
+                    showToast('Para resolver un correo, usuario o nombre necesitas conexión. Los favoritos ya cargados sí funcionan sin conexión.', 5000);
+                    return;
+                }
+                if (typeof resolverDestinatarioTransferencia !== 'function') {
+                    showToast('Búsqueda no disponible. Recarga la app.', 3500);
+                    return;
+                }
                 try {
-                    const destResuelto = await resolverDestinatarioTransferencia(destinatarioCorreo);
-                    if (!destResuelto || !destResuelto.correo) {
-                        showToast('No existe ninguna cuenta con ese correo, usuario o nombre', 4000);
+                    const resuelto = await resolverDestinatarioTransferencia(textoDestinatario);
+                    if (!resuelto || !resuelto.id) {
+                        showToast('No existe ninguna cuenta con ese correo, usuario o nombre.', 4000);
                         return;
                     }
-                    try {
-                        const yoT = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual') || 'null');
-                        if (yoT && destResuelto.id && yoT.id === destResuelto.id) {
-                            showToast('No puedes transferirte a ti mismo', 3500);
-                            return;
-                        }
-                    } catch (eYoT) { /* ignore */ }
-                    if (destResuelto.estado && String(destResuelto.estado).toLowerCase() !== 'activo') {
-                        showToast('Esa cuenta no está activa', 3500);
+                    if (resuelto.id === usuarioSesion.id) {
+                        showToast('No puedes transferirte a ti mismo.', 3500);
                         return;
                     }
-                    destinatarioCorreo = destResuelto.correo;
-                    document.getElementById('transferir-destinatario-correo').value = destinatarioCorreo;
+                    if (resuelto.estado !== 'activo') {
+                        showToast('Esa cuenta no está activa.', 3500);
+                        return;
+                    }
+                    window.establecerDestinatarioTransferencia(resuelto, false);
+                    destinatarioSeleccionado = window.transferenciaDestinatarioSeleccionado;
                 } catch (eRes) {
                     showToast((eRes && eRes.message) ? eRes.message : 'No se pudo verificar el destinatario', 4000);
                     return;
                 }
             }
 
-            if (!esMontoEnteroValido(valorCantidadTransferir)) {
-                showToast('La cantidad debe ser un número entero mayor a 0, sin decimales', 3500);
+            if (!destinatarioSeleccionado || !destinatarioSeleccionado.id) {
+                showToast('Selecciona un destinatario válido.', 3500);
                 return;
             }
+            if (destinatarioSeleccionado.id === usuarioSesion.id) {
+                showToast('No puedes transferirte a ti mismo.', 3500);
+                return;
+            }
+            if (destinatarioSeleccionado.estado && destinatarioSeleccionado.estado !== 'activo') {
+                showToast('Esa cuenta no está activa.', 3500);
+                return;
+            }
+            const nombreDestinatario = [destinatarioSeleccionado.nombre, destinatarioSeleccionado.apellido]
+                .filter(Boolean).join(' ') || (destinatarioSeleccionado.usuario ? '@' + destinatarioSeleccionado.usuario : 'Destinatario');
 
-            // Reautenticación QR (2026-08-08, a pedido del usuario): si el
-            // destinatario vino de escanear su QR (sin editar a mano), pedir
-            // la contraseña de la cuenta en vez del confirm() nativo - paso
-            // de seguridad extra porque acá la persona nunca tipeó/revisó el
-            // correo del destinatario a mano.
             if (transferenciaViaQR) {
-                abrirConfirmarPasswordTransferencia(destinatarioCorreo, cantidad, motivo);
+                abrirConfirmarPasswordTransferencia(destinatarioSeleccionado.id, nombreDestinatario, cantidad, motivo);
                 return;
             }
-
-            // Confirmación explícita antes de mover el dinero: evita transferencias
-            // por error (monto o destinatario equivocado). Si el usuario cancela,
-            // no se llama a la Edge Function y no se toca el saldo. Funciona igual
-            // sin internet (es un diálogo nativo del navegador, no necesita red).
-            const confirmado = confirm(`Estás a punto de transferir $${cantidad.toFixed(2)} a ${destinatarioCorreo}. ¿Estás seguro de esto?`);
-            if (!confirmado) {
-                return;
-            }
-
-            await ejecutarTransferencia(destinatarioCorreo, cantidad, motivo);
+            const confirmado = confirm('Estás a punto de transferir $' + cantidad.toFixed(2) + ' a ' + nombreDestinatario + '. ¿Estás seguro de esto?');
+            if (!confirmado) return;
+            await ejecutarTransferencia(destinatarioSeleccionado.id, cantidad, motivo, nombreDestinatario);
         });
 
         // Reautenticación QR (2026-08-08): modal chico con un solo campo de
@@ -2172,10 +2174,10 @@
                 return;
             }
 
-            const { destinatarioCorreo, cantidad, motivo } = transferenciaPendienteQR;
+            const { destinatarioId, destinatarioNombre, cantidad, motivo } = transferenciaPendienteQR;
             transferenciaPendienteQR = null;
             closeModal('confirmar-password-qr-modal');
-            await ejecutarTransferencia(destinatarioCorreo, cantidad, motivo);
+            await ejecutarTransferencia(destinatarioId, cantidad, motivo, destinatarioNombre);
         });
 
         // Punto 8 (2026-08-09): buscar destinatario por nombre de usuario,
@@ -2206,26 +2208,23 @@
                     return;
                 }
                 const dest = await resolverDestinatarioTransferencia(textoBusqueda);
-                if (!dest || !dest.correo) {
+                if (!dest || !dest.id) {
                     estado.textContent = 'No existe ninguna cuenta con ese correo, usuario o nombre.';
                     return;
                 }
-                // Cuenta propia
-                try {
-                    const yo = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual') || 'null');
-                    if (yo && dest.id && yo.id === dest.id) {
-                        estado.textContent = 'No puedes transferirte a ti mismo.';
-                        return;
-                    }
-                } catch (eYo) { /* ignore */ }
-                if (dest.estado && String(dest.estado).toLowerCase() !== 'activo') {
+                const yo = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual') || 'null');
+                if (yo && dest.id === yo.id) {
+                    estado.textContent = 'No puedes transferirte a ti mismo.';
+                    return;
+                }
+                if (dest.estado !== 'activo') {
                     estado.textContent = 'Esa cuenta no está activa.';
                     return;
                 }
-                document.getElementById('transferir-destinatario-correo').value = dest.correo;
+                window.establecerDestinatarioTransferencia(dest, false);
                 cerrarBuscarUsuarioTransferir();
-                const nombreMostrado = dest.nombre || dest.usuario || dest.correo;
-                showToast(`Destinatario cargado: ${nombreMostrado}`, 3000);
+                const nombreMostrado = [dest.nombre, dest.apellido].filter(Boolean).join(' ') || (dest.usuario ? '@' + dest.usuario : 'Destinatario');
+                showToast('Destinatario cargado: ' + nombreMostrado, 3000);
             } catch (err) {
                 console.error('Error resolviendo destinatario:', err);
                 estado.textContent = (err && err.message) ? err.message : 'Error de conexión buscando destinatario.';
