@@ -1,0 +1,57 @@
+name: FORTUNA native PostgreSQL concurrency tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/tests/fortuna_v1_schema_prototype.sql"
+      - "supabase/tests/fortuna_v1_settlement_prototype.sql"
+      - "scripts/verify-fortuna-postgres-concurrency.mjs"
+      - "docs/fortuna/**"
+      - ".github/workflows/fortuna-postgres-concurrency.yml"
+  push:
+    branches:
+      - "main"
+      - "fix/**"
+    paths:
+      - "supabase/tests/fortuna_v1_schema_prototype.sql"
+      - "supabase/tests/fortuna_v1_settlement_prototype.sql"
+      - "scripts/verify-fortuna-postgres-concurrency.mjs"
+      - "docs/fortuna/**"
+      - ".github/workflows/fortuna-postgres-concurrency.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fortuna-native-pg-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-postgres-concurrency:
+    runs-on: [self-hosted, Windows, X64, cuevacoin]
+    timeout-minutes: 20
+    env:
+      FORTUNA_TEST_HOME: ${{ runner.temp }}\fortuna-native-pg-${{ github.run_id }}
+      FORTUNA_SCHEMA_SQL_FILE: ${{ github.workspace }}\supabase\tests\fortuna_v1_schema_prototype.sql
+      FORTUNA_SETTLEMENT_SQL_FILE: ${{ github.workspace }}\supabase\tests\fortuna_v1_settlement_prototype.sql
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install pinned native PostgreSQL 17.11 runtime
+        run: |
+          if exist "%FORTUNA_TEST_HOME%" rmdir /s /q "%FORTUNA_TEST_HOME%"
+          mkdir "%FORTUNA_TEST_HOME%"
+          cd /d "%FORTUNA_TEST_HOME%"
+          echo {"private":true,"type":"module"}>package.json
+          npm install --no-audit --no-fund --save-exact embedded-postgres@17.11.0-beta.19
+        shell: cmd
+
+      - name: Verify real multi-connection settlement and idempotency
+        run: |
+          copy /Y scripts\verify-fortuna-postgres-concurrency.mjs "%FORTUNA_TEST_HOME%\verify.mjs"
+          node "%FORTUNA_TEST_HOME%\verify.mjs"
+        shell: cmd
