@@ -88,7 +88,7 @@ console.log('PASS — salary batch transaction test verifies replay, payload mis
 
 // Recovered migration ledger: validate filenames and byte-exact SQL provenance.
 const ledgerManifest = JSON.parse(readFileSync('docs/evidence/revision-6/SUPABASE_MIGRATION_LEDGER_SHA256.json', 'utf8'));
-const migrationFiles = readdirSync('supabase/migrations').filter(name => /^\\d{14}_[a-z0-9_]+\\.sql$/.test(name)).sort();
+const migrationFiles = readdirSync('supabase/migrations').filter(name => name.length > 18 && [...name.slice(0, 14)].every(ch => ch >= '0' && ch <= '9') && name[14] === '_' && name.endsWith('.sql')).sort();
 assert.deepEqual(migrationFiles, [...ledgerManifest.expected_files].sort(), 'Tracked migration filenames must match all 65 LIVE ledger versions');
 for (const entry of ledgerManifest.recovered) {
   const source = readFileSync('supabase/migrations/' + entry.file, 'utf8');
