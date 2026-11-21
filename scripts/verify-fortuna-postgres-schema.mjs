@@ -163,10 +163,20 @@ try {
     [contact1, book1, contact2, linkedProfile]
   );
 
+  await expectFailure(
+    'linked profile can appear only once per book',
+    () => db.query(
+      `INSERT INTO fortuna_private.financial_contacts (book_id, display_name, linked_profile_id)
+       VALUES ($1, 'Duplicate linked profile', $2)`,
+      [book1, linkedProfile]
+    ),
+    /unique/i
+  );
+
   await db.query(
     `INSERT INTO fortuna_private.financial_obligations
-      (id, book_id, contact_id, currency_code, direction, principal_minor, created_by)
-     VALUES ($1, $2, $3, 'CUP', 'receivable', 12540, $4)`,
+      (id, book_id, contact_id, currency_code, direction, principal_minor, description, created_by)
+     VALUES ($1, $2, $3, 'CUP', 'receivable', 12540, 'Préstamo fixture', $4)`,
     [obligation1, book1, contact1, owner1]
   );
   await expectFailure(
@@ -225,8 +235,8 @@ try {
     'reversal cannot cross currencies',
     () => db.query(
       `INSERT INTO fortuna_private.financial_events
-        (book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id)
-       VALUES ($1, $2, 'USD', 'reversal', $3, $4)`,
+        (book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id, reversal_reason)
+       VALUES ($1, $2, 'USD', 'reversal', $3, $4, 'currency mismatch fixture')`,
       [book1, contact1, owner1, cashEvent]
     ),
     /foreign key/i
@@ -235,27 +245,47 @@ try {
     'reversal cannot cross contacts',
     () => db.query(
       `INSERT INTO fortuna_private.financial_events
-        (book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id)
-       VALUES ($1, $2, 'CUP', 'reversal', $3, $4)`,
+        (book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id, reversal_reason)
+       VALUES ($1, $2, 'CUP', 'reversal', $3, $4, 'contact mismatch fixture')`,
       [book1, contact2, owner1, cashEvent]
     ),
     /foreign key/i
   );
   await db.query(
     `INSERT INTO fortuna_private.financial_events
-      (id, book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id)
-     VALUES ($1, $2, $3, 'CUP', 'reversal', $4, $5)`,
+      (id, book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id, reversal_reason)
+     VALUES ($1, $2, $3, 'CUP', 'reversal', $4, $5, 'Partial correction fixture')`,
     [reversalEvent, book1, contact1, owner1, cashEvent]
   );
   await expectFailure(
     'a reversal cannot reverse another reversal',
     () => db.query(
       `INSERT INTO fortuna_private.financial_events
-        (book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id)
-       VALUES ($1, $2, 'CUP', 'reversal', $3, $4)`,
+        (book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id, reversal_reason)
+       VALUES ($1, $2, 'CUP', 'reversal', $3, $4, 'invalid second reversal fixture')`,
       [book1, contact1, owner1, reversalEvent]
     ),
     /fortuna_invalid_reversal_target/i
+  );
+  await expectFailure(
+    'reversal must provide a non-empty reason',
+    () => db.query(
+      `INSERT INTO fortuna_private.financial_events
+        (book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id)
+       VALUES ($1, $2, 'CUP', 'reversal', $3, $4)`,
+      [book1, contact1, owner1, cashEvent]
+    ),
+    /check constraint/i
+  );
+  await expectFailure(
+    'event cannot reverse itself',
+    () => db.query(
+      `INSERT INTO fortuna_private.financial_events
+        (id, book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id, reversal_reason)
+       VALUES ($1, $2, $3, 'CUP', 'reversal', $4, $1, 'self reversal fixture')`,
+      [reversalEvent, book1, contact1, owner1]
+    ),
+    /check constraint/i
   );
   await db.query(
     `INSERT INTO fortuna_private.financial_ledger_entries
@@ -302,17 +332,17 @@ try {
   const payloadHash = 'a'.repeat(64);
   await db.query(
     `INSERT INTO fortuna_private.financial_idempotency
-      (book_id, idempotency_key, payload_sha256)
-     VALUES ($1, $2, $3)`,
-    [book1, key, payloadHash]
+      (book_id, actor_user_id, idempotency_key, payload_sha256)
+     VALUES ($1, $2, $3, $4)`,
+    [book1, owner1, key, payloadHash]
   );
   await expectFailure(
     'idempotency key is unique within the book',
     () => db.query(
       `INSERT INTO fortuna_private.financial_idempotency
-        (book_id, idempotency_key, payload_sha256)
-       VALUES ($1, $2, $3)`,
-      [book1, key, 'b'.repeat(64)]
+        (book_id, actor_user_id, idempotency_key, payload_sha256)
+       VALUES ($1, $2, $3, $4)`,
+      [book1, owner1, key, 'b'.repeat(64)]
     ),
     /unique/i
   );
@@ -327,9 +357,9 @@ try {
     'processing idempotency row cannot contain a result',
     () => db.query(
       `INSERT INTO fortuna_private.financial_idempotency
-        (book_id, idempotency_key, payload_sha256, event_id)
-       VALUES ($1, 'fortuna-test-key-0003', $2, $3)`,
-      [book1, payloadHash, cashEvent]
+        (book_id, actor_user_id, idempotency_key, payload_sha256, event_id)
+       VALUES ($1, $2, 'fortuna-test-key-0003', $3, $4)`,
+      [book1, owner1, payloadHash, cashEvent]
     ),
     /check constraint/i
   );
@@ -337,11 +367,27 @@ try {
     'idempotency row cannot be created directly as committed',
     () => db.query(
       `INSERT INTO fortuna_private.financial_idempotency
-        (book_id, idempotency_key, payload_sha256, status, event_id, response, committed_at)
-       VALUES ($1, 'fortuna-test-key-0002', $2, 'committed', $3, '{}'::jsonb, now())`,
-      [book1, payloadHash, cashEvent]
+        (book_id, actor_user_id, idempotency_key, payload_sha256, status, event_id, response, committed_at)
+       VALUES ($1, $2, 'fortuna-test-key-0002', $3, 'committed', $4, '{}'::jsonb, now())`,
+      [book1, owner1, payloadHash, cashEvent]
     ),
     /fortuna_idempotency_initial_state_invalid/i
+  );
+  await db.query(
+    `INSERT INTO fortuna_private.financial_idempotency
+      (book_id, actor_user_id, idempotency_key, payload_sha256)
+     VALUES ($1, $2, $3, $4)`,
+    [book1, owner2, key, payloadHash]
+  );
+  await expectFailure(
+    'idempotency key is scoped to the actor within the book',
+    () => db.query(
+      `INSERT INTO fortuna_private.financial_idempotency
+        (book_id, actor_user_id, idempotency_key, payload_sha256)
+       VALUES ($1, $2, $3, $4)`,
+      [book1, owner1, key, payloadHash]
+    ),
+    /unique/i
   );
   await expectFailure(
     'idempotency payload hash cannot be rewritten after insert',
