@@ -1,0 +1,1 @@
+ALTER TABLE public.chat ALTER COLUMN destinatario_id DROP NOT NULL;

@@ -13,7 +13,7 @@ const adminPanel = read('js/finance/orchestration/show-admin-panel.js');
 const userPanel = read('js/finance/orchestration/show-user-dashboard.js');
 const app = read('js/core/app.js');
 const localDateRange = read('js/utils/local-date-range.js');
-const migration = read('supabase/migrations/20261104183000_admin_salary_individual_batch.sql');
+const migration = read('supabase/migrations/20261104235424_admin_salary_individual_batch.sql');
 const sqlTest = read('supabase/tests/admin_payroll_batch_atomicity.sql');
 
 assert.match(history, /from\('transacciones'\)/);

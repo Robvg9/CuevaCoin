@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 const migrationPath = 'supabase/migrations/20261014161845_step10_p0_security_atomic_balance_adjustment.sql';
 const migration = readFileSync(migrationPath, 'utf8');
@@ -61,7 +62,7 @@ console.log('PASS — admin adjustment and batch payout deny archived/inactive a
 console.log('PASS: ' + sqlChecks.length + ' migration invariant groups');
 
 
-const salaryMigration = readFileSync('supabase/migrations/20261104183000_admin_salary_individual_batch.sql', 'utf8');
+const salaryMigration = readFileSync('supabase/migrations/20261104235424_admin_salary_individual_batch.sql', 'utf8');
 const salaryBatchTest = readFileSync('supabase/tests/admin_payroll_batch_atomicity.sql', 'utf8');
 for (const [label, pattern] of [
   ['creates an RLS-protected idempotency ledger', /CREATE TABLE public\.admin_pagos_salario_idempotencia[\s\S]*?ENABLE ROW LEVEL SECURITY[\s\S]*?REVOKE ALL PRIVILEGES/i],
@@ -83,3 +84,17 @@ assert.match(salaryBatchTest, /replayed IS DISTINCT FROM true/);
 assert.match(salaryBatchTest, /idempotency_key_payload_mismatch/);
 assert.match(salaryBatchTest, /No se puede pagar a una cuenta no activa/);
 console.log('PASS — salary batch transaction test verifies replay, payload mismatch, inactive-worker rejection and rollback');
+
+
+// Recovered migration ledger: validate filenames and byte-exact SQL provenance.
+const ledgerManifest = JSON.parse(readFileSync('docs/evidence/revision-6/SUPABASE_MIGRATION_LEDGER_SHA256.json', 'utf8'));
+const migrationFiles = readdirSync('supabase/migrations').filter(name => name.length > 18 && [...name.slice(0, 14)].every(ch => ch >= '0' && ch <= '9') && name[14] === '_' && name.endsWith('.sql')).sort();
+assert.deepEqual(migrationFiles, [...ledgerManifest.expected_files].sort(), 'Tracked migration filenames must match all 65 LIVE ledger versions');
+for (const entry of ledgerManifest.recovered) {
+  const source = readFileSync('supabase/migrations/' + entry.file, 'utf8');
+  // Git for Windows may check out LF files as CRLF; normalize before provenance hashing.
+  const normalizedSource = source.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const actual = createHash('sha256').update(normalizedSource, 'utf8').digest('hex');
+  assert.equal(actual, entry.sha256, 'Recovered SQL must match the original Supabase ledger statement: ' + entry.file);
+}
+console.log('PASS — all 65 migration filenames match LIVE ledger; all 58 recovered SQL files match their ledger SHA-256');
