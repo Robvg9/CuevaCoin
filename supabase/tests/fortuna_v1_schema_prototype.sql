@@ -197,8 +197,15 @@ CREATE OR REPLACE FUNCTION fortuna_private.guard_idempotency_transition()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = pg_catalog
-AS $
+AS $$
 BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.status <> 'processing' THEN
+      RAISE EXCEPTION 'fortuna_idempotency_initial_state_invalid: a request must start in processing state';
+    END IF;
+    RETURN NEW;
+  END IF;
+
   IF NEW.book_id IS DISTINCT FROM OLD.book_id
      OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
      OR NEW.payload_sha256 IS DISTINCT FROM OLD.payload_sha256
@@ -216,8 +223,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$;
-
+$$;
 REVOKE ALL ON FUNCTION fortuna_private.guard_idempotency_transition() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION fortuna_private.guard_idempotency_transition() TO service_role;
 
@@ -227,7 +233,7 @@ CREATE TRIGGER financial_events_validate_reversal
   EXECUTE FUNCTION fortuna_private.validate_financial_reversal();
 
 CREATE TRIGGER financial_idempotency_guard_transition
-  BEFORE UPDATE ON fortuna_private.financial_idempotency
+  BEFORE INSERT OR UPDATE ON fortuna_private.financial_idempotency
   FOR EACH ROW EXECUTE FUNCTION fortuna_private.guard_idempotency_transition();
 
 CREATE TRIGGER financial_obligations_immutable
