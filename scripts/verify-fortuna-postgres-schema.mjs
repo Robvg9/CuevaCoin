@@ -87,13 +87,19 @@ try {
       has_table_privilege('authenticated', 'fortuna_private.financial_books', 'SELECT') AS auth_table,
       has_table_privilege('service_role', 'fortuna_private.financial_books', 'SELECT') AS service_table,
       has_table_privilege('service_role', 'fortuna_private.financial_books', 'UPDATE') AS update_book,
-      has_table_privilege('service_role', 'fortuna_private.financial_contacts', 'UPDATE') AS update_contact,
+      has_table_privilege('service_role', 'fortuna_private.financial_contacts', 'UPDATE') AS update_contact_table,
       has_table_privilege('service_role', 'fortuna_private.financial_currencies', 'UPDATE') AS update_currency,
       has_table_privilege('service_role', 'fortuna_private.financial_obligations', 'UPDATE') AS update_obligation,
       has_table_privilege('service_role', 'fortuna_private.financial_events', 'UPDATE') AS update_event,
       has_table_privilege('service_role', 'fortuna_private.financial_ledger_entries', 'UPDATE') AS update_ledger,
       has_table_privilege('service_role', 'fortuna_private.financial_allocations', 'UPDATE') AS update_allocation,
-      has_table_privilege('service_role', 'fortuna_private.financial_idempotency', 'UPDATE') AS update_idempotency,
+      has_table_privilege('service_role', 'fortuna_private.financial_idempotency', 'UPDATE') AS update_idempotency_table,
+      has_column_privilege('service_role', 'fortuna_private.financial_contacts', 'display_name', 'UPDATE') AS update_contact_name,
+      has_column_privilege('service_role', 'fortuna_private.financial_contacts', 'linked_profile_id', 'UPDATE') AS update_contact_profile,
+      has_column_privilege('service_role', 'fortuna_private.financial_contacts', 'book_id', 'UPDATE') AS update_contact_book,
+      has_column_privilege('service_role', 'fortuna_private.financial_idempotency', 'status', 'UPDATE') AS update_idempotency_status,
+      has_column_privilege('service_role', 'fortuna_private.financial_idempotency', 'payload_sha256', 'UPDATE') AS update_idempotency_hash,
+      has_column_privilege('service_role', 'fortuna_private.financial_idempotency', 'idempotency_key', 'UPDATE') AS update_idempotency_key,
       has_table_privilege('service_role', 'fortuna_private.financial_audit', 'UPDATE') AS update_audit
   `);
   assert.deepEqual(access.rows[0], {
@@ -103,16 +109,22 @@ try {
     auth_table: false,
     service_table: true,
     update_book: false,
-    update_contact: true,
+    update_contact_table: false,
     update_currency: false,
     update_obligation: false,
     update_event: false,
     update_ledger: false,
     update_allocation: false,
-    update_idempotency: true,
+    update_idempotency_table: false,
+    update_contact_name: true,
+    update_contact_profile: true,
+    update_contact_book: false,
+    update_idempotency_status: true,
+    update_idempotency_hash: false,
+    update_idempotency_key: false,
     update_audit: false
   });
-  console.log('PASS — Data API roles have no direct access; server updates are limited to contacts/idempotency');
+  console.log('PASS — Data API roles have no direct access; server UPDATE grants are column-scoped');
 
   const owner1 = '10000000-0000-4000-8000-000000000001';
   const owner2 = '10000000-0000-4000-8000-000000000002';
@@ -124,6 +136,7 @@ try {
   const obligation1 = '50000000-0000-4000-8000-000000000001';
   const openingEvent = '60000000-0000-4000-8000-000000000001';
   const cashEvent = '60000000-0000-4000-8000-000000000002';
+  const reversalEvent = '60000000-0000-4000-8000-000000000003';
 
   await db.query('INSERT INTO auth.users (id) VALUES ($1), ($2)', [owner1, owner2]);
   await db.query('INSERT INTO public.perfiles (id) VALUES ($1)', [linkedProfile]);
@@ -209,6 +222,50 @@ try {
   console.log('PASS — opening, cash-event, ledger and allocation rows satisfy relational constraints');
 
   await expectFailure(
+    'reversal cannot cross currencies',
+    () => db.query(
+      `INSERT INTO fortuna_private.financial_events
+        (book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id)
+       VALUES ($1, $2, 'USD', 'reversal', $3, $4)`,
+      [book1, contact1, owner1, cashEvent]
+    ),
+    /foreign key/i
+  );
+  await expectFailure(
+    'reversal cannot cross contacts',
+    () => db.query(
+      `INSERT INTO fortuna_private.financial_events
+        (book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id)
+       VALUES ($1, $2, 'CUP', 'reversal', $3, $4)`,
+      [book1, contact2, owner1, cashEvent]
+    ),
+    /foreign key/i
+  );
+  await db.query(
+    `INSERT INTO fortuna_private.financial_events
+      (id, book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id)
+     VALUES ($1, $2, $3, 'CUP', 'reversal', $4, $5)`,
+    [reversalEvent, book1, contact1, owner1, cashEvent]
+  );
+  await expectFailure(
+    'a reversal cannot reverse another reversal',
+    () => db.query(
+      `INSERT INTO fortuna_private.financial_events
+        (book_id, contact_id, currency_code, event_type, actor_user_id, reverses_event_id)
+       VALUES ($1, $2, 'CUP', 'reversal', $3, $4)`,
+      [book1, contact1, owner1, reversalEvent]
+    ),
+    /fortuna_invalid_reversal_target/i
+  );
+  await db.query(
+    `INSERT INTO fortuna_private.financial_ledger_entries
+      (book_id, event_id, contact_id, currency_code, obligation_id, entry_kind, signed_minor)
+     VALUES ($1, $2, $3, 'CUP', $4, 'reversal', 2540)`,
+    [book1, reversalEvent, contact1, obligation1]
+  );
+  console.log('PASS — reversal stays within the original contact/currency and cannot reverse a reversal');
+
+  await expectFailure(
     'ledger entry cannot cross currencies',
     () => db.query(
       `INSERT INTO fortuna_private.financial_ledger_entries
@@ -267,7 +324,17 @@ try {
     [cashEvent, book1, key]
   );
   await expectFailure(
-    'committed idempotency record requires an event and commit timestamp',
+    'processing idempotency row cannot contain a result',
+    () => db.query(
+      `INSERT INTO fortuna_private.financial_idempotency
+        (book_id, idempotency_key, payload_sha256, event_id)
+       VALUES ($1, 'fortuna-test-key-0003', $2, $3)`,
+      [book1, payloadHash, cashEvent]
+    ),
+    /check constraint/i
+  );
+  await expectFailure(
+    'committed idempotency record requires an event, response and commit timestamp',
     () => db.query(
       `INSERT INTO fortuna_private.financial_idempotency
         (book_id, idempotency_key, payload_sha256, status)
@@ -275,6 +342,26 @@ try {
       [book1, payloadHash]
     ),
     /check constraint/i
+  );
+  await expectFailure(
+    'idempotency payload hash cannot be rewritten after insert',
+    () => db.query(
+      `UPDATE fortuna_private.financial_idempotency
+          SET payload_sha256 = $1
+        WHERE book_id = $2 AND idempotency_key = $3`,
+      ['b'.repeat(64), book1, key]
+    ),
+    /fortuna_idempotency_identity_immutable/i
+  );
+  await expectFailure(
+    'committed idempotency result is immutable',
+    () => db.query(
+      `UPDATE fortuna_private.financial_idempotency
+          SET response = '{"accepted":false}'::jsonb
+        WHERE book_id = $1 AND idempotency_key = $2`,
+      [book1, key]
+    ),
+    /fortuna_idempotency_committed_immutable/i
   );
 
   await db.query(
