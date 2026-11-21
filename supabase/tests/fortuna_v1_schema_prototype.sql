@@ -183,7 +183,7 @@ CREATE OR REPLACE FUNCTION fortuna_private.validate_financial_reversal()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = pg_catalog
-AS $
+AS $fortuna$
 DECLARE
   referenced_event_type text;
 BEGIN
@@ -199,7 +199,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$;
+$fortuna$;
 
 REVOKE ALL ON FUNCTION fortuna_private.validate_financial_reversal() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION fortuna_private.validate_financial_reversal() TO service_role;
