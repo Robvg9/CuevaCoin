@@ -334,14 +334,14 @@ try {
     /check constraint/i
   );
   await expectFailure(
-    'committed idempotency record requires an event, response and commit timestamp',
+    'idempotency row cannot be created directly as committed',
     () => db.query(
       `INSERT INTO fortuna_private.financial_idempotency
-        (book_id, idempotency_key, payload_sha256, status)
-       VALUES ($1, 'fortuna-test-key-0002', $2, 'committed')`,
-      [book1, payloadHash]
+        (book_id, idempotency_key, payload_sha256, status, event_id, response, committed_at)
+       VALUES ($1, 'fortuna-test-key-0002', $2, 'committed', $3, '{}'::jsonb, now())`,
+      [book1, payloadHash, cashEvent]
     ),
-    /check constraint/i
+    /fortuna_idempotency_initial_state_invalid/i
   );
   await expectFailure(
     'idempotency payload hash cannot be rewritten after insert',
