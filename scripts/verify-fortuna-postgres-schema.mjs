@@ -136,6 +136,8 @@ try {
   const contact1 = '40000000-0000-4000-8000-000000000001';
   const contact2 = '40000000-0000-4000-8000-000000000002';
   const obligation1 = '50000000-0000-4000-8000-000000000001';
+  const obligationUsd = '50000000-0000-4000-8000-000000000002';
+  const obligationOtherContact = '50000000-0000-4000-8000-000000000003';
   const openingEvent = '60000000-0000-4000-8000-000000000001';
   const cashEvent = '60000000-0000-4000-8000-000000000002';
   const reversalEvent = '60000000-0000-4000-8000-000000000003';
@@ -164,6 +166,14 @@ try {
     `INSERT INTO fortuna_private.financial_contacts (id, book_id, display_name, linked_profile_id)
      VALUES ($1, $2, 'Contacto externo', NULL), ($3, $2, 'Cuenta vinculada', $4)`,
     [contact1, book1, contact2, linkedProfile]
+  );
+
+  await db.query(
+    `INSERT INTO fortuna_private.financial_obligations
+      (id, book_id, contact_id, currency_code, direction, principal_minor, description, created_by)
+     VALUES ($1, $2, $3, 'USD', 'receivable', 500, 'USD FK fixture', $4),
+            ($5, $2, $6, 'CUP', 'receivable', 500, 'Contact FK fixture', $4)`,
+    [obligationUsd, book1, contact1, owner1, obligationOtherContact, contact2]
   );
 
   await expectFailure(
@@ -334,7 +344,7 @@ try {
       `INSERT INTO fortuna_private.financial_ledger_entries
         (book_id, event_id, contact_id, currency_code, obligation_id, entry_kind, signed_minor)
        VALUES ($1, $2, $3, 'USD', $4, 'cash_received', -100)`,
-      [book1, cashEvent, contact1, obligation1]
+      [book1, cashEvent, contact1, obligationUsd]
     ),
     /foreign key/i
   );
@@ -345,7 +355,7 @@ try {
       `INSERT INTO fortuna_private.financial_ledger_entries
         (book_id, event_id, contact_id, currency_code, obligation_id, entry_kind, signed_minor)
        VALUES ($1, $2, $3, 'CUP', $4, 'cash_received', -100)`,
-      [book1, cashEvent, contact2, obligation1]
+      [book1, cashEvent, contact2, obligationOtherContact]
     ),
     /foreign key/i
   );
