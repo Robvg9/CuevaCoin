@@ -61,7 +61,7 @@ console.log('PASS — admin adjustment and batch payout deny archived/inactive a
 console.log('PASS: ' + sqlChecks.length + ' migration invariant groups');
 
 
-const salaryMigration = readFileSync('supabase/migrations/20261104183000_admin_salary_individual_batch.sql', 'utf8');
+const salaryMigration = readFileSync('supabase/migrations/20261104235424_admin_salary_individual_batch.sql', 'utf8');
 const salaryBatchTest = readFileSync('supabase/tests/admin_payroll_batch_atomicity.sql', 'utf8');
 for (const [label, pattern] of [
   ['creates an RLS-protected idempotency ledger', /CREATE TABLE public\.admin_pagos_salario_idempotencia[\s\S]*?ENABLE ROW LEVEL SECURITY[\s\S]*?REVOKE ALL PRIVILEGES/i],
