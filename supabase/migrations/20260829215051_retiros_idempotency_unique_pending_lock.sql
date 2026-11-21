@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX IF NOT EXISTS solicitudes_retiro_idempotency_key_uidx ON public.solicitudes_retiro (idempotency_key) WHERE idempotency_key IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS solicitudes_retiro_un_pendiente_usuario_uidx ON public.solicitudes_retiro (usuario_id) WHERE estado = 'pendiente';
