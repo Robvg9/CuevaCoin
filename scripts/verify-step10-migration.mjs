@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 const migrationPath = 'supabase/migrations/20261014161845_step10_p0_security_atomic_balance_adjustment.sql';
 const migration = readFileSync(migrationPath, 'utf8');
@@ -83,3 +84,15 @@ assert.match(salaryBatchTest, /replayed IS DISTINCT FROM true/);
 assert.match(salaryBatchTest, /idempotency_key_payload_mismatch/);
 assert.match(salaryBatchTest, /No se puede pagar a una cuenta no activa/);
 console.log('PASS — salary batch transaction test verifies replay, payload mismatch, inactive-worker rejection and rollback');
+
+
+// Recovered migration ledger: validate filenames and byte-exact SQL provenance.
+const ledgerManifest = JSON.parse(readFileSync('docs/evidence/revision-6/SUPABASE_MIGRATION_LEDGER_SHA256.json', 'utf8'));
+const migrationFiles = readdirSync('supabase/migrations').filter(name => /^\\d{14}_[a-z0-9_]+\\.sql$/.test(name)).sort();
+assert.deepEqual(migrationFiles, [...ledgerManifest.expected_files].sort(), 'Tracked migration filenames must match all 65 LIVE ledger versions');
+for (const entry of ledgerManifest.recovered) {
+  const source = readFileSync('supabase/migrations/' + entry.file, 'utf8');
+  const actual = createHash('sha256').update(source, 'utf8').digest('hex');
+  assert.equal(actual, entry.sha256, 'Recovered SQL must match the original Supabase ledger statement: ' + entry.file);
+}
+console.log('PASS — all 65 migration filenames match LIVE ledger; all 58 recovered SQL files match their ledger SHA-256');

@@ -1,0 +1,364 @@
+{
+  "source": "supabase_migrations.schema_migrations.statements[1]",
+  "project_ref": "zqgmjwfvluboiporytcq",
+  "captured_at": "2026-11-21",
+  "expected_files": [
+    "20260801194832_cuevacoin_esquema_inicial.sql",
+    "20260801203412_permitir_ver_perfiles_de_admins.sql",
+    "20260801235122_agregar_campos_perfil_validacion.sql",
+    "20260802001452_proteger_columnas_sensibles_perfil.sql",
+    "20260802025727_permitir_service_role_en_proteccion_saldo.sql",
+    "20260802031600_crear_tabla_push_suscripciones.sql",
+    "20260802122322_crear_bucket_fotos_perfil.sql",
+    "20260802122336_corregir_policy_lectura_fotos_perfil.sql",
+    "20260802125849_agregar_preferencias_notificaciones_perfiles.sql",
+    "20260802131705_agregar_mensaje_chat_a_preferencias_notificaciones.sql",
+    "20260802154431_habilitar_realtime_tabla_chat.sql",
+    "20260802185735_permitir_insert_notificaciones_trabajador_a_admin.sql",
+    "20260802190551_habilitar_realtime_notificaciones.sql",
+    "20260803200948_chat_grupal_y_privado_38a_38b.sql",
+    "20260803204223_permitir_notificacion_privada_entre_contrapartes.sql",
+    "20260803212924_fix_chat_grupal_destinatario_nullable.sql",
+    "20260803212929_permitir_ver_perfil_de_contraparte_transferencia.sql",
+    "20260803234044_agregar_preferencias_privacidad_perfiles_41c.sql",
+    "20260804010253_verificacion_correo_31.sql",
+    "20260804013812_proteger_correo_verificado_de_edicion_directa.sql",
+    "20260804231247_quitar_verificacion_correo_de_policy_retiro.sql",
+    "20260806011729_add_frase_personal_a_perfiles.sql",
+    "20260806012349_add_color_acento_a_perfiles.sql",
+    "20260806015850_add_meta_ahorro_a_perfiles.sql",
+    "20260806103149_add_meta_ahorro_aviso_y_rpc_pagos.sql",
+    "20260806115244_actualizar_texto_aviso_meta_ahorro.sql",
+    "20260806144606_add_solicitudes_retiro_a_realtime.sql",
+    "20260806224512_agregar_respuesta_a_sugerencias.sql",
+    "20260806230347_permitir_trabajador_marcar_respuesta_vista_sugerencias.sql",
+    "20260806233115_agregar_tabla_favoritos.sql",
+    "20260807000950_crear_tabla_solicitudes_cambio_correo.sql",
+    "20260807014837_agregar_perfiles_a_realtime_e4.sql",
+    "20260807030627_borrar_tabla_huerfana_verificacion_correo_envios.sql",
+    "20260807030643_agregar_tipo_evento_a_notificaciones_e5.sql",
+    "20260807030743_agregar_tipo_evento_en_funciones_notificacion_e5.sql",
+    "20260807031703_rls_ver_perfiles_remitentes_chat_grupal_e12.sql",
+    "20260807184820_policy_autoregistro_no_usada_directamente.sql",
+    "20260807191306_crear_tabla_anuncio_app.sql",
+    "20260807191535_crear_tabla_contenido_bonos.sql",
+    "20260807222349_f_gmail_columnas_vinculacion_google.sql",
+    "20260808185408_agregar_duracion_horas_a_anuncio_app.sql",
+    "20260809010244_notificar_mensaje_chat_grupal.sql",
+    "20260809141810_retiro_rpc_atomico.sql",
+    "20260809142538_crear_admin_resolver_retiro_atomico.sql",
+    "20260825192235_secure_withdrawal_idempotency.sql",
+    "20260825234205_bug1_retiro_idempotency.sql",
+    "20260825234214_bug1_retiro_preserve_amount_validation.sql",
+    "20260825234230_bug1_withdrawal_idempotency_rpc.sql",
+    "20260829165722_atomic_transfer_idempotent.sql",
+    "20260829215051_retiros_idempotency_unique_pending_lock.sql",
+    "20260830005538_harden_solicitar_retiro_idempotency_replay.sql",
+    "20260830123508_fix_retiro_reserva_saldo_v3.sql",
+    "20260830125423_fix_withdrawal_reservation_transaction_balances.sql",
+    "20260830132218_fix_trusted_balance_updates.sql",
+    "20260830134045_hfin_transfer_atomic_idempotent_v2.sql",
+    "20260830134121_hfin_transfer_rls_owner_access_fix.sql",
+    "20260830144945_fix_transfer_recipient_lookup_by_username_and_email.sql",
+    "20260830160212_fix_resolver_destinatario_identificador_nombre.sql",
+    "20261014161845_step10_p0_security_atomic_balance_adjustment.sql",
+    "20261014162706_step10_require_trusted_balance_write.sql",
+    "20261020172209_block_admin_finance_on_inactive_profiles.sql",
+    "20261020222631_password_recovery_request_tokens.sql",
+    "20261030153827_admin_recovery_codes.sql",
+    "20261030153927_admin_recovery_approved_by_index.sql",
+    "20261104235424_admin_salary_individual_batch.sql"
+  ],
+  "recovered": [
+    {
+      "file": "20260801194832_cuevacoin_esquema_inicial.sql",
+      "sha256": "b6f9210d9670dcb841876da68180138b3c70c96f9aab2912902ef1df9ead3a26",
+      "characters": 4723
+    },
+    {
+      "file": "20260801203412_permitir_ver_perfiles_de_admins.sql",
+      "sha256": "058bb5c5248be7ada8d77a0355b22f8d71dd29cdad251676c78b5e99d4548f8f",
+      "characters": 409
+    },
+    {
+      "file": "20260801235122_agregar_campos_perfil_validacion.sql",
+      "sha256": "f9a0cf20e6d0a2d696b766f1716590d01317bc5ef28fd4f5e324c9ef8d44485f",
+      "characters": 249
+    },
+    {
+      "file": "20260802001452_proteger_columnas_sensibles_perfil.sql",
+      "sha256": "941cb71f7d3dd55b3b0b85660187be7586de2be9c9cf7e0f560524fc82c155b1",
+      "characters": 1155
+    },
+    {
+      "file": "20260802025727_permitir_service_role_en_proteccion_saldo.sql",
+      "sha256": "8ad79fd1d901529fc97be9252e13217b7a9ee38f1db1d878c01ff108b27f66e1",
+      "characters": 418
+    },
+    {
+      "file": "20260802031600_crear_tabla_push_suscripciones.sql",
+      "sha256": "e61eb2ee104ac5c4fe844b9cf066a41cfb7ded433b533840bc1304d02ae05b9a",
+      "characters": 1120
+    },
+    {
+      "file": "20260802122322_crear_bucket_fotos_perfil.sql",
+      "sha256": "9427b17d1ff9927f82ce6f9008c20cee7a9e60275ef5f9383ef9d5a1b0d2dca4",
+      "characters": 1823
+    },
+    {
+      "file": "20260802122336_corregir_policy_lectura_fotos_perfil.sql",
+      "sha256": "92135b9febce1b52f92aa0fb2cfb7e15a68e4551a7f2d4884f21b07af597902e",
+      "characters": 572
+    },
+    {
+      "file": "20260802125849_agregar_preferencias_notificaciones_perfiles.sql",
+      "sha256": "65d2f0550930a38ce3a5511814dd19bbf2e88a50ef3d9d1d130057ff8af016f3",
+      "characters": 262
+    },
+    {
+      "file": "20260802131705_agregar_mensaje_chat_a_preferencias_notificaciones.sql",
+      "sha256": "1685cf573b0871e46439ffa69dfdd7cf873a694e39d540911850ca1ac8341779",
+      "characters": 442
+    },
+    {
+      "file": "20260802154431_habilitar_realtime_tabla_chat.sql",
+      "sha256": "78c27190d4111f1ac3dbb45b1ec532b9bcc6db7a8c6834812a6f848fa7444381",
+      "characters": 58
+    },
+    {
+      "file": "20260802185735_permitir_insert_notificaciones_trabajador_a_admin.sql",
+      "sha256": "b5b461f9c61d8429ce977ad1acf08eee66af7777a2c3ec2e1dfffebd7e81234f",
+      "characters": 872
+    },
+    {
+      "file": "20260802190551_habilitar_realtime_notificaciones.sql",
+      "sha256": "fb75e00780827a113d63351c58cb4778683757a01183a8727d3faae597eb2fcd",
+      "characters": 347
+    },
+    {
+      "file": "20260803200948_chat_grupal_y_privado_38a_38b.sql",
+      "sha256": "971f99f3ac0dacac07927f753a64785c785de30d63488481460c8e1484d0dc60",
+      "characters": 2282
+    },
+    {
+      "file": "20260803204223_permitir_notificacion_privada_entre_contrapartes.sql",
+      "sha256": "772eb7c6731764468b3d6da36b5d4d4b09bb0207662efb45693f7a9c528f477e",
+      "characters": 1008
+    },
+    {
+      "file": "20260803212924_fix_chat_grupal_destinatario_nullable.sql",
+      "sha256": "d6e3a6fb5eac1d1627d2234a9b4b8bdaeccfd67f2609a7309c827a9c04d6a769",
+      "characters": 67
+    },
+    {
+      "file": "20260803212929_permitir_ver_perfil_de_contraparte_transferencia.sql",
+      "sha256": "5c8fdb2b0d9dfb5ec99c2258725e9ab5ce321d7613015d189da427d28edc4446",
+      "characters": 270
+    },
+    {
+      "file": "20260803234044_agregar_preferencias_privacidad_perfiles_41c.sql",
+      "sha256": "c9f010f26230c5d4e5311c954db5e96bd45b5a37de3b6de761a26681b35fb80b",
+      "characters": 237
+    },
+    {
+      "file": "20260804010253_verificacion_correo_31.sql",
+      "sha256": "923b2ebc313753e0f676429c294cda9ec96927ae515c91a82e4b09383874805e",
+      "characters": 2000
+    },
+    {
+      "file": "20260804013812_proteger_correo_verificado_de_edicion_directa.sql",
+      "sha256": "e12183e6e810108c40167a6862f8e9544f08c0e20c0dc8333dfc97004b826bff",
+      "characters": 857
+    },
+    {
+      "file": "20260804231247_quitar_verificacion_correo_de_policy_retiro.sql",
+      "sha256": "dbd56f6fed86b6acbd6ac58c8bdbb8c61794a2aae6b3c671b9338694c55229f1",
+      "characters": 200
+    },
+    {
+      "file": "20260806011729_add_frase_personal_a_perfiles.sql",
+      "sha256": "40d8e04eaa99f693018c4bfc2d66cb76e7a3b1bf7cbe92590d9985170c405a6f",
+      "characters": 263
+    },
+    {
+      "file": "20260806012349_add_color_acento_a_perfiles.sql",
+      "sha256": "ee296d0602d34ad5a52bbd2996e81e4cb13f50ac45ccf0265d4abf1f9bc9db69",
+      "characters": 376
+    },
+    {
+      "file": "20260806015850_add_meta_ahorro_a_perfiles.sql",
+      "sha256": "4780e9c87314fb6be89b171b99e43c99d89a634b6087f694d51b836050a1355b",
+      "characters": 379
+    },
+    {
+      "file": "20260806103149_add_meta_ahorro_aviso_y_rpc_pagos.sql",
+      "sha256": "5192b48e492d98608c48db471214d23ab232caa3c2a35d753807e5bc9a6ecc26",
+      "characters": 6396
+    },
+    {
+      "file": "20260806115244_actualizar_texto_aviso_meta_ahorro.sql",
+      "sha256": "aafe61b5d69ad96c47a3016ecaa3c84dcd6d80d77ffe8250377bcdf48d0b12b0",
+      "characters": 867
+    },
+    {
+      "file": "20260806144606_add_solicitudes_retiro_a_realtime.sql",
+      "sha256": "6d3bb6ca6973698c0f686c277f7275671d1eed011f0becfd23e6b5e47eedec03",
+      "characters": 65
+    },
+    {
+      "file": "20260806224512_agregar_respuesta_a_sugerencias.sql",
+      "sha256": "2bffe54bc92c4892d9364770a0a570c22c6d0bc95e0a4f02e7ce264d7e7dd923",
+      "characters": 202
+    },
+    {
+      "file": "20260806230347_permitir_trabajador_marcar_respuesta_vista_sugerencias.sql",
+      "sha256": "a5fbd7b5a25ad23efc03a26ca71177289a6b2bc189033a0130d16d42e52a6651",
+      "characters": 981
+    },
+    {
+      "file": "20260806233115_agregar_tabla_favoritos.sql",
+      "sha256": "d61af11e0d629a3a8633e470ef46a9ad91e1da8d3b0b6f2002b1cbb1bf090987",
+      "characters": 942
+    },
+    {
+      "file": "20260807000950_crear_tabla_solicitudes_cambio_correo.sql",
+      "sha256": "6301f1a62e5299afa54c8c2cc5e04c4a9f927557fcbcf7b694af47e310ea1d82",
+      "characters": 1666
+    },
+    {
+      "file": "20260807014837_agregar_perfiles_a_realtime_e4.sql",
+      "sha256": "2f8a4b5fb0b520c91ccd641049b7cdc57ba7afad3319e1e6b01cf268841abbb0",
+      "characters": 62
+    },
+    {
+      "file": "20260807030627_borrar_tabla_huerfana_verificacion_correo_envios.sql",
+      "sha256": "b3846b89208ce1a094e918e63ee839095daaa15f9e92dfc2bb5f3dfb2af33b86",
+      "characters": 55
+    },
+    {
+      "file": "20260807030643_agregar_tipo_evento_a_notificaciones_e5.sql",
+      "sha256": "eee72f35471895dfa1f15bd979d88a27d1f18eab2ae3c1fe8397c5d6663d7a79",
+      "characters": 76
+    },
+    {
+      "file": "20260807030743_agregar_tipo_evento_en_funciones_notificacion_e5.sql",
+      "sha256": "bd7241c3630006b374bd35cb0b60b87339ceffffa1ade24019c35668bbf914f1",
+      "characters": 2976
+    },
+    {
+      "file": "20260807031703_rls_ver_perfiles_remitentes_chat_grupal_e12.sql",
+      "sha256": "b54aad11789068f7c6903be070d8e2d92736ac6d72b983c7059b64167fa81bfc",
+      "characters": 568
+    },
+    {
+      "file": "20260807184820_policy_autoregistro_no_usada_directamente.sql",
+      "sha256": "da8191713f03a5ab8466e25ecacc6d191c3e32380aec4d834101f2d714df8f2a",
+      "characters": 450
+    },
+    {
+      "file": "20260807191306_crear_tabla_anuncio_app.sql",
+      "sha256": "4e262e904cb5af3caebf723c4fb73274d89835a77d441bcdbf6e4399fa8160c0",
+      "characters": 1410
+    },
+    {
+      "file": "20260807191535_crear_tabla_contenido_bonos.sql",
+      "sha256": "836dd7321039a6b197cc74e52ee1342150e9497695b11bf3a5e1e505a0507cdd",
+      "characters": 1395
+    },
+    {
+      "file": "20260807222349_f_gmail_columnas_vinculacion_google.sql",
+      "sha256": "ad2bba8a11216e7a9c0fd865cacfd81805a54d49989499a1f1ff928e0e78ffb2",
+      "characters": 1078
+    },
+    {
+      "file": "20260808185408_agregar_duracion_horas_a_anuncio_app.sql",
+      "sha256": "66dff8a5239d44c5866694ffa5d00d289c9f92a7942990500de7b6caa38dc202",
+      "characters": 319
+    },
+    {
+      "file": "20260809010244_notificar_mensaje_chat_grupal.sql",
+      "sha256": "c0040fcede3ca3c9a3bfa2a23f3b1001fe3d666c788d496bd0b6b3ecd6835629",
+      "characters": 947
+    },
+    {
+      "file": "20260809141810_retiro_rpc_atomico.sql",
+      "sha256": "5ccc2d5273ce425b7d451e3e0b282149c90280d573005a763dfe8a43fa5b6496",
+      "characters": 5692
+    },
+    {
+      "file": "20260809142538_crear_admin_resolver_retiro_atomico.sql",
+      "sha256": "a58127bf898ddee3402f30f00b71b3fea3c81ccc33013d21c4c9e4eda0218b30",
+      "characters": 4134
+    },
+    {
+      "file": "20260825192235_secure_withdrawal_idempotency.sql",
+      "sha256": "ef91c110f98d1f843c0c670b24d47544edfc6b1ec14712a66c46fe7db113fdcc",
+      "characters": 2444
+    },
+    {
+      "file": "20260825234205_bug1_retiro_idempotency.sql",
+      "sha256": "f8053627841b04cb8c72508b71c494574305a7452c15dd03ae235cc09a56e107",
+      "characters": 2983
+    },
+    {
+      "file": "20260825234214_bug1_retiro_preserve_amount_validation.sql",
+      "sha256": "1d857a9ed5869bf2a4e012a6720914e87a76c2ce6082be70a6848029202c3725",
+      "characters": 2328
+    },
+    {
+      "file": "20260825234230_bug1_withdrawal_idempotency_rpc.sql",
+      "sha256": "933b76f96f4ba300773660cd7e48bc80504fdd8942a066a0ac97782a5c149f41",
+      "characters": 3391
+    },
+    {
+      "file": "20260829165722_atomic_transfer_idempotent.sql",
+      "sha256": "22ebfba10e9970bc8c27ccb0f5993a86d629252d849ebb1e797cd66e256a74be",
+      "characters": 4026
+    },
+    {
+      "file": "20260829215051_retiros_idempotency_unique_pending_lock.sql",
+      "sha256": "05417bc61cd20f052aae603e847a8259bcdd8203aa5c4f8374297b01fa755977",
+      "characters": 304
+    },
+    {
+      "file": "20260830005538_harden_solicitar_retiro_idempotency_replay.sql",
+      "sha256": "355166cfc52fa32254b53662286df6a9e03e8be18075ecd650ad3eed25e0877a",
+      "characters": 2900
+    },
+    {
+      "file": "20260830123508_fix_retiro_reserva_saldo_v3.sql",
+      "sha256": "a3241aa7840bb1c84f972457fcbcc76e6a842323d863b76e2c2df1cbdcbbf8c6",
+      "characters": 4954
+    },
+    {
+      "file": "20260830125423_fix_withdrawal_reservation_transaction_balances.sql",
+      "sha256": "f6b7f943bc3a59f5e16b67e26c3e89d2719c07be79f0062c2ec38fa0cbebf8c4",
+      "characters": 2482
+    },
+    {
+      "file": "20260830132218_fix_trusted_balance_updates.sql",
+      "sha256": "28e90ad104c53513e756deec296497e38059e4a84491d3c1741dbcec2f130ce9",
+      "characters": 11119
+    },
+    {
+      "file": "20260830134045_hfin_transfer_atomic_idempotent_v2.sql",
+      "sha256": "4f20c27d461ea4089a1efab69f8f46fb553e51583113cec5754173742db6a766",
+      "characters": 6627
+    },
+    {
+      "file": "20260830134121_hfin_transfer_rls_owner_access_fix.sql",
+      "sha256": "c898d90f0a3a0859d1b6cd3110c1e0e6f397b7e5fda1deeac22ece8ce0caad0c",
+      "characters": 75
+    },
+    {
+      "file": "20260830144945_fix_transfer_recipient_lookup_by_username_and_email.sql",
+      "sha256": "20cc3d6cc95947721fbf07278e3548134501918b2d6e75a2b0deb06176561e91",
+      "characters": 1032
+    },
+    {
+      "file": "20260830160212_fix_resolver_destinatario_identificador_nombre.sql",
+      "sha256": "e9163f796b938a42ed4c24f8652be670a21aa423e2d1fa28edd4ba1761d071dd",
+      "characters": 1188
+    }
+  ]
+}
