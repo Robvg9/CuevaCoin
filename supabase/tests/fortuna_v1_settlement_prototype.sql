@@ -2,6 +2,9 @@
 -- This is NOT a production RPC, migration, endpoint, or approved API.
 -- Actor/book IDs simulate a trusted server caller; production must verify the session
 -- and resolve/authorize the book on the server before invoking any financial operation.
+-- SECURITY DEFINER is intentional: the function locks immutable obligations with FOR UPDATE,
+-- while service_role retains no direct UPDATE grant on those tables. Production must use a
+-- tightly owned function, a fixed search_path, fully qualified names, and restricted EXECUTE.
 
 CREATE OR REPLACE FUNCTION fortuna_private.test_commit_settlement_atomic(
   p_book_id uuid,
@@ -19,6 +22,7 @@ CREATE OR REPLACE FUNCTION fortuna_private.test_commit_settlement_atomic(
 )
 RETURNS jsonb
 LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path = pg_catalog
 AS $fortuna_settlement_test$
 DECLARE
