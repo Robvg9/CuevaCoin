@@ -39,7 +39,7 @@ jobs:
 
       - name: Install pinned native PostgreSQL 17.11 runtime
         env:
-          FORTUNA_TEST_HOME: \${{ runner.temp }}\fortuna-native-pg-\${{ github.run_id }}
+          FORTUNA_TEST_HOME: ${{ runner.temp }}\fortuna-native-pg-${{ github.run_id }}
         run: |
           if exist "%FORTUNA_TEST_HOME%" rmdir /s /q "%FORTUNA_TEST_HOME%"
           mkdir "%FORTUNA_TEST_HOME%"
@@ -50,9 +50,9 @@ jobs:
 
       - name: Verify real multi-connection settlement and idempotency
         env:
-          FORTUNA_TEST_HOME: \${{ runner.temp }}\fortuna-native-pg-\${{ github.run_id }}
-          FORTUNA_SCHEMA_SQL_FILE: \${{ github.workspace }}\supabase\tests\fortuna_v1_schema_prototype.sql
-          FORTUNA_SETTLEMENT_SQL_FILE: \${{ github.workspace }}\supabase\tests\fortuna_v1_settlement_prototype.sql
+          FORTUNA_TEST_HOME: ${{ runner.temp }}\fortuna-native-pg-${{ github.run_id }}
+          FORTUNA_SCHEMA_SQL_FILE: ${{ github.workspace }}\supabase\tests\fortuna_v1_schema_prototype.sql
+          FORTUNA_SETTLEMENT_SQL_FILE: ${{ github.workspace }}\supabase\tests\fortuna_v1_settlement_prototype.sql
         run: |
           copy /Y scripts\verify-fortuna-postgres-concurrency.mjs "%FORTUNA_TEST_HOME%\verify.mjs"
           node "%FORTUNA_TEST_HOME%\verify.mjs"
