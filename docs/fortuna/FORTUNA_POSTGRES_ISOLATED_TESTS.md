@@ -4,7 +4,7 @@
 
 ## Purpose
 
-The CuevaCoin runner has Node.js 22 but no Docker, psql, local PostgreSQL server, or usable Supabase CLI download. This harness uses the pinned test-only package @electric-sql/pglite@0.5.17 to run PostgreSQL 17 in an isolated in-memory database on the existing Windows runner. The package is installed under %RUNNER_TEMP%; it does not become an application dependency.
+The CuevaCoin runner has Node.js 22 but no Docker, psql, local PostgreSQL server, or usable Supabase CLI download. This harness pins the test-only package @electric-sql/pglite@0.4.6, whose embedded engine is PostgreSQL 17.5, to run schema checks in an isolated in-memory database on the existing Windows runner. PGlite 0.5.x upgraded its embedded engine to PostgreSQL 18, so it is intentionally not used for this PG17 parity check. The package is installed under %RUNNER_TEMP%; it does not become an application dependency.
 
 The SQL fixture at supabase/tests/fortuna_v1_schema_prototype.sql is loaded only by this ephemeral test. It is deliberately stored under supabase/tests, not supabase/migrations.
 
