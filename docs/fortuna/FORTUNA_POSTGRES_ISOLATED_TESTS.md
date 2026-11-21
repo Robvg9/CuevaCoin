@@ -4,7 +4,7 @@
 
 ## Purpose
 
-The CuevaCoin runner has Node.js 22 but no Docker, psql, local PostgreSQL server, or usable Supabase CLI download. This harness pins the test-only package @electric-sql/pglite@0.4.6, whose embedded engine is PostgreSQL 17.5, to run schema checks in an isolated in-memory database on the existing Windows runner. PGlite 0.5.x upgraded its embedded engine to PostgreSQL 18, so it is intentionally not used for this PG17 parity check. The package is installed under %RUNNER_TEMP%; it does not become an application dependency.
+The CuevaCoin runner has Node.js 22 but no Docker, psql, local PostgreSQL server, or usable Supabase CLI download. This harness pins the test-only package @electric-sql/pglite@0.4.6, which is expected to use the PostgreSQL 17 major line, to run schema checks in an isolated in-memory database on the existing Windows runner. PGlite 0.5.x upgraded its embedded engine to PostgreSQL 18, so it is intentionally not used for this PG17 major-version check. The test itself reads SELECT version() and fails unless the reported major is 17. The package is installed under %RUNNER_TEMP%; it does not become an application dependency.
 
 The SQL fixture at supabase/tests/fortuna_v1_schema_prototype.sql is loaded only by this ephemeral test. It is deliberately stored under supabase/tests, not supabase/migrations.
 
@@ -24,7 +24,7 @@ The PGlite test verifies PostgreSQL DDL execution, expected tables, RLS enabled 
 
 ## What PGlite does not prove
 
-This is real PostgreSQL 17.5 execution, but it is not a full Supabase environment or an exact patch-version match for CuevaCoin LIVE PostgreSQL 17.11. It does not validate Supabase Auth/JWT behavior, the Data API schema exposure settings, Edge Function authorization, Supabase advisors, production grants/default privileges, or live database concurrency under competing connections. The test stubs only the small auth.users and public.perfiles structures needed to compile the schema. Concurrency/idempotency races and owner authorization must be covered in a later integration test against a dedicated isolated Supabase/Postgres environment.
+This is real PostgreSQL 17 execution, but it is not a full Supabase environment or an exact patch-version match for CuevaCoin LIVE PostgreSQL 17.11. It does not validate Supabase Auth/JWT behavior, the Data API schema exposure settings, Edge Function authorization, Supabase advisors, production grants/default privileges, or live database concurrency under competing connections. The test stubs only the small auth.users and public.perfiles structures needed to compile the schema. Concurrency/idempotency races and owner authorization must be covered in a later integration test against a dedicated isolated Supabase/Postgres environment.
 
 ## Gates before a real migration
 
