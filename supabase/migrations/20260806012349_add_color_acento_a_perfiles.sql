@@ -1,0 +1,2 @@
+ALTER TABLE public.perfiles ADD COLUMN color_acento text NOT NULL DEFAULT 'rosa';
+COMMENT ON COLUMN public.perfiles.color_acento IS 'Clave de la paleta de acento kawaii que eligió el usuario (rosa/lavanda/menta/amarillo/celeste/coral). Se traduce a colores en el frontend (ver PALETA_ACENTOS en index.html), no se guardan valores hex directamente para no romper la estética.';

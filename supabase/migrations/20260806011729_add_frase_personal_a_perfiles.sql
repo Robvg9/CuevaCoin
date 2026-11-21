@@ -1,0 +1,2 @@
+ALTER TABLE public.perfiles ADD COLUMN frase_personal text;
+COMMENT ON COLUMN public.perfiles.frase_personal IS 'Frase o mote personal que la trabajadora elige mostrar junto a su nombre en el saludo de Inicio. Opcional, editable desde Perfil > Datos Personales.';
