@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     }
 
     let targetId = destinatarioId
-    // Compatibility only: replay queued records from clients that predate V157 and stored recipient email.
+    // Legacy compatibility only: replay queued records from clients that predate V157 and stored recipient email.
     if (!targetId && typeof destinatarioCorreo === 'string' && destinatarioCorreo.trim()) {
       const { data, error } = await supabase
         .from('perfiles')
