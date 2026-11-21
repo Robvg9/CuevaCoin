@@ -85,16 +85,34 @@ try {
       has_schema_privilege('authenticated', 'fortuna_private', 'USAGE') AS auth_schema,
       has_table_privilege('anon', 'fortuna_private.financial_books', 'SELECT') AS anon_table,
       has_table_privilege('authenticated', 'fortuna_private.financial_books', 'SELECT') AS auth_table,
-      has_table_privilege('service_role', 'fortuna_private.financial_books', 'SELECT') AS service_table
+      has_table_privilege('service_role', 'fortuna_private.financial_books', 'SELECT') AS service_table,
+      has_table_privilege('service_role', 'fortuna_private.financial_books', 'UPDATE') AS update_book,
+      has_table_privilege('service_role', 'fortuna_private.financial_contacts', 'UPDATE') AS update_contact,
+      has_table_privilege('service_role', 'fortuna_private.financial_currencies', 'UPDATE') AS update_currency,
+      has_table_privilege('service_role', 'fortuna_private.financial_obligations', 'UPDATE') AS update_obligation,
+      has_table_privilege('service_role', 'fortuna_private.financial_events', 'UPDATE') AS update_event,
+      has_table_privilege('service_role', 'fortuna_private.financial_ledger_entries', 'UPDATE') AS update_ledger,
+      has_table_privilege('service_role', 'fortuna_private.financial_allocations', 'UPDATE') AS update_allocation,
+      has_table_privilege('service_role', 'fortuna_private.financial_idempotency', 'UPDATE') AS update_idempotency,
+      has_table_privilege('service_role', 'fortuna_private.financial_audit', 'UPDATE') AS update_audit
   `);
   assert.deepEqual(access.rows[0], {
     anon_schema: false,
     auth_schema: false,
     anon_table: false,
     auth_table: false,
-    service_table: true
+    service_table: true,
+    update_book: false,
+    update_contact: true,
+    update_currency: false,
+    update_obligation: false,
+    update_event: false,
+    update_ledger: false,
+    update_allocation: false,
+    update_idempotency: true,
+    update_audit: false
   });
-  console.log('PASS — Data API roles have no direct access; server role has backend access');
+  console.log('PASS — Data API roles have no direct access; server updates are limited to contacts/idempotency');
 
   const owner1 = '10000000-0000-4000-8000-000000000001';
   const owner2 = '10000000-0000-4000-8000-000000000002';
