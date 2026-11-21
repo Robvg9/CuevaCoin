@@ -184,4 +184,7 @@ CREATE TRIGGER financial_audit_immutable
   FOR EACH ROW EXECUTE FUNCTION fortuna_private.reject_immutable_financial_data();
 
 REVOKE ALL ON ALL TABLES IN SCHEMA fortuna_private FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA fortuna_private TO service_role;
+REVOKE ALL ON ALL TABLES IN SCHEMA fortuna_private FROM service_role;
+GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA fortuna_private TO service_role;
+GRANT UPDATE ON fortuna_private.financial_contacts, fortuna_private.financial_idempotency
+  TO service_role;
