@@ -71,15 +71,17 @@ async function commitSettlement({
   requestedAllocations = [],
   confirmOverage = false,
   failAfter = null,
+  currency = 'CUP',
 }) {
   const result = await db.query(
     `SELECT fortuna_private.test_commit_settlement_atomic(
-      $1::uuid, $2::uuid, 'CUP', $3::uuid, $4::text, $5::text,
-      $6::text, $7::text, $8::bigint, $9::jsonb, $10::boolean, $11::text
+      $1::uuid, $2::uuid, $3::text, $4::uuid, $5::text, $6::text,
+      $7::text, $8::text, $9::bigint, $10::jsonb, $11::boolean, $12::text
     ) AS value`,
     [
       ids.book,
       ids.contact,
+      currency,
       ids.owner,
       key,
       hash,
@@ -311,7 +313,7 @@ try {
       mode: 'manual',
       totalMinor: 100,
       requestedAllocations: [{ obligation_id: ids.r2, amount_minor: 100 }],
-      currencyOverride: 'USD',
+      currency: 'USD',
     }),
     /fortuna_settlement_manual_obligation_not_in_contact_currency_or_book/i
   );
