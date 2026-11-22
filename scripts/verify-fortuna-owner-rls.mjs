@@ -27,16 +27,6 @@ const ids = {
   event2: '50000000-0000-4000-8000-000000000002',
 };
 
-const childTables = [
-  'financial_contacts',
-  'financial_obligations',
-  'financial_events',
-  'financial_ledger_entries',
-  'financial_allocations',
-  'financial_idempotency',
-  'financial_audit',
-];
-
 async function count(table) {
   const result = await db.query(`SELECT count(*)::int AS count FROM fortuna_private.${table}`);
   return Number(result.rows[0].count);
@@ -107,6 +97,11 @@ try {
     'INSERT INTO public.cuevacoin_global_admin_fixture (user_id, is_global_admin) VALUES ($1, true)',
     [ids.owner2]
   );
+  const globalAdminFixture = await db.query(
+    'SELECT is_global_admin FROM public.cuevacoin_global_admin_fixture WHERE user_id = $1',
+    [ids.owner2]
+  );
+  assert.equal(globalAdminFixture.rows[0].is_global_admin, true, 'owner two is a global CuevaCoin admin in the test fixture');
   await db.query(
     "INSERT INTO fortuna_private.financial_currencies (code, display_name, minor_unit_scale) VALUES ('CUP', 'Cuban Peso fixture', 2)"
   );
