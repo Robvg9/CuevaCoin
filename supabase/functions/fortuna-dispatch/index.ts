@@ -52,12 +52,33 @@ Deno.serve(async (req: Request) => {
 
   let rawBody: string
   try {
-    rawBody = await req.text()
+    const reader = req.body?.getReader()
+    if (!reader) return reply({ error: 'INVALID_JSON' }, 400, origin)
+    const chunks: Uint8Array[] = []
+    let totalBytes = 0
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        totalBytes += value.byteLength
+        if (totalBytes > MAX_BODY_BYTES) {
+          await reader.cancel()
+          return reply({ error: 'REQUEST_TOO_LARGE' }, 413, origin)
+        }
+        chunks.push(value)
+      }
+    } finally {
+      reader.releaseLock()
+    }
+    const bytes = new Uint8Array(totalBytes)
+    let offset = 0
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset)
+      offset += chunk.byteLength
+    }
+    rawBody = new TextDecoder().decode(bytes)
   } catch {
     return reply({ error: 'INVALID_REQUEST_BODY' }, 400, origin)
-  }
-  if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) {
-    return reply({ error: 'REQUEST_TOO_LARGE' }, 413, origin)
   }
 
   let body: unknown
