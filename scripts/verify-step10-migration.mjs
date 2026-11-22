@@ -156,15 +156,15 @@ assert.equal(
   'An applied FORTUNA index migration must not remain in the pending list',
 );
 const fkIndexSql = readFileSync('supabase/migrations/' + fkIndexForward.file, 'utf8');
-assert.match(fkIndexSql, /BEGIN;[\\s\\S]*COMMIT;\\s*$/i);
+assert.match(fkIndexSql, /BEGIN;[\s\S]*COMMIT;\s*$/i);
 assert.equal(
-  (fkIndexSql.match(/^\\s*CREATE INDEX IF NOT EXISTS\\s+/gim) || []).length,
+  (fkIndexSql.match(/^\s*CREATE INDEX IF NOT EXISTS\s+/gim) || []).length,
   14,
   'The applied FORTUNA FK index migration source must retain exactly 14 additive indexes',
 );
 assert.doesNotMatch(
   fkIndexSql,
-  /\\bCREATE\\s+TABLE\\b|\\bALTER\\s+TABLE\\b|\\bDROP\\s+TABLE\\b|\\bTRUNCATE\\b|\\bGRANT\\b|\\bREVOKE\\b|\\bCREATE\\s+OR\\s+REPLACE\\s+FUNCTION\\b/i,
+  /\bCREATE\s+TABLE\b|\bALTER\s+TABLE\b|\bDROP\s+TABLE\b|\bTRUNCATE\b|\bGRANT\b|\bREVOKE\b|\bCREATE\s+OR\s+REPLACE\s+FUNCTION\b/i,
   'The applied FORTUNA FK migration source must remain index-only',
 );
 console.log('PASS — FORTUNA FK index migration is reconciled to LIVE version 20261122210505 with 14 verified indexes and no pending duplicate');
