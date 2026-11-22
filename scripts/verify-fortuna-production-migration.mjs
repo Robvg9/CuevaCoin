@@ -130,7 +130,7 @@ try {
     CREATE ROLE service_role NOLOGIN BYPASSRLS;
     CREATE SCHEMA auth;
     CREATE TABLE auth.users (id uuid PRIMARY KEY);
-    CREATE TABLE public.perfiles (id uuid PRIMARY KEY);
+    CREATE TABLE public.perfiles (id uuid PRIMARY KEY, es_admin boolean NOT NULL DEFAULT false, estado text NOT NULL DEFAULT 'activo');
     CREATE FUNCTION auth.uid()
     RETURNS uuid LANGUAGE sql STABLE SET search_path = pg_catalog
     AS $auth_uid_test_shim$
@@ -143,10 +143,13 @@ try {
 
   await admin.query(migrationSql);
   console.log('PASS — actual FORTUNA production migration applied to isolated PostgreSQL 17.11');
+  console.log('PASS — owner B is explicitly seeded as an active global CuevaCoin administrator for non-bypass testing');
 
   const ownerA = '10000000-0000-4000-8000-000000000001';
   const ownerB = '10000000-0000-4000-8000-000000000002';
   await admin.query('INSERT INTO auth.users (id) VALUES ($1), ($2)', [ownerA, ownerB]);
+  await admin.query('INSERT INTO public.perfiles (id, es_admin, estado) VALUES ($1, false, $3), ($2, true, $3)', [ownerA, ownerB, 'activo']);
+  assert.equal((await admin.query('SELECT es_admin FROM public.perfiles WHERE id = $1', [ownerB])).rows[0].es_admin, true);
   const a = await connect('fortuna-migration-owner-a', port);
   const b = await connect('fortuna-migration-owner-b', port);
   await authenticate(a, ownerA);
