@@ -289,9 +289,9 @@ CREATE SCHEMA IF NOT EXISTS api;
 REVOKE ALL ON SCHEMA api FROM PUBLIC, anon, authenticated;
 -- Keep the API schema closed in the production migration. A separate release
 -- gate must first verify Data API Exposed Schemas, then explicitly grant USAGE
--- to authenticated. Function EXECUTE grants alone do not open the schema.
-
-GRANT USAGE ON SCHEMA fortuna_private TO authenticated;
+-- to authenticated on both schemas. Only api may be exposed; fortuna_private
+-- must remain absent from the Data API schema allowlist. Function EXECUTE
+-- grants alone do not open either schema.
 
 CREATE OR REPLACE FUNCTION fortuna_private.fortuna_get_current_book_id()
 RETURNS uuid
