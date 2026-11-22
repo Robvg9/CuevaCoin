@@ -35,6 +35,23 @@ let postgresStarted = false;
 let admin;
 const clients = [];
 
+async function removeDirectoryWithRetry(directory, { attempts = 20, delayMs = 250 } = {}) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await rm(directory, { recursive: true, force: true, maxRetries: 2, retryDelay: 100 });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!['EBUSY', 'EPERM', 'ENOTEMPTY', 'EMFILE', 'ENFILE'].includes(error?.code)) {
+        throw error;
+      }
+      if (attempt < attempts) await delay(delayMs);
+    }
+  }
+  throw lastError;
+}
+
 async function findFreePort() {
   const listener = net.createServer();
   await new Promise((resolve, reject) => {
@@ -167,7 +184,9 @@ try {
     user: 'postgres',
     password: postgresPassword,
     port,
-    persistent: false,
+    // Keep directory ownership in this script. On Windows, the library's
+    // persistent:false cleanup can race process-tree shutdown and hit EBUSY.
+    persistent: true,
     autoRehydrateSymlinks: true,
     onLog: () => {},
     onError: error => postgresErrors.push(String(error)),
@@ -352,5 +371,5 @@ try {
       console.error('PostgreSQL shutdown warning:', String(error));
     }
   }
-  await rm(databaseDir, { recursive: true, force: true });
+  await removeDirectoryWithRetry(databaseDir);
 }
