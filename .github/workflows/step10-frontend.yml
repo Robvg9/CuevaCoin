@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "supabase/functions/transferir-saldo/**"
+      - "supabase/functions/fortuna-dispatch/**"
+      - "scripts/verify-fortuna-edge-dispatch.mjs"
 
       - "supabase/functions/resolver-cuenta-qr/**"
 
@@ -76,6 +78,8 @@ on:
       - "fix/**"
     paths:
       - "supabase/functions/transferir-saldo/**"
+      - "supabase/functions/fortuna-dispatch/**"
+      - "scripts/verify-fortuna-edge-dispatch.mjs"
 
       - "supabase/functions/resolver-cuenta-qr/**"
 
@@ -182,6 +186,9 @@ jobs:
         shell: cmd
       - name: Verify recipient-ID privacy and active-admin withdrawal guards
         run: node scripts/verify-transfer-recipient-security.mjs
+        shell: cmd
+      - name: Verify FORTUNA Edge Dispatcher user-JWT security contract
+        run: node scripts/verify-fortuna-edge-dispatch.mjs
         shell: cmd
       - name: Install isolated PGlite test runtime (test-only dependency)
         run: |
