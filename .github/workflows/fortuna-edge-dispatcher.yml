@@ -1,0 +1,37 @@
+name: FORTUNA Edge Dispatcher contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/functions/fortuna-dispatch/**"
+      - "scripts/verify-fortuna-edge-dispatch.mjs"
+      - "docs/fortuna/edge-dispatcher.md"
+      - ".github/workflows/fortuna-edge-dispatcher.yml"
+  push:
+    branches: [main, "feat/**"]
+    paths:
+      - "supabase/functions/fortuna-dispatch/**"
+      - "scripts/verify-fortuna-edge-dispatch.mjs"
+      - "docs/fortuna/edge-dispatcher.md"
+      - ".github/workflows/fortuna-edge-dispatcher.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fortuna-edge-dispatcher-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  edge-dispatcher-contract:
+    runs-on: [self-hosted, Windows, X64, cuevacoin]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify user-JWT dispatcher security contract
+        run: node scripts/verify-fortuna-edge-dispatch.mjs
+        shell: cmd
