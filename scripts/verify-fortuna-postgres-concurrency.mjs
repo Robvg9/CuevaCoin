@@ -5,12 +5,12 @@ import path from 'node:path';
 import net from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 import { spawn } from 'node:child_process';
+import EmbeddedPostgres from 'embedded-postgres';
 
 const windowsPgCtl = process.platform === 'win32'
   ? await import('@embedded-postgres/windows-x64')
   : null;
 const pgCtlPath = windowsPgCtl?.pg_ctl ?? null;
-import EmbeddedPostgres from 'embedded-postgres';
 import { Client } from 'pg';
 
 const schemaPath = process.env.FORTUNA_SCHEMA_SQL_FILE;
