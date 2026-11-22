@@ -20,7 +20,7 @@ assert.match(source, /reader\.read\(\)/)
 assert.match(source, /OPERATION_NOT_ALLOWED/)
 assert.match(source, /Object\.hasOwn\(RPC_BY_OPERATION, body\.operation\)/)
 assert.match(source, /Access-Control-Allow-Origin/)
-assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY|SERVICE_ROLE_KEY|supabaseAdmin/i)
+assert.doesNotMatch(source, /SUPABASE_SECRET_KEYS|SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|SERVICE_ROLE_KEY|supabaseAdmin/i)
 for (const operation of ['create_contact', 'open_obligation', 'list_contacts', 'list_obligations', 'preview_settlement', 'receive_cash', 'pay_contact']) {
   assert.match(source, new RegExp(operation))
 }
