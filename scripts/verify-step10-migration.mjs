@@ -128,6 +128,26 @@ assert.equal(
   'No forward migration should be marked pending after FORTUNA was applied',
 );
 
+const pendingIndexMigration = (ledgerManifest.pending_forward_migrations || []).find(entry =>
+  entry.file === '20261122192417_fortuna_private_fk_covering_indexes.sql',
+);
+assert.ok(pendingIndexMigration, 'FORTUNA FK index migration must be tracked separately as pending');
+assert.equal(pendingIndexMigration.applied_to_live, false, 'FORTUNA FK indexes must remain unapplied to LIVE');
+assert.equal(pendingIndexMigration.execution_status, 'pending_review_not_applied');
+assert.ok(
+  ledgerManifest.expected_files.includes(pendingIndexMigration.file),
+  'The pending FORTUNA index migration must remain in the tracked SQL inventory',
+);
+const pendingIndexSql = readFileSync('supabase/migrations/' + pendingIndexMigration.file, 'utf8');
+assert.match(pendingIndexSql, /BEGIN;[\s\S]*COMMIT;\s*$/i);
+assert.match(pendingIndexSql, /COMMIT;\s*$/i);
+assert.equal(
+  (pendingIndexSql.match(/^\s*CREATE INDEX IF NOT EXISTS\s+/gim) || []).length,
+  14,
+  'The pending FORTUNA index migration must contain exactly 14 additive indexes',
+);
+console.log('PASS — FORTUNA FK index migration is tracked, explicitly pending LIVE approval, and contains 14 indexes');
+
 const recipientForward = (ledgerManifest.forward_migrations || []).find(entry =>
   entry.file === '20261121124522_transfer_recipient_id_privacy_active_admin.sql',
 );

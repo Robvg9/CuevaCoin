@@ -13,6 +13,31 @@ if (!migrationPath) throw new Error('FORTUNA_MIGRATION_SQL_FILE is required');
 const migrationSql = await readFile(migrationPath, 'utf8');
 assert.match(migrationSql, /BEGIN;[\s\S]*COMMIT;\s*$/i);
 
+const fkIndexMigrationPath = process.env.FORTUNA_FK_INDEX_MIGRATION_SQL_FILE;
+if (!fkIndexMigrationPath) throw new Error('FORTUNA_FK_INDEX_MIGRATION_SQL_FILE is required');
+const fkIndexMigrationSql = await readFile(fkIndexMigrationPath, 'utf8');
+assert.match(fkIndexMigrationSql, /BEGIN;[\s\S]*COMMIT;\s*$/i);
+assert.equal((fkIndexMigrationSql.match(/CREATE INDEX IF NOT EXISTS/gi) || []).length, 14,
+  'FORTUNA FK migration must add exactly fourteen indexes');
+assert.doesNotMatch(fkIndexMigrationSql, /\bCREATE\s+TABLE\b|\bALTER\s+TABLE\b|\bDROP\s+TABLE\b|\bTRUNCATE\b|\bGRANT\b|\bREVOKE\b|\bCREATE\s+OR\s+REPLACE\s+FUNCTION\b/i,
+  'FORTUNA FK migration must remain index-only');
+const expectedFkIndexes = [
+  { name: 'financial_allocations_book_event_contact_currency_fk_idx', table: 'financial_allocations', columns: ['book_id', 'event_id', 'contact_id', 'currency_code'] },
+  { name: 'financial_allocations_book_obligation_contact_currency_fk_idx', table: 'financial_allocations', columns: ['book_id', 'obligation_id', 'contact_id', 'currency_code'] },
+  { name: 'financial_audit_actor_user_fk_idx', table: 'financial_audit', columns: ['actor_user_id'] },
+  { name: 'financial_audit_book_event_fk_idx', table: 'financial_audit', columns: ['book_id', 'event_id'] },
+  { name: 'financial_contacts_linked_profile_fk_idx', table: 'financial_contacts', columns: ['linked_profile_id'] },
+  { name: 'financial_events_actor_user_fk_idx', table: 'financial_events', columns: ['actor_user_id'] },
+  { name: 'financial_events_book_reversal_contact_currency_fk_idx', table: 'financial_events', columns: ['book_id', 'reverses_event_id', 'contact_id', 'currency_code'] },
+  { name: 'financial_events_currency_fk_idx', table: 'financial_events', columns: ['currency_code'] },
+  { name: 'financial_idempotency_actor_user_fk_idx', table: 'financial_idempotency', columns: ['actor_user_id'] },
+  { name: 'financial_idempotency_book_event_fk_idx', table: 'financial_idempotency', columns: ['book_id', 'event_id'] },
+  { name: 'financial_ledger_book_event_contact_currency_fk_idx', table: 'financial_ledger_entries', columns: ['book_id', 'event_id', 'contact_id', 'currency_code'] },
+  { name: 'financial_ledger_book_obligation_contact_currency_fk_idx', table: 'financial_ledger_entries', columns: ['book_id', 'obligation_id', 'contact_id', 'currency_code'] },
+  { name: 'financial_obligations_created_by_fk_idx', table: 'financial_obligations', columns: ['created_by'] },
+  { name: 'financial_obligations_currency_fk_idx', table: 'financial_obligations', columns: ['currency_code'] },
+];
+
 const windowsPgCtl = process.platform === 'win32' ? await import('@embedded-postgres/windows-x64') : null;
 const pgCtlPath = windowsPgCtl?.pg_ctl ?? null;
 const databaseDir = await mkdtemp(path.join(tmpdir(), 'fortuna-migration-pg17-'));
@@ -164,6 +189,142 @@ try {
 
   await admin.query(migrationSql);
   console.log('PASS — actual FORTUNA production migration applied to isolated PostgreSQL 17.11');
+
+  const indexCountBefore = Number((await admin.query(
+    "SELECT count(*)::int AS count FROM pg_index i JOIN pg_class tbl ON tbl.oid=i.indrelid JOIN pg_namespace ns ON ns.oid=tbl.relnamespace WHERE ns.nspname='fortuna_private'"
+  )).rows[0].count);
+  const publicIndexCountBefore = Number((await admin.query(
+    "SELECT count(*)::int AS count FROM pg_index i JOIN pg_class tbl ON tbl.oid=i.indrelid JOIN pg_namespace ns ON ns.oid=tbl.relnamespace WHERE ns.nspname='public'"
+  )).rows[0].count);
+  const privateRowsBefore = (await admin.query(`
+    SELECT
+      (SELECT count(*)::int FROM fortuna_private.financial_books) AS books,
+      (SELECT count(*)::int FROM fortuna_private.financial_contacts) AS contacts,
+      (SELECT count(*)::int FROM fortuna_private.financial_currencies) AS currencies,
+      (SELECT count(*)::int FROM fortuna_private.financial_obligations) AS obligations,
+      (SELECT count(*)::int FROM fortuna_private.financial_events) AS events,
+      (SELECT count(*)::int FROM fortuna_private.financial_ledger_entries) AS ledger_entries,
+      (SELECT count(*)::int FROM fortuna_private.financial_allocations) AS allocations,
+      (SELECT count(*)::int FROM fortuna_private.financial_idempotency) AS idempotency,
+      (SELECT count(*)::int FROM fortuna_private.financial_audit) AS audit
+  `)).rows[0];
+  await admin.query(fkIndexMigrationSql);
+  const indexCountAfter = Number((await admin.query(
+    "SELECT count(*)::int AS count FROM pg_index i JOIN pg_class tbl ON tbl.oid=i.indrelid JOIN pg_namespace ns ON ns.oid=tbl.relnamespace WHERE ns.nspname='fortuna_private'"
+  )).rows[0].count);
+  const publicIndexCountAfter = Number((await admin.query(
+    "SELECT count(*)::int AS count FROM pg_index i JOIN pg_class tbl ON tbl.oid=i.indrelid JOIN pg_namespace ns ON ns.oid=tbl.relnamespace WHERE ns.nspname='public'"
+  )).rows[0].count);
+  const privateRowsAfter = (await admin.query(`
+    SELECT
+      (SELECT count(*)::int FROM fortuna_private.financial_books) AS books,
+      (SELECT count(*)::int FROM fortuna_private.financial_contacts) AS contacts,
+      (SELECT count(*)::int FROM fortuna_private.financial_currencies) AS currencies,
+      (SELECT count(*)::int FROM fortuna_private.financial_obligations) AS obligations,
+      (SELECT count(*)::int FROM fortuna_private.financial_events) AS events,
+      (SELECT count(*)::int FROM fortuna_private.financial_ledger_entries) AS ledger_entries,
+      (SELECT count(*)::int FROM fortuna_private.financial_allocations) AS allocations,
+      (SELECT count(*)::int FROM fortuna_private.financial_idempotency) AS idempotency,
+      (SELECT count(*)::int FROM fortuna_private.financial_audit) AS audit
+  `)).rows[0];
+  assert.equal(publicIndexCountAfter, publicIndexCountBefore,
+    'Index-only FORTUNA migration must not alter any public-schema index');
+  assert.deepEqual(privateRowsAfter, privateRowsBefore,
+    'Index-only FORTUNA migration must not insert or modify financial rows');
+  assert.equal(indexCountAfter - indexCountBefore, expectedFkIndexes.length,
+    'Index-only migration must create exactly fourteen new private indexes');
+
+  const expectedNames = expectedFkIndexes.map(item => item.name);
+  const actualIndexes = await admin.query(`
+    SELECT
+      index_class.relname AS index_name,
+      table_class.relname AS table_name,
+      access_method.amname AS access_method,
+      index_data.indisvalid AS is_valid,
+      index_data.indisready AS is_ready,
+      index_data.indpred IS NULL AS is_not_partial,
+      ARRAY(
+        SELECT attribute.attname::text
+        FROM unnest(index_data.indkey::smallint[]) WITH ORDINALITY AS key_column(attnum, ord)
+        JOIN pg_attribute attribute
+          ON attribute.attrelid = index_data.indrelid
+         AND attribute.attnum = key_column.attnum
+        WHERE key_column.ord <= index_data.indnkeyatts
+        ORDER BY key_column.ord
+      ) AS key_columns
+    FROM pg_index index_data
+    JOIN pg_class index_class ON index_class.oid = index_data.indexrelid
+    JOIN pg_class table_class ON table_class.oid = index_data.indrelid
+    JOIN pg_namespace schema_class ON schema_class.oid = table_class.relnamespace
+    JOIN pg_am access_method ON access_method.oid = index_class.relam
+    WHERE schema_class.nspname = 'fortuna_private'
+      AND index_class.relname = ANY($1::text[])
+  `, [expectedNames]);
+  assert.equal(actualIndexes.rows.length, expectedFkIndexes.length,
+    'All fourteen named covering indexes must exist exactly once');
+  for (const expected of expectedFkIndexes) {
+    const matches = actualIndexes.rows.filter(row => row.index_name === expected.name);
+    assert.equal(matches.length, 1, 'Expected one index named ' + expected.name);
+    const actual = matches[0];
+    assert.equal(actual.table_name, expected.table, expected.name + ' table');
+    assert.equal(actual.access_method, 'btree', expected.name + ' access method');
+    assert.equal(actual.is_valid, true, expected.name + ' must be valid');
+    assert.equal(actual.is_ready, true, expected.name + ' must be ready');
+    assert.equal(actual.is_not_partial, true, expected.name + ' must not be partial');
+    assert.deepEqual(actual.key_columns, expected.columns, expected.name + ' ordered key columns');
+    const duplicate = await admin.query(`
+      SELECT count(*)::int AS count
+      FROM pg_index other_index
+      JOIN pg_class other_class ON other_class.oid = other_index.indexrelid
+      WHERE other_index.indrelid = to_regclass('fortuna_private.' || $1)
+        AND other_class.relname <> $2
+        AND other_index.indisvalid
+        AND other_index.indpred IS NULL
+        AND other_index.indnkeyatts = cardinality($3::text[])
+        AND ARRAY(
+          SELECT attribute.attname::text
+          FROM unnest(other_index.indkey::smallint[]) WITH ORDINALITY AS key_column(attnum, ord)
+          JOIN pg_attribute attribute
+            ON attribute.attrelid = other_index.indrelid
+           AND attribute.attnum = key_column.attnum
+          WHERE key_column.ord <= other_index.indnkeyatts
+          ORDER BY key_column.ord
+        ) = $3::text[]
+    `, [expected.table, expected.name, expected.columns]);
+    assert.equal(duplicate.rows[0].count, 0, expected.name + ' must not duplicate an existing exact-key index');
+  }
+
+  const uncoveredForeignKeys = await admin.query(`
+    SELECT constraint_row.conname
+    FROM pg_constraint constraint_row
+    JOIN pg_class table_class ON table_class.oid = constraint_row.conrelid
+    JOIN pg_namespace schema_class ON schema_class.oid = table_class.relnamespace
+    WHERE constraint_row.contype = 'f'
+      AND schema_class.nspname = 'fortuna_private'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM pg_index index_data
+        JOIN pg_class index_class ON index_class.oid = index_data.indexrelid
+        JOIN pg_am access_method ON access_method.oid = index_class.relam
+        WHERE index_data.indrelid = constraint_row.conrelid
+          AND access_method.amname = 'btree'
+          AND index_data.indisvalid
+          AND index_data.indisready
+          AND index_data.indpred IS NULL
+          AND index_data.indnkeyatts >= cardinality(constraint_row.conkey)
+          AND (
+            SELECT array_agg(key_column.attnum::smallint ORDER BY key_column.ord)
+            FROM unnest(index_data.indkey::smallint[]) WITH ORDINALITY AS key_column(attnum, ord)
+            WHERE key_column.ord <= cardinality(constraint_row.conkey)
+          ) = constraint_row.conkey
+      )
+    ORDER BY constraint_row.conname
+  `);
+  assert.deepEqual(uncoveredForeignKeys.rows, [],
+    'Every FORTUNA private foreign key must have a valid B-tree left-prefix covering index');
+  console.log('PASS — exact fourteen FORTUNA covering indexes exist with ordered B-tree keys, valid/ready state and no exact duplicates');
+  console.log('PASS — all FORTUNA private foreign keys have a left-prefix-compatible covering index');
+
   console.log('PASS — owner B is explicitly seeded as an active global CuevaCoin administrator for non-bypass testing');
 
   const ownerA = '10000000-0000-4000-8000-000000000001';
