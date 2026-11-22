@@ -68,7 +68,8 @@
     "20261030153827_admin_recovery_codes.sql",
     "20261030153927_admin_recovery_approved_by_index.sql",
     "20261104235424_admin_salary_individual_batch.sql",
-    "20261121110000_transfer_recipient_id_privacy_active_admin.sql"
+    "20261121110000_transfer_recipient_id_privacy_active_admin.sql",
+    "20261122140000_fortuna_v1_private_ledger_and_owner_api.sql"
   ],
   "recovered": [
     {
@@ -368,6 +369,13 @@
       "file": "20261121110000_transfer_recipient_id_privacy_active_admin.sql",
       "purpose": "Additive ID-only recipient resolver and active-admin guards on both withdrawal resolver overloads",
       "captured_from_live": "Read-only function definitions inspected 2026-11-21; not executed"
+    },
+    {
+      "file": "20261122140000_fortuna_v1_private_ledger_and_owner_api.sql",
+      "purpose": "FORTUNA v1 private financial ledger and owner-scoped contacts, obligations and settlement API; includes detailed obligation query",
+      "execution_status": "pending_review_not_applied",
+      "applied_to_live": false,
+      "source": "Prepared in PR #50 from isolated PGlite prototypes; not applied to hosted Supabase"
     }
   ]
 }
