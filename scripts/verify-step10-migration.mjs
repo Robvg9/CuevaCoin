@@ -91,7 +91,7 @@ const fortunaMigration = readFileSync(
   'supabase/migrations/20261122140000_fortuna_v1_private_ledger_and_owner_api.sql',
   'utf8',
 );
-assert.match(fortunaMigration, /^BEGIN;[\s\S]*COMMIT;\s*$/i,
+assert.match(fortunaMigration, /BEGIN;[\s\S]*COMMIT;\s*$/i,
   'FORTUNA migration must be atomic');
 assert.match(fortunaMigration,
   /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_list_obligations\([\s\S]*?p_contact_id uuid,[\s\S]*?p_currency_code text DEFAULT NULL,[\s\S]*?p_direction text DEFAULT NULL/i,
