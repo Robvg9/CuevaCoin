@@ -83,3 +83,19 @@ The seven later migration files already tracked in the repository were reconcile
 | `20260830160212` | `fix_resolver_destinatario_identificador_nombre` | 1188 |
 
 Total recovered: **58 files**, 96,523 SQL characters.
+
+ 
+## Addendum — FORTUNA FK covering-index migration applied to LIVE (2026-11-22)
+
+The index-only source file `20261122192417_fortuna_private_fk_covering_indexes.sql` was applied to CuevaCoin LIVE after a separate explicit owner approval. Supabase registered it under its actual migration-ledger version `20261122210505`; the source filename retains its original repository prefix and must not be replayed.
+
+Post-application read-only verification confirmed:
+
+- All 14 expected indexes exist on the exact private tables and ordered columns; each is B-tree, valid, ready, non-partial and non-unique.
+- All 21 foreign keys in `fortuna_private` are covered (zero uncovered).
+- Performance Advisor's unindexed-foreign-key findings decreased from 32 to 17; all 17 remaining findings are in the pre-existing `public` schema.
+- `fortuna_private` index count increased from 25 to 39; `public` index count remained 34.
+- All eight financial user-data tables remained empty; no financial rows were written.
+- Client schema access remained closed. No Data API exposure, grants, Edge deployment, secret changes or application deployment were part of this migration.
+
+The canonical machine-readable applied-migration provenance is maintained in `SUPABASE_MIGRATION_LEDGER_SHA256.json`. This addendum records the LIVE event; it is not a replay instruction.

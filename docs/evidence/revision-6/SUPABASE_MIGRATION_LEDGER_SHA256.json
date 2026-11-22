@@ -1,7 +1,7 @@
 {
   "source": "supabase_migrations.schema_migrations.statements[1]",
   "project_ref": "zqgmjwfvluboiporytcq",
-  "captured_at": "2026-11-21",
+  "captured_at": "2026-11-22",
   "expected_files": [
     "20260801194832_cuevacoin_esquema_inicial.sql",
     "20260801203412_permitir_ver_perfiles_de_admins.sql",
@@ -385,15 +385,25 @@
       "applied_to_live": true,
       "source": "Exact repository file blob c6407ebe46a3256bc95eae8227bd1cce138c228e was applied to hosted Supabase on 2026-11-22; stored migration SQL matches the repository file exactly after newline normalization.",
       "live_version": "20261122173537"
-    }
-  ],
-  "pending_forward_migrations": [
+    },
     {
       "file": "20261122192417_fortuna_private_fk_covering_indexes.sql",
-      "purpose": "Add 14 B-tree covering indexes for FORTUNA foreign-key coverage.",
-      "applied_to_live": false,
-      "execution_status": "pending_review_not_applied",
-      "provenance_note": "Reviewed in PR #59 and verified on isolated native PostgreSQL 17.11; not applied to hosted Supabase. Requires separate explicit LIVE migration authorization."
+      "purpose": "Add 14 B-tree covering indexes for the 15 FORTUNA private-schema foreign-key findings; the financial_audit composite index also covers the book_id prefix.",
+      "execution_status": "applied_live_index_catalog_verified",
+      "applied_to_live": true,
+      "live_version": "20261122210505",
+      "repository_blob_sha": "6d1bbf218600e2c19544c5ae5069251613bfa9d2",
+      "source": "The exact repository file blob was applied to hosted Supabase on 2026-11-22 with apply_migration success=true. Supabase assigned LIVE registry version 20261122210505. Post-application catalog verification confirmed all 14 exact B-tree indexes valid/ready/non-partial; 21 private FKs checked, zero uncovered; Performance Advisor unindexed FK count fell from 32 to 17, with all 17 remaining findings in public; public index count and financial user rows were unchanged.",
+      "index_count": 14,
+      "private_foreign_keys_checked": 21,
+      "uncovered_private_foreign_keys_after": 0,
+      "performance_advisor_unindexed_foreign_keys_before": 32,
+      "performance_advisor_unindexed_foreign_keys_after": 17,
+      "remaining_advisor_findings_schema": "public",
+      "public_index_count_before": 34,
+      "public_index_count_after": 34,
+      "financial_data_rows_written": 0
     }
-  ]
+  ],
+  "pending_forward_migrations": []
 }
