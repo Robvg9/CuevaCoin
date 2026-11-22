@@ -502,6 +502,31 @@ try {
   assert.equal(Number(auditCount), 1);
   console.log('PASS — audit record is stored separately from financial ledger entries');
 
+  const nonEventKey = 'fortuna-contact-key-0001';
+  await db.query(
+    `INSERT INTO fortuna_private.financial_idempotency
+      (book_id, actor_user_id, idempotency_key, payload_sha256)
+     VALUES ($1, $2, $3, $4)`,
+    [book1, owner1, nonEventKey, payloadHash]
+  );
+  await db.query(
+    `UPDATE fortuna_private.financial_idempotency
+        SET status = 'committed', response = '{"contact_id":"non-event-result"}'::jsonb,
+            committed_at = now()
+      WHERE book_id = $1 AND actor_user_id = $2 AND idempotency_key = $3`,
+    [book1, owner1, nonEventKey]
+  );
+  const nonEventResult = await db.query(
+    `SELECT event_id, status, response
+       FROM fortuna_private.financial_idempotency
+      WHERE book_id = $1 AND actor_user_id = $2 AND idempotency_key = $3`,
+    [book1, owner1, nonEventKey]
+  );
+  assert.equal(nonEventResult.rows[0].event_id, null);
+  assert.equal(nonEventResult.rows[0].status, 'committed');
+  assert.equal(nonEventResult.rows[0].response.contact_id, 'non-event-result');
+  console.log('PASS — generic idempotency supports committed non-event commands such as contact creation');
+
   console.log('PASS — isolated FORTUNA PostgreSQL schema verification complete');
 } finally {
   await db.close();
