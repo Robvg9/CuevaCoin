@@ -91,21 +91,21 @@ const fortunaMigration = readFileSync(
   'supabase/migrations/20261122140000_fortuna_v1_private_ledger_and_owner_api.sql',
   'utf8',
 );
-assert.match(fortunaMigration, /^BEGIN;[\\s\\S]*COMMIT;\\s*$/i,
+assert.match(fortunaMigration, /^BEGIN;[\s\S]*COMMIT;\s*$/i,
   'FORTUNA migration must be atomic');
 assert.match(fortunaMigration,
-  /CREATE OR REPLACE FUNCTION fortuna_private\\.fortuna_list_obligations\\([\\s\\S]*?p_contact_id uuid,[\\s\\S]*?p_currency_code text DEFAULT NULL,[\\s\\S]*?p_direction text DEFAULT NULL/i,
+  /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_list_obligations\([\s\S]*?p_contact_id uuid,[\s\S]*?p_currency_code text DEFAULT NULL,[\s\S]*?p_direction text DEFAULT NULL/i,
   'FORTUNA obligation detail must define optional currency and direction filters');
 assert.match(fortunaMigration,
-  /CREATE OR REPLACE FUNCTION api\\.list_obligations\\([\\s\\S]*?p_contact_id uuid,[\\s\\S]*?p_currency_code text DEFAULT NULL,[\\s\\S]*?p_direction text DEFAULT NULL[\\s\\S]*?SECURITY INVOKER/i,
+  /CREATE OR REPLACE FUNCTION api\.list_obligations\([\s\S]*?p_contact_id uuid,[\s\S]*?p_currency_code text DEFAULT NULL,[\s\S]*?p_direction text DEFAULT NULL[\s\S]*?SECURITY INVOKER/i,
   'API list_obligations must be an invoker wrapper');
 assert.match(fortunaMigration,
-  /REVOKE ALL ON FUNCTION api\\.list_obligations\\(uuid, text, text\\) FROM PUBLIC, anon, authenticated[\\s\\S]*?GRANT EXECUTE ON FUNCTION api\\.list_obligations\\(uuid, text, text\\) TO authenticated/i,
+  /REVOKE ALL ON FUNCTION api\.list_obligations\(uuid, text, text\) FROM PUBLIC, anon, authenticated[\s\S]*?GRANT EXECUTE ON FUNCTION api\.list_obligations\(uuid, text, text\) TO authenticated/i,
   'only authenticated may execute the exact obligation query wrapper');
 assert.match(fortunaMigration,
   /REVOKE ALL ON ALL TABLES IN SCHEMA fortuna_private FROM PUBLIC, anon, authenticated/i,
   'private ledger tables must deny direct client privileges');
-assert.doesNotMatch(fortunaMigration, /CREATE OR REPLACE FUNCTION auth\\.uid\\(/i,
+assert.doesNotMatch(fortunaMigration, /CREATE OR REPLACE FUNCTION auth\.uid\(/i,
   'production migration must not replace Supabase Auth auth.uid');
 console.log('PASS — FORTUNA production migration static security contract');
 
