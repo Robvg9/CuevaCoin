@@ -205,25 +205,25 @@ try {
   const contact = await createContact('Settlement owner one', 'settlement-contact-0001');
   const contactId = contact.contact_id;
   const receivable1 = await openObligation({
-    contactId, direction: 'receivable', amountMinor: '3000',
+    contactId, direction: 'receivable', amountMinor: '300000',
     key: 'settlement-open-rec-0001', description: 'Older receivable',
   });
   const receivable2 = await openObligation({
-    contactId, direction: 'receivable', amountMinor: '5000',
+    contactId, direction: 'receivable', amountMinor: '500000',
     key: 'settlement-open-rec-0002', description: 'Newer receivable',
   });
   const payable1 = await openObligation({
-    contactId, direction: 'payable', amountMinor: '4000',
+    contactId, direction: 'payable', amountMinor: '400000',
     key: 'settlement-open-pay-0001', description: 'Payable A',
   });
   const payable2 = await openObligation({
-    contactId, direction: 'payable', amountMinor: '3000',
+    contactId, direction: 'payable', amountMinor: '300000',
     key: 'settlement-open-pay-0002', description: 'Payable B',
   });
   console.log('PASS — test owner opened two receivables and two payables through owner-scoped RPCs');
 
   const fifoPreview = await preview({
-    contactId, flow: 'cash_received', totalMinor: '4000',
+    contactId, flow: 'cash_received', totalMinor: '400000',
   });
   assert.match(fifoPreview.preview_fingerprint, /^[0-9a-f]{64}$/);
   assert.deepEqual(
@@ -236,7 +236,7 @@ try {
   console.log('PASS — FIFO preview proposes oldest-first allocations and returns a SHA-256 fingerprint');
 
   const fifoArgs = {
-    contactId, flow: 'cash_received', totalMinor: '4000',
+    contactId, flow: 'cash_received', totalMinor: '400000',
     fingerprint: fifoPreview.preview_fingerprint, key: 'settlement-receive-0001',
   };
   const fifoCommit = await commit(fifoArgs);
@@ -252,7 +252,7 @@ try {
 
   await expectFailure(
     'same settlement idempotency key with changed cash amount is rejected',
-    () => commit({ ...fifoArgs, totalMinor: '4100' }),
+    () => commit({ ...fifoArgs, totalMinor: '410000' }),
     /fortuna_idempotency_conflict/i
   );
   assert.deepEqual(await counts(), afterFifo);
@@ -281,18 +281,22 @@ try {
   assert.equal(await balance(payable2.obligation_id), -250000n);
   console.log('PASS — manual payment applies bounded allocations and preserves payable sign convention');
 
+  const staleContact = await createContact('Stale preview isolated contact', 'settlement-contact-stale-01');
   const staleObligation = await openObligation({
-    contactId, direction: 'receivable', amountMinor: '1000',
-    key: 'settlement-open-rec-0003', description: 'Stale preview receivable',
+    contactId: staleContact.contact_id,
+    direction: 'receivable',
+    amountMinor: '1000',
+    key: 'settlement-open-stale-0001',
+    description: 'Stale preview receivable',
   });
   const stalePreview = await preview({
-    contactId, flow: 'cash_received', totalMinor: '80000',
+    contactId: staleContact.contact_id, flow: 'cash_received', totalMinor: '800',
   });
   const interleavingPreview = await preview({
-    contactId, flow: 'cash_received', totalMinor: '20000',
+    contactId: staleContact.contact_id, flow: 'cash_received', totalMinor: '200',
   });
   const interleavingCommit = await commit({
-    contactId, flow: 'cash_received', totalMinor: '20000',
+    contactId: staleContact.contact_id, flow: 'cash_received', totalMinor: '200',
     fingerprint: interleavingPreview.preview_fingerprint,
     key: 'settlement-interleave-0001',
   });
@@ -300,23 +304,27 @@ try {
   await expectFailure(
     'changed balances between preview and confirm reject stale fingerprint',
     () => commit({
-      contactId, flow: 'cash_received', totalMinor: '80000',
+      contactId: staleContact.contact_id, flow: 'cash_received', totalMinor: '800',
       fingerprint: stalePreview.preview_fingerprint,
       key: 'settlement-stale-attempt-001',
     }),
     /fortuna_stale_preview/i
   );
   assert.deepEqual(await counts(), beforeStale);
+  assert.equal(await balance(staleObligation.obligation_id), 800n);
   assert.ok(interleavingCommit.event_id);
-  assert.ok(staleObligation.obligation_id);
   console.log('PASS — stale preview detects an intervening settlement and creates no event, allocation, ledger or idempotency rows');
 
+  const overageContact = await createContact('Overage isolated contact', 'settlement-contact-overage-01');
   const overageObligation = await openObligation({
-    contactId, direction: 'receivable', amountMinor: '500',
-    key: 'settlement-open-rec-0004', description: 'Overage preview receivable',
+    contactId: overageContact.contact_id,
+    direction: 'receivable',
+    amountMinor: '500',
+    key: 'settlement-open-overage-0001',
+    description: 'Overage preview receivable',
   });
   const overagePreview = await preview({
-    contactId, flow: 'cash_received', totalMinor: '100000',
+    contactId: overageContact.contact_id, flow: 'cash_received', totalMinor: '100000',
   });
   assert.equal(overagePreview.overage_minor, '99500');
   assert.equal(overagePreview.overage_direction, 'payable');
@@ -324,7 +332,7 @@ try {
   await expectFailure(
     'cash received above open receivables requires explicit owner confirmation',
     () => commit({
-      contactId, flow: 'cash_received', totalMinor: '100000',
+      contactId: overageContact.contact_id, flow: 'cash_received', totalMinor: '100000',
       fingerprint: overagePreview.preview_fingerprint,
       confirmOverage: false, key: 'settlement-overage-test-001',
     }),
@@ -332,7 +340,7 @@ try {
   );
   assert.deepEqual(await counts(), beforeUnconfirmed);
   const overageCommit = await commit({
-    contactId, flow: 'cash_received', totalMinor: '100000',
+    contactId: overageContact.contact_id, flow: 'cash_received', totalMinor: '100000',
     fingerprint: overagePreview.preview_fingerprint,
     confirmOverage: true, key: 'settlement-overage-commit-01',
   });
@@ -344,7 +352,37 @@ try {
   );
   assert.equal(overageRow.rows[0].direction, 'payable');
   assert.equal(Number(overageRow.rows[0].principal_minor), 99500);
+  assert.ok(overageObligation.obligation_id);
   console.log('PASS — confirmed excess creates the opposite payable; unconfirmed excess leaves all counts unchanged');
+
+  const payOverageContact = await createContact('Paid overage isolated contact', 'settlement-contact-pay-overage');
+  const payOverageObligation = await openObligation({
+    contactId: payOverageContact.contact_id,
+    direction: 'payable',
+    amountMinor: '700',
+    key: 'settlement-open-pay-overage-0001',
+    description: 'Paid overage payable',
+  });
+  const payOveragePreview = await preview({
+    contactId: payOverageContact.contact_id, flow: 'cash_paid', totalMinor: '1000',
+  });
+  assert.equal(payOveragePreview.overage_minor, '300');
+  assert.equal(payOveragePreview.overage_direction, 'receivable');
+  const payOverageCommit = await commit({
+    contactId: payOverageContact.contact_id, flow: 'cash_paid', totalMinor: '1000',
+    fingerprint: payOveragePreview.preview_fingerprint,
+    confirmOverage: true, key: 'settlement-pay-overage-commit-01',
+  });
+  assert.equal(payOverageCommit.overage_minor, '300');
+  assert.ok(payOverageCommit.overage_obligation_id);
+  const payOverageRow = await privilegedQuery(
+    'SELECT direction, principal_minor FROM fortuna_private.financial_obligations WHERE id = $1',
+    [payOverageCommit.overage_obligation_id]
+  );
+  assert.equal(payOverageRow.rows[0].direction, 'receivable');
+  assert.equal(Number(payOverageRow.rows[0].principal_minor), 300);
+  assert.ok(payOverageObligation.obligation_id);
+  console.log('PASS — confirmed paid excess creates the opposite receivable');
 
   const crossOwner = await expectFailure(
     'another owner cannot preview or settle a contact in the first owner book',
