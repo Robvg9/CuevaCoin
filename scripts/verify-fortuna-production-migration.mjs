@@ -98,6 +98,27 @@ async function expectFailure(operation, pattern, label) {
   assert.match(String(error.message || error), pattern, label);
   console.log('PASS — ' + label);
 }
+async function waitForLock(observer, pid, label) {
+  const deadline = Date.now() + 15000;
+  let lastActivity = null;
+  while (Date.now() < deadline) {
+    const result = await observer.query(
+      'SELECT state, wait_event_type, wait_event, query FROM pg_stat_activity WHERE pid = $1',
+      [pid],
+    );
+    lastActivity = result.rows[0] || null;
+    if (lastActivity?.wait_event_type === 'Lock') {
+      assert.equal(lastActivity.state, 'active', label + ': blocked backend must remain active');
+      return lastActivity;
+    }
+    if (!lastActivity || lastActivity.state === 'idle') {
+      throw new Error(label + ': contender returned before a PostgreSQL lock wait was observed');
+    }
+    await delay(25);
+  }
+  throw new Error(label + ': timed out waiting for a real PostgreSQL lock; last activity=' + JSON.stringify(lastActivity));
+}
+
 async function authenticate(client, userId) {
   await client.query('RESET ROLE');
   await client.query('SET ROLE authenticated');
@@ -222,6 +243,99 @@ try {
   assert.equal(Number(reconcile.rows[0].total_amount_minor), 5000);
   assert.equal(BigInt(reconcile.rows[0].ledger_total), -5000n);
   console.log('PASS — partial settlement recalculates remaining balance and ledger reconciles to the cash event');
+
+  // Run concurrency tests against the deployed migration itself (not the SQL prototypes).
+  const a2 = await connect('fortuna-migration-owner-a-concurrent', port);
+  await authenticate(a2, ownerA);
+
+  const staleContact = await call(a, 'SELECT api.create_contact($1, NULL, NULL, $2) AS value',
+    ['Migration stale preview contact', 'migration-stale-contact-001']);
+  const staleObligation = await call(a,
+    'SELECT api.open_obligation($1, $2, $3, $4, $5, NULL, $6) AS value',
+    [staleContact.contact_id, 'receivable', 'CUP', '10000', 'Stale preview race',
+      'migration-stale-obligation-001']);
+  const stalePreview = await call(a,
+    "SELECT api.preview_settlement($1, 'CUP', 'cash_received', 'fifo', $2, '[]'::jsonb) AS value",
+    [staleContact.contact_id, '6000']);
+
+  await a.query('BEGIN');
+  const firstStaleCommit = await call(a,
+    "SELECT api.receive_cash($1, 'CUP', 'fifo', $2, '[]'::jsonb, $3, false, $4) AS value",
+    [staleContact.contact_id, '6000', stalePreview.preview_fingerprint, 'migration-stale-confirm-a01']);
+  const staleContenderPid = (await a2.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
+  const staleContender = call(a2,
+    "SELECT api.receive_cash($1, 'CUP', 'fifo', $2, '[]'::jsonb, $3, false, $4) AS value",
+    [staleContact.contact_id, '6000', stalePreview.preview_fingerprint, 'migration-stale-confirm-b01']);
+  let staleWait;
+  try {
+    staleWait = await waitForLock(admin, staleContenderPid, 'production migration stale-preview serialization');
+  } catch (error) {
+    await a.query('ROLLBACK');
+    await staleContender.catch(() => {});
+    throw error;
+  }
+  assert.match(staleWait.query, /api\\.receive_cash/i);
+  await a.query('COMMIT');
+  await expectFailure(
+    () => staleContender,
+    /fortuna_stale_preview/i,
+    'second production-migration confirmation using a stale preview is rejected after the first commit',
+  );
+  const staleCheck = await admin.query(
+    `SELECT
+       (SELECT count(*)::int FROM fortuna_private.financial_events WHERE contact_id = $1 AND event_type = 'cash_received') AS cash_events,
+       (SELECT count(*)::int FROM fortuna_private.financial_idempotency WHERE idempotency_key IN ($2, $3)) AS idempotency_rows,
+       (SELECT COALESCE(sum(signed_minor), 0)::bigint FROM fortuna_private.financial_ledger_entries WHERE obligation_id = $4) AS remaining`,
+    [staleContact.contact_id, 'migration-stale-confirm-a01', 'migration-stale-confirm-b01', staleObligation.obligation_id],
+  );
+  assert.equal(staleCheck.rows[0].cash_events, 1);
+  assert.equal(staleCheck.rows[0].idempotency_rows, 1, 'stale failure must roll back its idempotency reservation');
+  assert.equal(BigInt(staleCheck.rows[0].remaining), 4000n);
+  assert.ok(firstStaleCommit.event_id);
+  console.log('PASS — production migration serializes competing confirmations and rolls back stale request reservation');
+
+  const replayContact = await call(a, 'SELECT api.create_contact($1, NULL, NULL, $2) AS value',
+    ['Migration idempotency replay contact', 'migration-replay-contact-001']);
+  const replayObligation = await call(a,
+    'SELECT api.open_obligation($1, $2, $3, $4, $5, NULL, $6) AS value',
+    [replayContact.contact_id, 'receivable', 'CUP', '10000', 'Idempotency replay race',
+      'migration-replay-obligation-001']);
+  const replayPreview = await call(a,
+    "SELECT api.preview_settlement($1, 'CUP', 'cash_received', 'fifo', $2, '[]'::jsonb) AS value",
+    [replayContact.contact_id, '4000']);
+
+  await a.query('BEGIN');
+  const replayOriginal = await call(a,
+    "SELECT api.receive_cash($1, 'CUP', 'fifo', $2, '[]'::jsonb, $3, false, $4) AS value",
+    [replayContact.contact_id, '4000', replayPreview.preview_fingerprint, 'migration-replay-key-001']);
+  const replayContenderPid = (await a2.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
+  const replayContender = call(a2,
+    "SELECT api.receive_cash($1, 'CUP', 'fifo', $2, '[]'::jsonb, $3, false, $4) AS value",
+    [replayContact.contact_id, '4000', replayPreview.preview_fingerprint, 'migration-replay-key-001']);
+  let replayWait;
+  try {
+    replayWait = await waitForLock(admin, replayContenderPid, 'production migration idempotency serialization');
+  } catch (error) {
+    await a.query('ROLLBACK');
+    await replayContender.catch(() => {});
+    throw error;
+  }
+  assert.match(replayWait.query, /api\\.receive_cash/i);
+  await a.query('COMMIT');
+  const replayed = await replayContender;
+  assert.deepEqual(replayed, replayOriginal, 'concurrent same-key request must return the stored response');
+  const replayCheck = await admin.query(
+    `SELECT
+       (SELECT count(*)::int FROM fortuna_private.financial_events WHERE contact_id = $1 AND event_type = 'cash_received') AS cash_events,
+       (SELECT count(*)::int FROM fortuna_private.financial_idempotency WHERE book_id = (SELECT book_id FROM fortuna_private.financial_contacts WHERE id = $1) AND actor_user_id = $2 AND idempotency_key = $3) AS idempotency_rows,
+       (SELECT COALESCE(sum(signed_minor), 0)::bigint FROM fortuna_private.financial_ledger_entries WHERE obligation_id = $4) AS remaining`,
+    [replayContact.contact_id, ownerA, 'migration-replay-key-001', replayObligation.obligation_id],
+  );
+  assert.equal(replayCheck.rows[0].cash_events, 1);
+  assert.equal(replayCheck.rows[0].idempotency_rows, 1);
+  assert.equal(BigInt(replayCheck.rows[0].remaining), 6000n);
+  console.log('PASS — production migration concurrent same-key retry returns one response with no duplicate event or ledger entry');
+
 
   const grants = await admin.query(`
     SELECT
