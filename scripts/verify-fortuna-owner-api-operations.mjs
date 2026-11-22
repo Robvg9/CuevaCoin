@@ -189,7 +189,7 @@ try {
     key: 'contact-create-0001',
   });
   assert.deepEqual(contactReplay, created, 'same key and payload must return stored result');
-  assert.equal(Number(await scalar('SELECT count(*)::int AS value FROM fortuna_private.financial_contacts')), 1);
+  assert.equal(Number(await privilegedScalar('SELECT count(*)::int AS value FROM fortuna_private.financial_contacts')), 1);
   assert.equal(Number(await privilegedScalar("SELECT count(*)::int AS value FROM fortuna_private.financial_audit WHERE action = 'contact_created'")), 1);
   console.log('PASS — create-contact retry is idempotent and creates no duplicate contact or audit row');
 
@@ -203,7 +203,7 @@ try {
     }),
     /fortuna_idempotency_conflict/i
   );
-  assert.equal(Number(await scalar('SELECT count(*)::int AS value FROM fortuna_private.financial_contacts')), 1);
+  assert.equal(Number(await privilegedScalar('SELECT count(*)::int AS value FROM fortuna_private.financial_contacts')), 1);
 
   const receivable = await openObligation({
     contactId: created.contact_id,
