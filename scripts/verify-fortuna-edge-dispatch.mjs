@@ -5,7 +5,8 @@ const source = await readFile(new URL('../supabase/functions/fortuna-dispatch/in
 const docs = await readFile(new URL('../docs/fortuna/edge-dispatcher.md', import.meta.url), 'utf8')
 
 assert.match(source, /createClient\(SUPABASE_URL, SUPABASE_ANON_KEY/)
-assert.match(source, /supabase\.auth\.getUser\(\)/)
+assert.match(source, /supabase\.auth\.getUser\(accessToken\)/)
+assert.match(source, /const accessToken = authHeader\.replace/)
 assert.match(source, /Authorization: authHeader/)
 assert.match(source, /supabase\.schema\('api'\)\.rpc\(rpc, body\.args\)/)
 assert.match(source, /FORTUNA_API_SCHEMA_NOT_EXPOSED/)
