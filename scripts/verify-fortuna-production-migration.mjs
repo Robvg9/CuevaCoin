@@ -274,7 +274,7 @@ try {
     await staleContender.catch(() => {});
     throw error;
   }
-  assert.match(staleWait.query, /api\\.receive_cash/i);
+  assert.match(staleWait.query, /api\.receive_cash/i);
   await a.query('COMMIT');
   await expectFailure(
     () => staleContender,
@@ -320,7 +320,7 @@ try {
     await replayContender.catch(() => {});
     throw error;
   }
-  assert.match(replayWait.query, /api\\.receive_cash/i);
+  assert.match(replayWait.query, /api\.receive_cash/i);
   await a.query('COMMIT');
   const replayed = await replayContender;
   assert.deepEqual(replayed, replayOriginal, 'concurrent same-key request must return the stored response');
