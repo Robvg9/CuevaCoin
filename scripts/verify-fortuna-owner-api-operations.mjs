@@ -68,6 +68,14 @@ async function listContacts() {
   return asJson(result.rows[0].value);
 }
 
+async function listObligations(contactId, currency = null, direction = null) {
+  const result = await db.query(
+    'SELECT api.list_obligations($1, $2, $3) AS value',
+    [contactId, currency, direction]
+  );
+  return asJson(result.rows[0].value);
+}
+
 async function scalar(sql, params = []) {
   const result = await db.query(sql, params);
   return result.rows[0]?.value;
@@ -316,6 +324,19 @@ try {
   assert.equal(usdPosition.te_debe_minor, '20000');
   assert.equal(usdPosition.le_debes_minor, '0');
   assert.equal(usdPosition.position_type, 'receivable');
+  const cupObligations = await listObligations(created.contact_id, 'CUP');
+  assert.equal(cupObligations.length, 2);
+  assert.equal(cupObligations[0].description, 'Deuda inicial');
+  assert.equal(cupObligations[0].principal_minor, '16500');
+  assert.equal(cupObligations[0].remaining_minor, '16500');
+  assert.equal(cupObligations[0].direction, 'receivable');
+  assert.equal(cupObligations[0].currency, 'CUP');
+  assert.ok(Object.hasOwn(cupObligations[0], 'due_at'));
+  const receivables = await listObligations(created.contact_id, 'CUP', 'receivable');
+  assert.equal(receivables.length, 1);
+  assert.equal((await listObligations(created.contact_id, 'EUR')).length, 0);
+  console.log('PASS — owner-only obligation detail query returns description, due date, currency, direction and remaining minor units with filters');
+
   console.log('PASS — one contact card exposes separate gross receivable/payable values per currency without FX/netting');
 
   await expectFailure(
@@ -337,6 +358,11 @@ try {
     'SELECT count(*)::int AS value FROM fortuna_private.financial_obligations WHERE contact_id = $1',
     [created.contact_id]
   )), 3);
+  await expectFailure(
+    'a different owner cannot enumerate another book obligations by contact ID',
+    () => listObligations(created.contact_id),
+    /fortuna_contact_not_found/i
+  );
   const owner2Contacts = await listContacts();
   assert.deepEqual(owner2Contacts, []);
   console.log('PASS — cross-owner resource ID is non-enumerating and creates no financial rows');
