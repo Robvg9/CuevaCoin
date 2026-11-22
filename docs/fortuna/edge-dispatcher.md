@@ -23,17 +23,21 @@ The dispatcher extracts the bearer token, validates that exact token with `supab
 - Database ownership and isolation remain enforced by the migration's authenticated owner-scoped API.
 - CORS accepts the current CuevaCoin production origin only; requests without an Origin header remain usable by native clients.
 
-## Hosted prerequisite — HUMAN GATE
+## Hosted status — migration applied, API still closed (2026-11-22)
 
-The migration creates schema `api`, but the hosted Supabase Data API currently does not expose that schema. Therefore this function intentionally returns `FORTUNA_API_SCHEMA_NOT_EXPOSED` until the owner explicitly approves adding `api` to Supabase Dashboard → API Settings → Exposed schemas.
+The exact FORTUNA migration is applied to hosted Supabase as migration version `20261122173537`. It creates nine tables in `fortuna_private`, all with RLS enabled, and seeds only CUP/USD/EUR. No books, contacts, obligations, events, ledger entries, allocations, idempotency rows or audit rows were created.
 
-Do not broaden table grants. The migration's function-level grants are the intended permission boundary. Do not apply the migration, expose the schema, add secrets, deploy this function, or write financial data as part of this PR.
+The schemas `api` and `fortuna_private` remain unusable by client roles: `anon` and `authenticated` have no schema `USAGE`, and neither role has direct table privileges. `service_role` has backend-only `USAGE` on `fortuna_private`; it has no `USAGE` on `api`. The actual Data API Exposed Schemas setting is not certified yet and has not been changed. `fortuna_private` must never be added to that allowlist.
 
-After the Human Gate is approved, the rollout sequence is:
-1. Apply the reviewed migration to hosted Supabase.
-2. Expose only schema `api` in Data API settings after rechecking the grants and RLS boundary.
-3. Deploy this function with the default JWT verification enabled.
-4. Run authenticated owner-A/owner-B E2E checks and verify no service-role use.
+This dispatcher must continue to fail closed with `FORTUNA_API_SCHEMA_NOT_EXPOSED` until a separate release gate verifies the Data API allowlist and explicitly grants the minimum `USAGE` needed on `api` and `fortuna_private` to `authenticated`.
+
+Do not broaden table grants. Keep the migration's function-level grants as the permission boundary. Do not expose the schema, add secrets, deploy this function, or write financial data as part of this code change.
+
+After the separate API activation gate is approved, the rollout sequence is:
+1. Verify the actual Dashboard → API Settings → Exposed schemas list; add only `api` if required. Keep `fortuna_private` absent.
+2. Reconfirm the exact grants and RLS boundary, then grant only the required schema `USAGE` to `authenticated`.
+3. Deploy this function with JWT verification enabled.
+4. Run authenticated owner-A/owner-B E2E checks and verify no service-role key or service-role client is used.
 5. Only then wire the financial UI to the dispatcher.
 
 ## Verification
