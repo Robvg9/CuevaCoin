@@ -2,22 +2,24 @@
 
 ## Scope
 
-Adds a user-facing Edge Function that dispatches only the six reviewed FORTUNA owner RPCs:
+Adds a user-facing Edge Function that dispatches only the seven reviewed FORTUNA owner RPCs:
 - `create_contact`
 - `open_obligation`
+- `list_contacts`
 - `list_obligations`
 - `preview_settlement`
 - `receive_cash`
 - `pay_contact`
 
-The dispatcher extracts the bearer token, validates that exact token with `supabase.auth.getUser(accessToken)`, forwards the original Authorization header to PostgREST, and uses only the public anon key. The operation name is allow-listed; clients cannot select arbitrary RPC names. Request bodies are capped at 32 KiB. Responses avoid returning raw SQL/PostgREST errors.
+The dispatcher extracts the bearer token, validates that exact token with `supabase.auth.getUser(accessToken)`, forwards the original Authorization header to PostgREST, and uses the default `SUPABASE_PUBLISHABLE_KEYS` entry when available, falling back to the legacy public `SUPABASE_ANON_KEY` during the transition period. Neither key bypasses RLS. The operation name is allow-listed; clients cannot select arbitrary RPC names. Request bodies are capped at 32 KiB. Responses avoid returning raw SQL/PostgREST errors.
 
 ## Security invariants
 
 - Supabase Edge Function JWT verification remains enabled by the platform default; no `verify_jwt = false` override is introduced.
 - `supabase.auth.getUser()` validates the caller's bearer token.
 - The same `Authorization: Bearer <user JWT>` header is forwarded for the RPC request.
-- No service-role key, admin client, or RLS bypass is used.
+- No service-role/secret key, admin client, or RLS bypass is used.
+- The publishable key is preferred; the legacy anon key is a compatibility fallback only.
 - Database ownership and isolation remain enforced by the migration's authenticated owner-scoped API.
 - CORS accepts the current CuevaCoin production origin only; requests without an Origin header remain usable by native clients.
 
@@ -36,4 +38,4 @@ After the Human Gate is approved, the rollout sequence is:
 
 ## Verification
 
-`scripts/verify-fortuna-edge-dispatch.mjs` statically enforces the JWT forwarding, Auth validation, allowlist, payload bound, schema-unavailable fail-closed behavior, and absence of service-role credentials. It does not claim hosted availability or deployment.
+`scripts/verify-fortuna-edge-dispatch.mjs` statically enforces the JWT forwarding, Auth validation, the seven-operation allowlist, publishable-key preference with legacy fallback, payload bound, schema-unavailable fail-closed behavior, and absence of service-role credentials. It does not claim hosted availability or deployment.
