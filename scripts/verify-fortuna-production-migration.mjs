@@ -244,7 +244,7 @@ try {
       index_data.indisready AS is_ready,
       index_data.indpred IS NULL AS is_not_partial,
       ARRAY(
-        SELECT attribute.attname
+        SELECT attribute.attname::text
         FROM unnest(index_data.indkey::smallint[]) WITH ORDINALITY AS key_column(attnum, ord)
         JOIN pg_attribute attribute
           ON attribute.attrelid = index_data.indrelid
