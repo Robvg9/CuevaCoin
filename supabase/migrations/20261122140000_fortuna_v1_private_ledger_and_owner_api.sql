@@ -287,7 +287,9 @@ ON CONFLICT (code) DO UPDATE SET display_name = EXCLUDED.display_name, minor_uni
 
 CREATE SCHEMA IF NOT EXISTS api;
 REVOKE ALL ON SCHEMA api FROM PUBLIC, anon, authenticated;
-GRANT USAGE ON SCHEMA api TO authenticated;
+-- Keep the API schema closed in the production migration. A separate release
+-- gate must first verify Data API Exposed Schemas, then explicitly grant USAGE
+-- to authenticated. Function EXECUTE grants alone do not open the schema.
 
 GRANT USAGE ON SCHEMA fortuna_private TO authenticated;
 
