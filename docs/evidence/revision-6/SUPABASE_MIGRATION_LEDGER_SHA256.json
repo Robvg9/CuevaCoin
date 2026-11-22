@@ -69,7 +69,7 @@
     "20261030153927_admin_recovery_approved_by_index.sql",
     "20261104235424_admin_salary_individual_batch.sql",
     "20261121110000_transfer_recipient_id_privacy_active_admin.sql",
-    "20261122140000_fortuna_v1_private_ledger_and_owner_api.sql"
+    "20261122173537_fortuna_v1_private_ledger_and_owner_api.sql"
   ],
   "recovered": [
     {
@@ -368,14 +368,19 @@
     {
       "file": "20261121110000_transfer_recipient_id_privacy_active_admin.sql",
       "purpose": "Additive ID-only recipient resolver and active-admin guards on both withdrawal resolver overloads",
-      "captured_from_live": "Read-only function definitions inspected 2026-11-21; not executed"
+      "captured_from_live": "Migration registry record verified 2026-11-22; prior read-only source inspection is retained as historical context.",
+      "live_version": "20261121124522",
+      "applied_to_live": true,
+      "execution_status": "applied_live_repository_sql_differs_from_recorded_statement",
+      "provenance_note": "The hosted registry contains version 20261121124522 with this migration name, but the stored SQL statement is not byte-identical to this repository file after newline normalization (9174 versus 9401 characters). Do not replay; reconcile this historical source separately."
     },
     {
-      "file": "20261122140000_fortuna_v1_private_ledger_and_owner_api.sql",
+      "file": "20261122173537_fortuna_v1_private_ledger_and_owner_api.sql",
       "purpose": "FORTUNA v1 private financial ledger and owner-scoped contacts, obligations and settlement API; includes detailed obligation query",
-      "execution_status": "pending_review_not_applied",
-      "applied_to_live": false,
-      "source": "Prepared in PR #50 from isolated PGlite prototypes; not applied to hosted Supabase"
+      "execution_status": "applied",
+      "applied_to_live": true,
+      "source": "Exact repository file blob c6407ebe46a3256bc95eae8227bd1cce138c228e was applied to hosted Supabase on 2026-11-22; stored migration SQL matches the repository file exactly after newline normalization.",
+      "live_version": "20261122173537"
     }
   ]
 }
