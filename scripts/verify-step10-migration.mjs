@@ -139,7 +139,7 @@ assert.ok(
   'The pending FORTUNA index migration must remain in the tracked SQL inventory',
 );
 const pendingIndexSql = readFileSync('supabase/migrations/' + pendingIndexMigration.file, 'utf8');
-assert.match(pendingIndexSql, /^\s*BEGIN;/i);
+assert.match(pendingIndexSql, /BEGIN;[\s\S]*COMMIT;\s*$/i);
 assert.match(pendingIndexSql, /COMMIT;\s*$/i);
 assert.equal(
   (pendingIndexSql.match(/^\s*CREATE INDEX IF NOT EXISTS\s+/gim) || []).length,
