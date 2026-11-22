@@ -176,6 +176,29 @@ try {
   await authenticate(a, ownerA);
   await authenticate(b, ownerB);
 
+  const apiSchemaClosed = await admin.query(`
+    SELECT
+      has_schema_privilege('authenticated', 'api', 'USAGE') AS authenticated_api_schema,
+      has_schema_privilege('authenticated', 'fortuna_private', 'USAGE') AS authenticated_private_schema,
+      has_schema_privilege('anon', 'api', 'USAGE') AS anon_api_schema,
+      has_schema_privilege('anon', 'fortuna_private', 'USAGE') AS anon_private_schema
+  `);
+  assert.equal(apiSchemaClosed.rows[0].authenticated_api_schema, false);
+  assert.equal(apiSchemaClosed.rows[0].authenticated_private_schema, false);
+  assert.equal(apiSchemaClosed.rows[0].anon_api_schema, false);
+  assert.equal(apiSchemaClosed.rows[0].anon_private_schema, false);
+  await expectFailure(
+    () => a.query('SELECT api.create_contact($1, NULL, NULL, $2)',
+      ['API schema must remain closed', 'migration-api-closed-probe']),
+    /permission denied for schema api/i,
+    'production migration leaves the API schema closed until its separate release gate',
+  );
+  // The isolated harness opens the schema only after proving the production
+  // migration does not. This enables integration coverage of the owner RPCs.
+  await admin.query('GRANT USAGE ON SCHEMA api TO authenticated');
+  await admin.query('GRANT USAGE ON SCHEMA fortuna_private TO authenticated');
+  console.log('PASS — test harness temporarily opens both schemas only after verifying the production migration keeps them closed');
+
   const contactA = await call(a,
     'SELECT api.create_contact($1, NULL, NULL, $2) AS value',
     ['Migration owner A', 'migration-contact-a-001']);
@@ -337,18 +360,24 @@ try {
   console.log('PASS — production migration concurrent same-key retry returns one response with no duplicate event or ledger entry');
 
 
+  await admin.query('REVOKE USAGE ON SCHEMA api FROM authenticated');
+  await admin.query('REVOKE USAGE ON SCHEMA fortuna_private FROM authenticated');
   const grants = await admin.query(`
     SELECT
       has_table_privilege('authenticated', 'fortuna_private.financial_contacts', 'SELECT') AS authenticated_select,
       has_table_privilege('anon', 'fortuna_private.financial_contacts', 'SELECT') AS anon_select,
+      has_schema_privilege('authenticated', 'api', 'USAGE') AS authenticated_api_schema,
+      has_schema_privilege('authenticated', 'fortuna_private', 'USAGE') AS authenticated_private_schema,
       has_function_privilege('authenticated', 'api.list_obligations(uuid,text,text)', 'EXECUTE') AS authenticated_rpc,
       has_function_privilege('anon', 'api.list_obligations(uuid,text,text)', 'EXECUTE') AS anon_rpc
   `);
   assert.equal(grants.rows[0].authenticated_select, false);
   assert.equal(grants.rows[0].anon_select, false);
+  assert.equal(grants.rows[0].authenticated_api_schema, false);
+  assert.equal(grants.rows[0].authenticated_private_schema, false);
   assert.equal(grants.rows[0].authenticated_rpc, true);
   assert.equal(grants.rows[0].anon_rpc, false);
-  console.log('PASS — authenticated has exact query EXECUTE; anon and direct table access remain denied');
+  console.log('PASS — authenticated API execution grants stay dormant without schema USAGE; anon and direct table access remain denied');
   console.log('PASS — complete production migration integration suite');
 } finally {
   for (const client of clients) { try { await client.end(); } catch {} }
