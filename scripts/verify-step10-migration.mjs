@@ -88,7 +88,7 @@ console.log('PASS — salary batch transaction test verifies replay, payload mis
 
 
 const fortunaMigration = readFileSync(
-  'supabase/migrations/20261122140000_fortuna_v1_private_ledger_and_owner_api.sql',
+  'supabase/migrations/20261122173537_fortuna_v1_private_ledger_and_owner_api.sql',
   'utf8',
 );
 assert.match(fortunaMigration, /BEGIN;[\s\S]*COMMIT;\s*$/i,
@@ -114,11 +114,18 @@ const ledgerManifest = JSON.parse(readFileSync('docs/evidence/revision-6/SUPABAS
 const migrationFiles = readdirSync('supabase/migrations').filter(name => name.length > 18 && [...name.slice(0, 14)].every(ch => ch >= '0' && ch <= '9') && name[14] === '_' && name.endsWith('.sql')).sort();
 assert.equal(ledgerManifest.baseline_ledger_count, 65, 'Recovered LIVE baseline must remain 65 versions');
 assert.equal(ledgerManifest.recovered.length, 58, 'Exactly 58 historical sources must retain provenance hashes');
-assert.equal((ledgerManifest.forward_migrations || []).length, 2, 'Expected one applied forward migration plus one pending FORTUNA candidate');
+assert.equal((ledgerManifest.forward_migrations || []).length, 2, 'Expected the two forward migrations documented in the recovery ledger');
+const fortunaForward = (ledgerManifest.forward_migrations || []).find(entry =>
+  entry.file === '20261122173537_fortuna_v1_private_ledger_and_owner_api.sql',
+);
+assert.ok(fortunaForward, 'FORTUNA migration must be present in the forward migration ledger');
+assert.equal(fortunaForward.applied_to_live, true, 'FORTUNA migration must be marked as applied to LIVE');
+assert.equal(fortunaForward.live_version, '20261122173537', 'FORTUNA migration filename must match the LIVE migration version');
+assert.equal(fortunaForward.execution_status, 'applied', 'FORTUNA migration must be marked applied');
 assert.equal(
   (ledgerManifest.forward_migrations || []).filter(entry => entry.applied_to_live === false && entry.execution_status === 'pending_review_not_applied').length,
-  1,
-  'FORTUNA migration must remain explicitly pending and not applied to LIVE',
+  0,
+  'No forward migration should be marked pending after FORTUNA was applied',
 );
 assert.deepEqual(
   migrationFiles,
