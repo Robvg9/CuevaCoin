@@ -10,7 +10,7 @@ Adds a user-facing Edge Function that dispatches only the six reviewed FORTUNA o
 - `receive_cash`
 - `pay_contact`
 
-The dispatcher validates the Supabase Auth user, forwards the caller's original JWT to PostgREST, and uses only the public anon key. The operation name is allow-listed; clients cannot select arbitrary RPC names. Request bodies are capped at 32 KiB. Responses avoid returning raw SQL/PostgREST errors.
+The dispatcher extracts the bearer token, validates that exact token with `supabase.auth.getUser(accessToken)`, forwards the original Authorization header to PostgREST, and uses only the public anon key. The operation name is allow-listed; clients cannot select arbitrary RPC names. Request bodies are capped at 32 KiB. Responses avoid returning raw SQL/PostgREST errors.
 
 ## Security invariants
 
