@@ -91,7 +91,9 @@ Deno.serve(async (req: Request) => {
     return reply({ error: 'INVALID_REQUEST' }, 400, origin)
   }
 
-  const rpc = RPC_BY_OPERATION[body.operation as keyof typeof RPC_BY_OPERATION]
+  const rpc = Object.hasOwn(RPC_BY_OPERATION, body.operation)
+    ? RPC_BY_OPERATION[body.operation as keyof typeof RPC_BY_OPERATION]
+    : undefined
   if (!rpc) return reply({ error: 'OPERATION_NOT_ALLOWED' }, 400, origin)
 
   try {
