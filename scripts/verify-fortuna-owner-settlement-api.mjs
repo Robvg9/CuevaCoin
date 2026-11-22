@@ -285,6 +285,14 @@ try {
   const manualCommit = await commit(manualArgs);
   assert.equal(await balance(payable1.obligation_id), -300000n);
   assert.equal(await balance(payable2.obligation_id), -250000n);
+  await expectFailure(
+    'manual allocation total cannot exceed the cash amount',
+    () => preview({
+      contactId, flow: 'cash_paid', mode: 'manual', totalMinor: '150000',
+      allocations: [{ obligation_id: payable1.obligation_id, amount_minor: '150001' }],
+    }),
+    /fortuna_settlement_allocations_exceed_cash_amount/i
+  );
   console.log('PASS — manual payment applies bounded allocations and preserves payable sign convention');
 
   const staleContact = await createContact('Stale preview isolated contact', 'settlement-contact-stale-01');
