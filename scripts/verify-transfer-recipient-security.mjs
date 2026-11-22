@@ -14,7 +14,7 @@ const index = read('index.html');
 const transferEdge = read('supabase/functions/transferir-saldo/index.ts');
 const qrEdge = read('supabase/functions/resolver-cuenta-qr/index.ts');
 const userEdge = read('supabase/functions/resolver-cuenta-usuario/index.ts');
-const migration = read('supabase/migrations/20261121110000_transfer_recipient_id_privacy_active_admin.sql');
+const migration = read('supabase/migrations/20261121124522_transfer_recipient_id_privacy_active_admin.sql');
 const sqlTest = read('supabase/tests/transfer_recipient_privacy_and_admin_active.sql');
 
 assert.match(lookup, /resolver_destinatario_transferencia_v2/);
