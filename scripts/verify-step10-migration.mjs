@@ -140,9 +140,9 @@ assert.ok(
 );
 const pendingIndexSql = readFileSync('supabase/migrations/' + pendingIndexMigration.file, 'utf8');
 assert.match(pendingIndexSql, /^BEGIN;/i);
-assert.match(pendingIndexSql, /COMMIT;\\s*$/i);
+assert.match(pendingIndexSql, /COMMIT;\s*$/i);
 assert.equal(
-  (pendingIndexSql.match(/^\\s*CREATE INDEX IF NOT EXISTS\\s+/gim) || []).length,
+  (pendingIndexSql.match(/^\s*CREATE INDEX IF NOT EXISTS\s+/gim) || []).length,
   14,
   'The pending FORTUNA index migration must contain exactly 14 additive indexes',
 );
