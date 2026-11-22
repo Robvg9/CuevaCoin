@@ -249,6 +249,10 @@ BEGIN
     END IF;
   END IF;
 
+  IF v_allocated > v_amount THEN
+    RAISE EXCEPTION 'fortuna_settlement_allocations_exceed_cash_amount';
+  END IF;
+
   v_overage := v_amount - v_allocated;
 
   v_snapshot := pg_catalog.jsonb_build_object(
@@ -385,7 +389,7 @@ BEGIN
   IF p_confirm_overage IS NULL THEN
     RAISE EXCEPTION 'fortuna_overage_confirmation_required';
   END IF;
-  IF p_flow NOT IN ('cash_received', 'cash_paid') THEN
+  IF p_flow IS NULL OR p_flow NOT IN ('cash_received', 'cash_paid') THEN
     RAISE EXCEPTION 'fortuna_settlement_invalid_flow';
   END IF;
 
