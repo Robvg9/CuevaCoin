@@ -68,7 +68,7 @@
     "20261030153827_admin_recovery_codes.sql",
     "20261030153927_admin_recovery_approved_by_index.sql",
     "20261104235424_admin_salary_individual_batch.sql",
-    "20261121110000_transfer_recipient_id_privacy_active_admin.sql",
+    "20261121124522_transfer_recipient_id_privacy_active_admin.sql",
     "20261122173537_fortuna_v1_private_ledger_and_owner_api.sql"
   ],
   "recovered": [
@@ -366,13 +366,16 @@
   "baseline_ledger_count": 65,
   "forward_migrations": [
     {
-      "file": "20261121110000_transfer_recipient_id_privacy_active_admin.sql",
+      "file": "20261121124522_transfer_recipient_id_privacy_active_admin.sql",
       "purpose": "Additive ID-only recipient resolver and active-admin guards on both withdrawal resolver overloads",
-      "captured_from_live": "Migration registry record verified 2026-11-22; prior read-only source inspection is retained as historical context.",
+      "captured_from_live": "Supabase migration registry and stored statement verified read-only on 2026-11-22; source SQL was recovered from LIVE definitions on 2026-11-21.",
       "live_version": "20261121124522",
       "applied_to_live": true,
-      "execution_status": "applied_live_repository_sql_differs_from_recorded_statement",
-      "provenance_note": "The hosted registry contains version 20261121124522 with this migration name, but the stored SQL statement is not byte-identical to this repository file after newline normalization (9174 versus 9401 characters). Do not replay; reconcile this historical source separately."
+      "execution_status": "applied_live_executable_sql_matches_comments_only_difference",
+      "provenance_note": "Complete normalized line comparison confirms every executable SQL line matches LIVE in order; only repository comments and trailing whitespace differ. Do not replay this already-applied migration.",
+      "hosted_statement_characters": 9174,
+      "hosted_statement_md5": "2b07ab98ef1814b936d3b21252367bdc",
+      "repository_statement_characters": 9597
     },
     {
       "file": "20261122173537_fortuna_v1_private_ledger_and_owner_api.sql",

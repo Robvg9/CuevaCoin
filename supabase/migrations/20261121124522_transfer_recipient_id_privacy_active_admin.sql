@@ -1,6 +1,9 @@
--- Forward-only hardening generated from read-only LIVE definitions inspected 2026-11-21.
--- Review and explicit authorization are required before production execution.
--- Existing withdrawal transaction, row-lock, ledger and notification behavior is preserved.
+-- Forward-only hardening applied to CuevaCoin LIVE on 2026-11-21.
+-- Git filename aligned to the Supabase migration registry version on 2026-11-22.
+-- LIVE registry: 20261121124522; stored statement: 9,174 normalized characters.
+-- Stored statement MD5: 2b07ab98ef1814b936d3b21252367bdc.
+-- The executable SQL matches LIVE; repository differences are comments/whitespace only.
+-- This migration is already applied. Never replay it against the LIVE project.
 
 BEGIN;
 
