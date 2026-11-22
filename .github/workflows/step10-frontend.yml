@@ -136,6 +136,7 @@ on:
       - "scripts/verify-fortuna-settlement-operations.mjs"
       - "scripts/verify-fortuna-owner-rls.mjs"
       - "scripts/verify-fortuna-api-boundary.mjs"
+      - "scripts/verify-fortuna-owner-api-operations.mjs"
       - "docs/fortuna/**"
       - ".github/workflows/step10-frontend.yml"
 
