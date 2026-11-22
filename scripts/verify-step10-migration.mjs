@@ -127,6 +127,36 @@ assert.equal(
   0,
   'No forward migration should be marked pending after FORTUNA was applied',
 );
+
+const recipientForward = (ledgerManifest.forward_migrations || []).find(entry =>
+  entry.file === '20261121124522_transfer_recipient_id_privacy_active_admin.sql',
+);
+assert.ok(recipientForward, 'Nov 21 recipient-privacy migration must use the exact LIVE version filename');
+assert.equal(recipientForward.live_version, '20261121124522', 'Nov 21 migration must match the LIVE registry version');
+assert.equal(recipientForward.applied_to_live, true, 'Nov 21 migration must remain recorded as applied to LIVE');
+assert.equal(
+  recipientForward.execution_status,
+  'applied_live_executable_sql_matches_comments_only_difference',
+  'Nov 21 migration provenance must distinguish comments-only source drift from pending execution',
+);
+assert.equal(recipientForward.hosted_statement_characters, 9174);
+assert.equal(recipientForward.hosted_statement_md5, '2b07ab98ef1814b936d3b21252367bdc');
+assert.ok(
+  ledgerManifest.expected_files.includes('20261121124522_transfer_recipient_id_privacy_active_admin.sql'),
+  'Expected migration files must contain the exact LIVE version filename',
+);
+assert.ok(
+  !ledgerManifest.expected_files.includes('20261121110000_transfer_recipient_id_privacy_active_admin.sql'),
+  'The stale pre-LIVE filename must not remain in the expected migration set',
+);
+const recipientMigration = readFileSync(
+  'supabase/migrations/20261121124522_transfer_recipient_id_privacy_active_admin.sql',
+  'utf8',
+);
+assert.match(recipientMigration, /CREATE OR REPLACE FUNCTION public\\.resolver_destinatario_transferencia_v2/);
+assert.match(recipientMigration, /This migration is already applied\\. Never replay it/);
+assert.doesNotMatch(recipientMigration, /Review and explicit authorization are required before production execution/i);
+console.log('PASS — Nov 21 applied migration filename, hosted statement provenance, and no-replay invariant');
 assert.deepEqual(
   migrationFiles,
   [...ledgerManifest.expected_files].sort(),
