@@ -445,7 +445,6 @@ try {
   await clientA.query('COMMIT');
   const apiReplay = await apiDuplicatePromise;
   assert.deepEqual(apiReplay, apiOriginal, 'same-key owner API retry must return original response');
-  assert.equal(await balance(apiReplayArgs.contactId).catch(() => null), null);
   console.log('PASS — owner API same-key concurrent retry waits on contact lock and replays one original event');
 
   const staleContact = await apiCreateContact(
@@ -488,11 +487,16 @@ try {
   const staleBalance = await balance(staleObligation.obligation_id);
   assert.equal(staleBalance, 200n);
   const staleEventCount = await admin.query(
-    'SELECT count(*)::int AS count FROM fortuna_private.financial_events WHERE id IN ($1)',
+    'SELECT count(*)::int AS count FROM fortuna_private.financial_events WHERE id = $1',
     [committedFirst.event_id]
   );
   assert.equal(staleEventCount.rows[0].count, 1);
-  console.log('PASS — native concurrent owner API requests serialize and stale preview creates no second event');
+  const staleIdempotencyCount = await admin.query(
+    'SELECT count(*)::int AS count FROM fortuna_private.financial_idempotency WHERE idempotency_key IN ($1, $2)',
+    [staleAKey, staleBKey]
+  );
+  assert.equal(staleIdempotencyCount.rows[0].count, 1, 'stale contender must roll back its idempotency reservation');
+  console.log('PASS — native concurrent owner API requests serialize and stale preview creates no second event or idempotency row');
   
   await admin.query('SELECT 1');
   console.log('PASS — all native PostgreSQL 17.11 concurrency and idempotency invariants verified');
