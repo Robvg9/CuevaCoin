@@ -193,10 +193,44 @@ try {
   const indexCountBefore = Number((await admin.query(
     "SELECT count(*)::int AS count FROM pg_index i JOIN pg_class tbl ON tbl.oid=i.indrelid JOIN pg_namespace ns ON ns.oid=tbl.relnamespace WHERE ns.nspname='fortuna_private'"
   )).rows[0].count);
+  const publicIndexCountBefore = Number((await admin.query(
+    "SELECT count(*)::int AS count FROM pg_index i JOIN pg_class tbl ON tbl.oid=i.indrelid JOIN pg_namespace ns ON ns.oid=tbl.relnamespace WHERE ns.nspname='public'"
+  )).rows[0].count);
+  const privateRowsBefore = (await admin.query(`
+    SELECT
+      (SELECT count(*)::int FROM fortuna_private.financial_books) AS books,
+      (SELECT count(*)::int FROM fortuna_private.financial_contacts) AS contacts,
+      (SELECT count(*)::int FROM fortuna_private.financial_currencies) AS currencies,
+      (SELECT count(*)::int FROM fortuna_private.financial_obligations) AS obligations,
+      (SELECT count(*)::int FROM fortuna_private.financial_events) AS events,
+      (SELECT count(*)::int FROM fortuna_private.financial_ledger_entries) AS ledger_entries,
+      (SELECT count(*)::int FROM fortuna_private.financial_allocations) AS allocations,
+      (SELECT count(*)::int FROM fortuna_private.financial_idempotency) AS idempotency,
+      (SELECT count(*)::int FROM fortuna_private.financial_audit) AS audit
+  `)).rows[0];
   await admin.query(fkIndexMigrationSql);
   const indexCountAfter = Number((await admin.query(
     "SELECT count(*)::int AS count FROM pg_index i JOIN pg_class tbl ON tbl.oid=i.indrelid JOIN pg_namespace ns ON ns.oid=tbl.relnamespace WHERE ns.nspname='fortuna_private'"
   )).rows[0].count);
+  const publicIndexCountAfter = Number((await admin.query(
+    "SELECT count(*)::int AS count FROM pg_index i JOIN pg_class tbl ON tbl.oid=i.indrelid JOIN pg_namespace ns ON ns.oid=tbl.relnamespace WHERE ns.nspname='public'"
+  )).rows[0].count);
+  const privateRowsAfter = (await admin.query(`
+    SELECT
+      (SELECT count(*)::int FROM fortuna_private.financial_books) AS books,
+      (SELECT count(*)::int FROM fortuna_private.financial_contacts) AS contacts,
+      (SELECT count(*)::int FROM fortuna_private.financial_currencies) AS currencies,
+      (SELECT count(*)::int FROM fortuna_private.financial_obligations) AS obligations,
+      (SELECT count(*)::int FROM fortuna_private.financial_events) AS events,
+      (SELECT count(*)::int FROM fortuna_private.financial_ledger_entries) AS ledger_entries,
+      (SELECT count(*)::int FROM fortuna_private.financial_allocations) AS allocations,
+      (SELECT count(*)::int FROM fortuna_private.financial_idempotency) AS idempotency,
+      (SELECT count(*)::int FROM fortuna_private.financial_audit) AS audit
+  `)).rows[0];
+  assert.equal(publicIndexCountAfter, publicIndexCountBefore,
+    'Index-only FORTUNA migration must not alter any public-schema index');
+  assert.deepEqual(privateRowsAfter, privateRowsBefore,
+    'Index-only FORTUNA migration must not insert or modify financial rows');
   assert.equal(indexCountAfter - indexCountBefore, expectedFkIndexes.length,
     'Index-only migration must create exactly fourteen new private indexes');
 
