@@ -65,6 +65,7 @@ on:
       - "scripts/verify-fortuna-transaction-atomicity.mjs"
       - "scripts/verify-fortuna-settlement-operations.mjs"
       - "scripts/verify-fortuna-owner-rls.mjs"
+      - "scripts/verify-fortuna-api-boundary.mjs"
       - "docs/fortuna/**"
       - ".github/workflows/step10-frontend.yml"
   push:
@@ -133,6 +134,7 @@ on:
       - "scripts/verify-fortuna-transaction-atomicity.mjs"
       - "scripts/verify-fortuna-settlement-operations.mjs"
       - "scripts/verify-fortuna-owner-rls.mjs"
+      - "scripts/verify-fortuna-api-boundary.mjs"
       - "docs/fortuna/**"
       - ".github/workflows/step10-frontend.yml"
 
@@ -203,6 +205,13 @@ jobs:
           set "FORTUNA_SQL_FILE=%GITHUB_WORKSPACE%\supabase\tests\fortuna_v1_schema_prototype.sql"
           set "FORTUNA_TRANSACTION_SQL_FILE=%GITHUB_WORKSPACE%\supabase\tests\fortuna_v1_transaction_prototype.sql"
           node "%RUNNER_TEMP%\fortuna-pglite\verify-transactions.mjs"
+        shell: cmd
+      - name: Verify FORTUNA API/private schema boundary (local claims simulation)
+        run: |
+          copy /Y scripts\verify-fortuna-api-boundary.mjs "%RUNNER_TEMP%\fortuna-pglite\verify-api-boundary.mjs"
+          set "FORTUNA_SQL_FILE=%GITHUB_WORKSPACE%\supabase\tests\fortuna_v1_schema_prototype.sql"
+          set "FORTUNA_API_BOUNDARY_SQL_FILE=%GITHUB_WORKSPACE%\supabase\tests\fortuna_v1_api_boundary_prototype.sql"
+          node "%RUNNER_TEMP%\fortuna-pglite\verify-api-boundary.mjs"
         shell: cmd
       - name: Verify FORTUNA owner-only RLS isolation (local claims simulation)
         run: |
