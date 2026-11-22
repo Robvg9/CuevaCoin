@@ -91,7 +91,12 @@ const ledgerManifest = JSON.parse(readFileSync('docs/evidence/revision-6/SUPABAS
 const migrationFiles = readdirSync('supabase/migrations').filter(name => name.length > 18 && [...name.slice(0, 14)].every(ch => ch >= '0' && ch <= '9') && name[14] === '_' && name.endsWith('.sql')).sort();
 assert.equal(ledgerManifest.baseline_ledger_count, 65, 'Recovered LIVE baseline must remain 65 versions');
 assert.equal(ledgerManifest.recovered.length, 58, 'Exactly 58 historical sources must retain provenance hashes');
-assert.equal((ledgerManifest.forward_migrations || []).length, 1, 'Exactly one reviewed forward migration is expected in this revision');
+assert.equal((ledgerManifest.forward_migrations || []).length, 2, 'Expected one applied forward migration plus one pending FORTUNA candidate');
+assert.equal(
+  (ledgerManifest.forward_migrations || []).filter(entry => entry.applied_to_live === false && entry.execution_status === 'pending_review_not_applied').length,
+  1,
+  'FORTUNA migration must remain explicitly pending and not applied to LIVE',
+);
 assert.deepEqual(
   migrationFiles,
   [...ledgerManifest.expected_files].sort(),
@@ -108,4 +113,4 @@ for (const forward of ledgerManifest.forward_migrations || []) {
   const source = readFileSync('supabase/migrations/' + forward.file, 'utf8');
   assert.ok(source.trim().length > 0, 'Forward migration source must not be empty: ' + forward.file);
 }
-console.log('PASS — all ' + ledgerManifest.baseline_ledger_count + ' LIVE ledger filenames plus ' + (ledgerManifest.forward_migrations || []).length + ' reviewed forward migration(s) match; all ' + ledgerManifest.recovered.length + ' recovered SQL files retain ledger SHA-256 provenance');
+console.log('PASS — all ' + ledgerManifest.baseline_ledger_count + ' LIVE baseline and forward filenames plus ' + (ledgerManifest.forward_migrations || []).length + ' applied/pending forward migration record(s) match; all ' + ledgerManifest.recovered.length + ' recovered SQL files retain ledger SHA-256 provenance');
