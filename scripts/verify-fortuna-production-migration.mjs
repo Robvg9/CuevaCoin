@@ -11,7 +11,7 @@ import { Client } from 'pg';
 const migrationPath = process.env.FORTUNA_MIGRATION_SQL_FILE;
 if (!migrationPath) throw new Error('FORTUNA_MIGRATION_SQL_FILE is required');
 const migrationSql = await readFile(migrationPath, 'utf8');
-assert.match(migrationSql, /^BEGIN;[\\s\\S]*COMMIT;\\s*$/i);
+assert.match(migrationSql, /^BEGIN;[\s\S]*COMMIT;\s*$/i);
 
 const windowsPgCtl = process.platform === 'win32' ? await import('@embedded-postgres/windows-x64') : null;
 const pgCtlPath = windowsPgCtl?.pg_ctl ?? null;
@@ -115,14 +115,14 @@ await new Promise((resolve, reject) => probe.close(error => error ? reject(error
 try {
   postgres = new EmbeddedPostgres({
     databaseDir, user: 'postgres', password, port, persistent: true, autoRehydrateSymlinks: true,
-    onLog: () => {}, onError: error => { process.stderr.write(String(error) + '\\n'); },
+    onLog: () => {}, onError: error => { process.stderr.write(String(error) + '\n'); },
   });
   await postgres.initialise();
   await postgres.start();
   postgresStarted = true;
   const admin = await connect('fortuna-production-migration-admin', port);
   const version = (await admin.query('SELECT version() AS version')).rows[0].version;
-  assert.match(version, /PostgreSQL 17\\.11(?:\\.|\\s)/i);
+  assert.match(version, /PostgreSQL 17\.11(?:\.|\s)/i);
 
   await admin.query(`
     CREATE ROLE anon NOLOGIN;
