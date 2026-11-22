@@ -183,6 +183,12 @@ try {
     auth_internal_plan: false,
   });
   console.log('PASS — API grants are minimal; anon denied; no direct financial-table or internal-plan access');
+  await authenticateAs(ids.owner1);
+  await expectFailure(
+    'authenticated owner cannot query private financial ledger tables directly',
+    () => db.query('SELECT count(*) FROM fortuna_private.financial_ledger_entries'),
+    /permission denied/i
+  );
 
   const functions = await db.query(`
     SELECT n.nspname AS schema_name, p.proname, p.prosecdef, p.pronargs,
@@ -228,9 +234,9 @@ try {
   assert.match(fifoPreview.preview_fingerprint, /^[0-9a-f]{64}$/);
   assert.deepEqual(
     fifoPreview.allocations.map(x => [x.obligation_id, Number(x.amount_minor)]),
-    [[receivable1.obligation_id, 3000], [receivable2.obligation_id, 1000]]
+    [[receivable1.obligation_id, 300000], [receivable2.obligation_id, 100000]]
   );
-  assert.equal(fifoPreview.allocated_minor, '4000');
+  assert.equal(fifoPreview.allocated_minor, '400000');
   assert.equal(fifoPreview.overage_minor, '0');
   assert.equal(fifoPreview.overage_direction, null);
   console.log('PASS — FIFO preview proposes oldest-first allocations and returns a SHA-256 fingerprint');
@@ -240,7 +246,7 @@ try {
     fingerprint: fifoPreview.preview_fingerprint, key: 'settlement-receive-0001',
   };
   const fifoCommit = await commit(fifoArgs);
-  assert.equal(fifoCommit.allocated_minor, '4000');
+  assert.equal(fifoCommit.allocated_minor, '400000');
   assert.equal(fifoCommit.overage_minor, '0');
   assert.equal(await balance(receivable1.obligation_id), 0n);
   assert.equal(await balance(receivable2.obligation_id), 400000n);
