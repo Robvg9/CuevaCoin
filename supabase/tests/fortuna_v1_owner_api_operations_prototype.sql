@@ -513,6 +513,100 @@ BEGIN
 END;
 $fortuna_list_contacts$;
 
+
+CREATE OR REPLACE FUNCTION fortuna_private.fortuna_list_obligations(
+  p_contact_id uuid,
+  p_currency_code text DEFAULT NULL,
+  p_direction text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fortuna_list_obligations$
+DECLARE
+  v_book_id uuid;
+  v_currency text;
+  v_direction text;
+  v_response jsonb;
+BEGIN
+  v_book_id := fortuna_private.fortuna_get_current_book_id();
+  IF v_book_id IS NULL THEN
+    RETURN '[]'::jsonb;
+  END IF;
+
+  IF p_contact_id IS NULL THEN
+    RAISE EXCEPTION 'fortuna_contact_not_found';
+  END IF;
+  v_currency := NULLIF(pg_catalog.upper(pg_catalog.btrim(COALESCE(p_currency_code, ''))), '');
+  v_direction := NULLIF(pg_catalog.lower(pg_catalog.btrim(COALESCE(p_direction, ''))), '');
+  IF v_direction IS NOT NULL AND v_direction NOT IN ('receivable', 'payable') THEN
+    RAISE EXCEPTION 'fortuna_obligation_direction_invalid';
+  END IF;
+  IF v_currency IS NOT NULL AND v_currency NOT IN ('CUP', 'USD', 'EUR') THEN
+    RAISE EXCEPTION 'fortuna_currency_not_supported';
+  END IF;
+
+  -- Contact ID is only a selector. The book predicate prevents cross-owner enumeration.
+  PERFORM 1
+    FROM fortuna_private.financial_contacts AS c
+   WHERE c.id = p_contact_id
+     AND c.book_id = v_book_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'fortuna_contact_not_found';
+  END IF;
+
+  WITH balances AS (
+    SELECT
+      o.id,
+      o.contact_id,
+      o.currency_code,
+      o.direction,
+      o.principal_minor,
+      o.description,
+      o.due_at,
+      o.created_at,
+      COALESCE(pg_catalog.sum(l.signed_minor), 0)::bigint AS signed_minor
+    FROM fortuna_private.financial_obligations AS o
+    LEFT JOIN fortuna_private.financial_ledger_entries AS l
+      ON l.book_id = o.book_id
+     AND l.obligation_id = o.id
+    WHERE o.book_id = v_book_id
+      AND o.contact_id = p_contact_id
+      AND (v_currency IS NULL OR o.currency_code = v_currency)
+      AND (v_direction IS NULL OR o.direction = v_direction)
+    GROUP BY o.id, o.contact_id, o.currency_code, o.direction,
+             o.principal_minor, o.description, o.due_at, o.created_at
+  )
+  SELECT COALESCE(
+    pg_catalog.jsonb_agg(
+      pg_catalog.jsonb_build_object(
+        'obligation_id', b.id,
+        'contact_id', b.contact_id,
+        'currency', b.currency_code,
+        'direction', b.direction,
+        'principal_minor', b.principal_minor::text,
+        'remaining_minor', CASE
+          WHEN b.direction = 'receivable' THEN b.signed_minor::text
+          ELSE (-b.signed_minor)::text
+        END,
+        'description', b.description,
+        'due_at', b.due_at,
+        'created_at', b.created_at
+      )
+      ORDER BY b.created_at, b.id
+    ),
+    '[]'::jsonb
+  )
+  INTO v_response
+  FROM balances AS b
+  WHERE CASE WHEN b.direction = 'receivable'
+             THEN b.signed_minor ELSE -b.signed_minor END > 0;
+
+  RETURN v_response;
+END;
+$fortuna_list_obligations$;
+
 -- Narrow PostgREST RPC wrappers. No wrapper accepts book, actor, or owner IDs.
 CREATE OR REPLACE FUNCTION api.create_contact(
   p_display_name text,
@@ -554,25 +648,43 @@ AS $fortuna_api_list_contacts$
   SELECT fortuna_private.fortuna_list_contacts();
 $fortuna_api_list_contacts$;
 
+
+CREATE OR REPLACE FUNCTION api.list_obligations(
+  p_contact_id uuid,
+  p_currency_code text DEFAULT NULL,
+  p_direction text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE sql
+SECURITY INVOKER
+SET search_path = pg_catalog
+AS $fortuna_api_list_obligations$
+  SELECT fortuna_private.fortuna_list_obligations($1, $2, $3);
+$fortuna_api_list_obligations$;
+
 -- Remove default PUBLIC EXECUTE; grant only the exact user-facing call graph.
 REVOKE ALL ON FUNCTION fortuna_private.fortuna_get_current_book_id() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION fortuna_private.fortuna_ensure_current_book_id() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION fortuna_private.fortuna_create_contact(text, text, text, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION fortuna_private.fortuna_open_obligation(uuid, text, text, text, text, timestamptz, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION fortuna_private.fortuna_list_contacts() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION fortuna_private.fortuna_list_obligations(uuid, text, text) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION fortuna_private.fortuna_get_current_book_id() TO authenticated;
 GRANT EXECUTE ON FUNCTION fortuna_private.fortuna_ensure_current_book_id() TO authenticated;
 GRANT EXECUTE ON FUNCTION fortuna_private.fortuna_create_contact(text, text, text, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION fortuna_private.fortuna_open_obligation(uuid, text, text, text, text, timestamptz, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION fortuna_private.fortuna_list_contacts() TO authenticated;
+GRANT EXECUTE ON FUNCTION fortuna_private.fortuna_list_obligations(uuid, text, text) TO authenticated;
 
 REVOKE ALL ON FUNCTION api.create_contact(text, text, text, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION api.open_obligation(uuid, text, text, text, text, timestamptz, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION api.list_contacts() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION api.list_obligations(uuid, text, text) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION api.create_contact(text, text, text, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION api.open_obligation(uuid, text, text, text, text, timestamptz, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION api.list_contacts() TO authenticated;
+GRANT EXECUTE ON FUNCTION api.list_obligations(uuid, text, text) TO authenticated;
 
 -- No direct table privileges are granted to anon/authenticated.
