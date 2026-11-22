@@ -73,6 +73,17 @@ async function scalar(sql, params = []) {
   return result.rows[0]?.value;
 }
 
+// Read internal fixture state as the verifier role, then restore the caller role.
+// Direct table reads under authenticated must remain denied by design.
+async function privilegedScalar(sql, params = []) {
+  await db.exec('RESET ROLE');
+  try {
+    return await scalar(sql, params);
+  } finally {
+    await db.exec('SET ROLE authenticated');
+  }
+}
+
 try {
   const version = await scalar('SELECT version() AS value');
   assert.match(String(version), /PostgreSQL 17/i);
@@ -167,8 +178,8 @@ try {
   assert.equal(created.display_name, 'Contacto mixto');
   assert.equal(created.phone, '555-0100');
   assert.equal(created.notes, 'Cliente de prueba');
-  assert.equal(Number(await scalar('SELECT count(*)::int AS value FROM fortuna_private.financial_books')), 1);
-  assert.equal(Number(await scalar('SELECT count(*)::int AS value FROM fortuna_private.financial_contacts')), 1);
+  assert.equal(Number(await privilegedScalar('SELECT count(*)::int AS value FROM fortuna_private.financial_books')), 1);
+  assert.equal(Number(await privilegedScalar('SELECT count(*)::int AS value FROM fortuna_private.financial_contacts')), 1);
   console.log('PASS — first owner write creates exactly one personal book and one normalized contact');
 
   const contactReplay = await createContact({
@@ -179,7 +190,7 @@ try {
   });
   assert.deepEqual(contactReplay, created, 'same key and payload must return stored result');
   assert.equal(Number(await scalar('SELECT count(*)::int AS value FROM fortuna_private.financial_contacts')), 1);
-  assert.equal(Number(await scalar("SELECT count(*)::int AS value FROM fortuna_private.financial_audit WHERE action = 'contact_created'")), 1);
+  assert.equal(Number(await privilegedScalar("SELECT count(*)::int AS value FROM fortuna_private.financial_audit WHERE action = 'contact_created'")), 1);
   console.log('PASS — create-contact retry is idempotent and creates no duplicate contact or audit row');
 
   await expectFailure(
@@ -217,7 +228,7 @@ try {
     key: 'obligation-open-0001',
   });
   assert.deepEqual(receivableReplay, receivable);
-  assert.equal(Number(await scalar('SELECT count(*)::int AS value FROM fortuna_private.financial_events')), 1);
+  assert.equal(Number(await privilegedScalar('SELECT count(*)::int AS value FROM fortuna_private.financial_events')), 1);
   console.log('PASS — opening a receivable writes one event and one ledger line; same-key replay does not duplicate');
 
   await expectFailure(
@@ -322,7 +333,7 @@ try {
     },
     /fortuna_contact_not_found/i
   );
-  assert.equal(Number(await scalar(
+  assert.equal(Number(await privilegedScalar(
     'SELECT count(*)::int AS value FROM fortuna_private.financial_obligations WHERE contact_id = $1',
     [created.contact_id]
   )), 3);
@@ -335,7 +346,7 @@ try {
     key: 'owner2-contact-0001',
   });
   assert.ok(owner2Contact.contact_id);
-  const owner2BookId = await scalar(
+  const owner2BookId = await privilegedScalar(
     'SELECT id AS value FROM fortuna_private.financial_books WHERE owner_user_id = $1',
     [ids.owner2]
   );
