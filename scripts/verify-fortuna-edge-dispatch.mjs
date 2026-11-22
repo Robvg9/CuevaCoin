@@ -22,6 +22,6 @@ for (const operation of ['create_contact', 'open_obligation', 'list_obligations'
   assert.match(source, new RegExp(operation))
 }
 assert.match(docs, /HUMAN GATE/i)
-assert.match(docs, /not exposed/i)
+assert.match(docs, /(?:not exposed|does not expose)/i)
 assert.match(docs, /service_role/i)
 console.log('PASS — FORTUNA Edge Dispatcher user-JWT, RPC allowlist, payload bounds and no-service-role contract')
