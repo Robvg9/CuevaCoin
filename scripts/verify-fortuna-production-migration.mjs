@@ -19,7 +19,7 @@ const fkIndexMigrationSql = await readFile(fkIndexMigrationPath, 'utf8');
 assert.match(fkIndexMigrationSql, /BEGIN;[\s\S]*COMMIT;\s*$/i);
 assert.equal((fkIndexMigrationSql.match(/CREATE INDEX IF NOT EXISTS/gi) || []).length, 14,
   'FORTUNA FK migration must add exactly fourteen indexes');
-assert.doesNotMatch(fkIndexMigrationSql, /CREATE TABLE|ALTER TABLE|DROP TABLE|TRUNCATE|GRANT|REVOKE|CREATE OR REPLACE FUNCTION/i,
+assert.doesNotMatch(fkIndexMigrationSql, /\bCREATE\s+TABLE\b|\bALTER\s+TABLE\b|\bDROP\s+TABLE\b|\bTRUNCATE\b|\bGRANT\b|\bREVOKE\b|\bCREATE\s+OR\s+REPLACE\s+FUNCTION\b/i,
   'FORTUNA FK migration must remain index-only');
 const expectedFkIndexes = [
   { name: 'financial_allocations_book_event_contact_currency_fk_idx', table: 'financial_allocations', columns: ['book_id', 'event_id', 'contact_id', 'currency_code'] },
