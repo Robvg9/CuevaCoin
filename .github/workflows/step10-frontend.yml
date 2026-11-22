@@ -64,6 +64,7 @@ on:
       - "scripts/verify-fortuna-postgres-schema.mjs"
       - "scripts/verify-fortuna-transaction-atomicity.mjs"
       - "scripts/verify-fortuna-settlement-operations.mjs"
+      - "scripts/verify-fortuna-owner-rls.mjs"
       - "docs/fortuna/**"
       - ".github/workflows/step10-frontend.yml"
   push:
@@ -131,6 +132,7 @@ on:
       - "scripts/verify-fortuna-postgres-schema.mjs"
       - "scripts/verify-fortuna-transaction-atomicity.mjs"
       - "scripts/verify-fortuna-settlement-operations.mjs"
+      - "scripts/verify-fortuna-owner-rls.mjs"
       - "docs/fortuna/**"
       - ".github/workflows/step10-frontend.yml"
 
@@ -201,6 +203,13 @@ jobs:
           set "FORTUNA_SQL_FILE=%GITHUB_WORKSPACE%\supabase\tests\fortuna_v1_schema_prototype.sql"
           set "FORTUNA_TRANSACTION_SQL_FILE=%GITHUB_WORKSPACE%\supabase\tests\fortuna_v1_transaction_prototype.sql"
           node "%RUNNER_TEMP%\fortuna-pglite\verify-transactions.mjs"
+        shell: cmd
+      - name: Verify FORTUNA owner-only RLS isolation (local claims simulation)
+        run: |
+          copy /Y scripts\\verify-fortuna-owner-rls.mjs "%RUNNER_TEMP%\\fortuna-pglite\\verify-owner-rls.mjs"
+          set "FORTUNA_SQL_FILE=%GITHUB_WORKSPACE%\\supabase\\tests\\fortuna_v1_schema_prototype.sql"
+          set "FORTUNA_RLS_SQL_FILE=%GITHUB_WORKSPACE%\\supabase\\tests\\fortuna_v1_owner_rls_prototype.sql"
+          node "%RUNNER_TEMP%\\fortuna-pglite\\verify-owner-rls.mjs"
         shell: cmd
       - name: Verify MISIÓN FORTUNA v1 accounting contract (pure model)
         run: node scripts/verify-fortuna-ledger-contract.mjs
