@@ -32,3 +32,8 @@ Do not apply this migration, expose `api` through Data API, deploy an Edge dispa
 ## Known implementation boundary
 
 The migration creates the database contract only. The actual app screen, Edge/API dispatch integration, hosted PostgREST exposure, JWT behavior, and end-to-end LIVE smoke remain separate work.
+
+
+## Migration ledger reconciliation
+
+The checksum manifest lists the 65-version recovered baseline, the existing V157 forward migration, and this new FORTUNA candidate. The FORTUNA entry is explicitly marked `execution_status: pending_review_not_applied` and `applied_to_live: false`; the migration verifier enforces that exactly one pending candidate exists. This is repository provenance only, not a claim that the hosted database has applied it.
