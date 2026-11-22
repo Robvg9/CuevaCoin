@@ -1,13 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')
 const APP_ORIGIN = 'https://cuevacoin.robvg9.workers.dev'
 const MAX_BODY_BYTES = 32 * 1024
 
 const RPC_BY_OPERATION = {
   create_contact: 'create_contact',
   open_obligation: 'open_obligation',
+  list_contacts: 'list_contacts',
   list_obligations: 'list_obligations',
   preview_settlement: 'preview_settlement',
   receive_cash: 'receive_cash',
@@ -33,6 +33,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
+function resolvePublicApiKey(): string | undefined {
+  const rawPublishableKeys = Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')
+  if (rawPublishableKeys) {
+    try {
+      const keys: unknown = JSON.parse(rawPublishableKeys)
+      if (isRecord(keys) && typeof keys.default === 'string' && keys.default.trim()) {
+        return keys.default
+      }
+    } catch {
+      // Fall back to the legacy anon key during the platform's transition period.
+    }
+  }
+  return Deno.env.get('SUPABASE_ANON_KEY') ?? undefined
+}
+
+const SUPABASE_PUBLIC_KEY = resolvePublicApiKey()
+
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get('origin') ?? undefined
   if (origin && origin !== APP_ORIGIN) return reply({ error: 'ORIGIN_NOT_ALLOWED' }, 403)
@@ -47,7 +64,7 @@ Deno.serve(async (req: Request) => {
     return reply({ error: 'AUTH_REQUIRED' }, 401, origin)
   }
   const accessToken = authHeader.replace(/^Bearer\s+/i, '')
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  if (!SUPABASE_URL || !SUPABASE_PUBLIC_KEY) {
     return reply({ error: 'SERVICE_UNAVAILABLE' }, 503, origin)
   }
 
@@ -99,8 +116,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     // Keep the caller's JWT on every Auth and PostgREST request. This client uses
-    // only the public anon key; owner isolation is enforced by the database API.
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    // only a public publishable/legacy anon key; owner isolation is enforced by the database API.
+    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLIC_KEY, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
       global: { headers: { Authorization: authHeader } },
     })
