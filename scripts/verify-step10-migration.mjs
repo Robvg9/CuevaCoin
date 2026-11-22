@@ -153,8 +153,8 @@ const recipientMigration = readFileSync(
   'supabase/migrations/20261121124522_transfer_recipient_id_privacy_active_admin.sql',
   'utf8',
 );
-assert.match(recipientMigration, /CREATE OR REPLACE FUNCTION public\\.resolver_destinatario_transferencia_v2/);
-assert.match(recipientMigration, /This migration is already applied\\. Never replay it/);
+assert.match(recipientMigration, /CREATE OR REPLACE FUNCTION public\.resolver_destinatario_transferencia_v2/);
+assert.match(recipientMigration, /This migration is already applied\. Never replay it/);
 assert.doesNotMatch(recipientMigration, /Review and explicit authorization are required before production execution/i);
 console.log('PASS — Nov 21 applied migration filename, hosted statement provenance, and no-replay invariant');
 assert.deepEqual(
