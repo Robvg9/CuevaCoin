@@ -119,11 +119,11 @@ async function counts() {
 }
 
 async function balance(obligationId) {
-  const value = await scalar(
+  const result = await privilegedQuery(
     'SELECT COALESCE(sum(signed_minor), 0)::bigint AS value FROM fortuna_private.financial_ledger_entries WHERE obligation_id = $1',
     [obligationId]
   );
-  return BigInt(value ?? 0);
+  return BigInt(result.rows[0]?.value ?? 0);
 }
 
 try {
