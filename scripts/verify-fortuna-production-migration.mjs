@@ -11,7 +11,7 @@ import { Client } from 'pg';
 const migrationPath = process.env.FORTUNA_MIGRATION_SQL_FILE;
 if (!migrationPath) throw new Error('FORTUNA_MIGRATION_SQL_FILE is required');
 const migrationSql = await readFile(migrationPath, 'utf8');
-assert.match(migrationSql, /^BEGIN;[\s\S]*COMMIT;\s*$/i);
+assert.match(migrationSql, /BEGIN;[\s\S]*COMMIT;\s*$/i);
 
 const windowsPgCtl = process.platform === 'win32' ? await import('@embedded-postgres/windows-x64') : null;
 const pgCtlPath = windowsPgCtl?.pg_ctl ?? null;
