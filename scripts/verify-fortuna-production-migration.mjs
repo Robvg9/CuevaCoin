@@ -241,17 +241,12 @@ try {
     const duplicate = await admin.query(`
       SELECT count(*)::int AS count
       FROM pg_index other_index
-      WHERE other_index.indrelid = (
-        SELECT indrelid FROM pg_index WHERE indexrelid = (
-          SELECT oid FROM pg_class WHERE relname = $1
-        )
-      )
-        AND other_index.indexrelid <> (
-          SELECT oid FROM pg_class WHERE relname = $1
-        )
+      JOIN pg_class other_class ON other_class.oid = other_index.indexrelid
+      WHERE other_index.indrelid = to_regclass('fortuna_private.' || $1)
+        AND other_class.relname <> $2
         AND other_index.indisvalid
         AND other_index.indpred IS NULL
-        AND other_index.indnkeyatts = cardinality($2::text[])
+        AND other_index.indnkeyatts = cardinality($3::text[])
         AND ARRAY(
           SELECT attribute.attname
           FROM unnest(other_index.indkey::smallint[]) WITH ORDINALITY AS key_column(attnum, ord)
@@ -260,8 +255,8 @@ try {
            AND attribute.attnum = key_column.attnum
           WHERE key_column.ord <= other_index.indnkeyatts
           ORDER BY key_column.ord
-        ) = $2::text[]
-    `, [expected.name, expected.columns]);
+        ) = $3::text[]
+    `, [expected.table, expected.name, expected.columns]);
     assert.equal(duplicate.rows[0].count, 0, expected.name + ' must not duplicate an existing exact-key index');
   }
 
@@ -275,7 +270,10 @@ try {
       AND NOT EXISTS (
         SELECT 1
         FROM pg_index index_data
+        JOIN pg_class index_class ON index_class.oid = index_data.indexrelid
+        JOIN pg_am access_method ON access_method.oid = index_class.relam
         WHERE index_data.indrelid = constraint_row.conrelid
+          AND access_method.amname = 'btree'
           AND index_data.indisvalid
           AND index_data.indisready
           AND index_data.indpred IS NULL
