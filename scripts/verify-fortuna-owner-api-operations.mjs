@@ -326,7 +326,7 @@ try {
   assert.equal(usdPosition.position_type, 'receivable');
   const cupObligations = await listObligations(created.contact_id, 'CUP');
   assert.equal(cupObligations.length, 2);
-  assert.equal(cupObligations[0].description, 'Deuda inicial');
+  assert.equal(cupObligations[0].description, 'Préstamo inicial');
   assert.equal(cupObligations[0].principal_minor, '16500');
   assert.equal(cupObligations[0].remaining_minor, '16500');
   assert.equal(cupObligations[0].direction, 'receivable');
