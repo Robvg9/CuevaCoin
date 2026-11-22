@@ -143,7 +143,7 @@ try {
         OR (n.nspname = 'fortuna_private' AND p.proname LIKE 'fortuna_%')
      ORDER BY n.nspname, p.proname
   `);
-  assert.equal(functionCatalog.rows.length, 7);
+  assert.equal(functionCatalog.rows.length, 8);
   for (const row of functionCatalog.rows.filter(row => row.schema_name === 'api')) {
     assert.equal(row.prosecdef, false, row.proname + ' must be SECURITY INVOKER');
     assert.ok(row.settings.includes('search_path=pg_catalog'));
