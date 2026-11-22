@@ -4,6 +4,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
+import { spawn } from 'node:child_process';
+
+const windowsPgCtl = process.platform === 'win32'
+  ? await import('@embedded-postgres/windows-x64')
+  : null;
+const pgCtlPath = windowsPgCtl?.pg_ctl ?? null;
 import EmbeddedPostgres from 'embedded-postgres';
 import { Client } from 'pg';
 
@@ -56,6 +62,55 @@ async function removeDirectoryWithRetry(directory, { attempts = 20, delayMs = 25
     }
   }
   throw lastError;
+}
+
+async function stopPostgresGracefully() {
+  if (!pgCtlPath) {
+    throw new Error('Windows pg_ctl binary is required for graceful native PostgreSQL shutdown');
+  }
+
+  const child = spawn(
+    pgCtlPath,
+    ['stop', '-D', databaseDir, '-m', 'fast', '-w', '-t', '30'],
+    { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }
+  );
+  let stdout = '';
+  let stderr = '';
+  child.stdout?.setEncoding('utf8');
+  child.stderr?.setEncoding('utf8');
+  child.stdout?.on('data', chunk => { stdout += chunk; });
+  child.stderr?.on('data', chunk => { stderr += chunk; });
+
+  const result = await new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      child.kill();
+      reject(new Error('pg_ctl graceful shutdown exceeded 45 seconds'));
+    }, 45000);
+
+    child.once('error', error => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(error);
+    });
+    child.once('close', (code, signal) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({ code, signal });
+    });
+  });
+
+  if (result.code !== 0) {
+    throw new Error(
+      'pg_ctl graceful shutdown failed (exit=' + result.code + ', signal=' + result.signal + '): ' +
+      [stdout.trim(), stderr.trim()].filter(Boolean).join(' | ')
+    );
+  }
+  console.log('PASS — native PostgreSQL 17.11 stopped gracefully with pg_ctl fast mode');
 }
 
 async function findFreePort() {
@@ -513,10 +568,12 @@ try {
     } catch {}
   }
   if (postgresStarted && postgres) {
-    try {
+    if (process.platform === 'win32') {
+      // embedded-postgres stop() uses an unawaited taskkill process tree on Windows.
+      // pg_ctl performs a graceful, directory-scoped shutdown and waits for child backends.
+      await stopPostgresGracefully();
+    } else {
       await postgres.stop();
-    } catch (error) {
-      console.error('PostgreSQL shutdown warning:', String(error));
     }
   }
   await removeDirectoryWithRetry(databaseDir);

@@ -51,7 +51,7 @@ jobs:
           mkdir "%FORTUNA_TEST_HOME%"
           cd /d "%FORTUNA_TEST_HOME%"
           echo {"private":true,"type":"module"}>package.json
-          npm install --no-audit --no-fund --save-exact embedded-postgres@17.11.0-beta.19
+          npm install --no-audit --no-fund --save-exact embedded-postgres@17.11.0-beta.19 @embedded-postgres/windows-x64@17.11.0-beta.19
         shell: cmd
 
       - name: Verify real multi-connection settlement and idempotency
