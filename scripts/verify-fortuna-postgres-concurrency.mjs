@@ -445,6 +445,7 @@ try {
   await clientA.query('COMMIT');
   const apiReplay = await apiDuplicatePromise;
   assert.deepEqual(apiReplay, apiOriginal, 'same-key owner API retry must return original response');
+  assert.equal(await balance(apiReplay.allocations[0].obligation_id), 300n);
   console.log('PASS — owner API same-key concurrent retry waits on contact lock and replays one original event');
 
   const staleContact = await apiCreateContact(
