@@ -129,9 +129,9 @@ CREATE TABLE fortuna_private.financial_idempotency (
   created_at timestamptz NOT NULL DEFAULT now(),
   committed_at timestamptz NULL,
   FOREIGN KEY (book_id, event_id) REFERENCES fortuna_private.financial_events(book_id, id) ON DELETE RESTRICT,
-  CHECK (
+  CONSTRAINT financial_idempotency_state_check CHECK (
     (status = 'processing' AND event_id IS NULL AND response IS NULL AND committed_at IS NULL)
-    OR (status = 'committed' AND event_id IS NOT NULL AND response IS NOT NULL AND committed_at IS NOT NULL)
+    OR (status = 'committed' AND response IS NOT NULL AND committed_at IS NOT NULL)
   ),
   UNIQUE (book_id, actor_user_id, idempotency_key)
 );
