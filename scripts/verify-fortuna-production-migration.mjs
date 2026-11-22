@@ -248,7 +248,7 @@ try {
         AND other_index.indpred IS NULL
         AND other_index.indnkeyatts = cardinality($3::text[])
         AND ARRAY(
-          SELECT attribute.attname
+          SELECT attribute.attname::text
           FROM unnest(other_index.indkey::smallint[]) WITH ORDINALITY AS key_column(attnum, ord)
           JOIN pg_attribute attribute
             ON attribute.attrelid = other_index.indrelid
