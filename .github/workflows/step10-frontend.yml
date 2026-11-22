@@ -67,6 +67,7 @@ on:
       - "scripts/verify-fortuna-owner-rls.mjs"
       - "scripts/verify-fortuna-api-boundary.mjs"
       - "scripts/verify-fortuna-owner-api-operations.mjs"
+      - "scripts/verify-fortuna-owner-settlement-api.mjs"
       - "docs/fortuna/**"
       - ".github/workflows/step10-frontend.yml"
   push:
@@ -137,6 +138,7 @@ on:
       - "scripts/verify-fortuna-owner-rls.mjs"
       - "scripts/verify-fortuna-api-boundary.mjs"
       - "scripts/verify-fortuna-owner-api-operations.mjs"
+      - "scripts/verify-fortuna-owner-settlement-api.mjs"
       - "docs/fortuna/**"
       - ".github/workflows/step10-frontend.yml"
 
@@ -221,6 +223,14 @@ jobs:
           set "FORTUNA_SQL_FILE=%GITHUB_WORKSPACE%\supabase\tests\fortuna_v1_schema_prototype.sql"
           set "FORTUNA_OPERATIONS_SQL_FILE=%GITHUB_WORKSPACE%\supabase\tests\fortuna_v1_owner_api_operations_prototype.sql"
           node "%RUNNER_TEMP%\fortuna-pglite\verify-owner-api-operations.mjs"
+        shell: cmd
+      - name: Verify FORTUNA owner settlement preview/confirm and stale protection (local claims simulation)
+        run: |
+          copy /Y scripts\verify-fortuna-owner-settlement-api.mjs "%RUNNER_TEMP%\fortuna-pglite\verify-owner-settlement-api.mjs"
+          set "FORTUNA_SQL_FILE=%GITHUB_WORKSPACE%\supabase\tests\fortuna_v1_schema_prototype.sql"
+          set "FORTUNA_OPERATIONS_SQL_FILE=%GITHUB_WORKSPACE%\supabase\tests\fortuna_v1_owner_api_operations_prototype.sql"
+          set "FORTUNA_SETTLEMENT_API_SQL_FILE=%GITHUB_WORKSPACE%\supabase\tests\fortuna_v1_owner_settlement_api_prototype.sql"
+          node "%RUNNER_TEMP%\fortuna-pglite\verify-owner-settlement-api.mjs"
         shell: cmd
       - name: Verify FORTUNA owner-only RLS isolation (local claims simulation)
         run: |

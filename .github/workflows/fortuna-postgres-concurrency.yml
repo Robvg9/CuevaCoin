@@ -6,6 +6,9 @@ on:
     paths:
       - "supabase/tests/fortuna_v1_schema_prototype.sql"
       - "supabase/tests/fortuna_v1_settlement_prototype.sql"
+      - "supabase/tests/fortuna_v1_owner_api_operations_prototype.sql"
+      - "supabase/tests/fortuna_v1_owner_settlement_api_prototype.sql"
+      - "scripts/verify-fortuna-owner-settlement-api.mjs"
       - "scripts/verify-fortuna-postgres-concurrency.mjs"
       - "docs/fortuna/**"
       - ".github/workflows/fortuna-postgres-concurrency.yml"
@@ -16,6 +19,9 @@ on:
     paths:
       - "supabase/tests/fortuna_v1_schema_prototype.sql"
       - "supabase/tests/fortuna_v1_settlement_prototype.sql"
+      - "supabase/tests/fortuna_v1_owner_api_operations_prototype.sql"
+      - "supabase/tests/fortuna_v1_owner_settlement_api_prototype.sql"
+      - "scripts/verify-fortuna-owner-settlement-api.mjs"
       - "scripts/verify-fortuna-postgres-concurrency.mjs"
       - "docs/fortuna/**"
       - ".github/workflows/fortuna-postgres-concurrency.yml"
@@ -45,7 +51,7 @@ jobs:
           mkdir "%FORTUNA_TEST_HOME%"
           cd /d "%FORTUNA_TEST_HOME%"
           echo {"private":true,"type":"module"}>package.json
-          npm install --no-audit --no-fund --save-exact embedded-postgres@17.11.0-beta.19
+          npm install --no-audit --no-fund --save-exact embedded-postgres@17.11.0-beta.19 @embedded-postgres/windows-x64@17.11.0-beta.19
         shell: cmd
 
       - name: Verify real multi-connection settlement and idempotency
@@ -53,6 +59,8 @@ jobs:
           FORTUNA_TEST_HOME: ${{ runner.temp }}\fortuna-native-pg-${{ github.run_id }}
           FORTUNA_SCHEMA_SQL_FILE: ${{ github.workspace }}\supabase\tests\fortuna_v1_schema_prototype.sql
           FORTUNA_SETTLEMENT_SQL_FILE: ${{ github.workspace }}\supabase\tests\fortuna_v1_settlement_prototype.sql
+          FORTUNA_OPERATIONS_SQL_FILE: ${{ github.workspace }}\supabase\tests\fortuna_v1_owner_api_operations_prototype.sql
+          FORTUNA_SETTLEMENT_API_SQL_FILE: ${{ github.workspace }}\supabase\tests\fortuna_v1_owner_settlement_api_prototype.sql
         run: |
           copy /Y scripts\verify-fortuna-postgres-concurrency.mjs "%FORTUNA_TEST_HOME%\verify.mjs"
           node "%FORTUNA_TEST_HOME%\verify.mjs"

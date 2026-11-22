@@ -4,17 +4,29 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
+import { spawn } from 'node:child_process';
 import EmbeddedPostgres from 'embedded-postgres';
+
+const windowsPgCtl = process.platform === 'win32'
+  ? await import('@embedded-postgres/windows-x64')
+  : null;
+const pgCtlPath = windowsPgCtl?.pg_ctl ?? null;
 import { Client } from 'pg';
 
 const schemaPath = process.env.FORTUNA_SCHEMA_SQL_FILE;
 const settlementPath = process.env.FORTUNA_SETTLEMENT_SQL_FILE;
+const operationsPath = process.env.FORTUNA_OPERATIONS_SQL_FILE;
+const settlementApiPath = process.env.FORTUNA_SETTLEMENT_API_SQL_FILE;
 if (!schemaPath) throw new Error('FORTUNA_SCHEMA_SQL_FILE is required');
 if (!settlementPath) throw new Error('FORTUNA_SETTLEMENT_SQL_FILE is required');
+if (!operationsPath) throw new Error('FORTUNA_OPERATIONS_SQL_FILE is required');
+if (!settlementApiPath) throw new Error('FORTUNA_SETTLEMENT_API_SQL_FILE is required');
 
-const [schemaSql, settlementSql] = await Promise.all([
+const [schemaSql, settlementSql, operationsSql, settlementApiSql] = await Promise.all([
   readFile(schemaPath, 'utf8'),
   readFile(settlementPath, 'utf8'),
+  readFile(operationsPath, 'utf8'),
+  readFile(settlementApiPath, 'utf8'),
 ]);
 
 const ids = {
@@ -50,6 +62,55 @@ async function removeDirectoryWithRetry(directory, { attempts = 20, delayMs = 25
     }
   }
   throw lastError;
+}
+
+async function stopPostgresGracefully() {
+  if (!pgCtlPath) {
+    throw new Error('Windows pg_ctl binary is required for graceful native PostgreSQL shutdown');
+  }
+
+  const child = spawn(
+    pgCtlPath,
+    ['stop', '-D', databaseDir, '-m', 'fast', '-w', '-t', '30'],
+    { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }
+  );
+  let stdout = '';
+  let stderr = '';
+  child.stdout?.setEncoding('utf8');
+  child.stderr?.setEncoding('utf8');
+  child.stdout?.on('data', chunk => { stdout += chunk; });
+  child.stderr?.on('data', chunk => { stderr += chunk; });
+
+  const result = await new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      child.kill();
+      reject(new Error('pg_ctl graceful shutdown exceeded 45 seconds'));
+    }, 45000);
+
+    child.once('error', error => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(error);
+    });
+    child.once('close', (code, signal) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({ code, signal });
+    });
+  });
+
+  if (result.code !== 0) {
+    throw new Error(
+      'pg_ctl graceful shutdown failed (exit=' + result.code + ', signal=' + result.signal + '): ' +
+      [stdout.trim(), stderr.trim()].filter(Boolean).join(' | ')
+    );
+  }
+  console.log('PASS — native PostgreSQL 17.11 stopped gracefully with pg_ctl fast mode');
 }
 
 async function findFreePort() {
@@ -126,6 +187,48 @@ async function settle(client, args) {
   );
   const value = result.rows[0].value;
   return typeof value === 'string' ? JSON.parse(value) : value;
+}
+
+function asJson(value) {
+  return typeof value === 'string' ? JSON.parse(value) : value;
+}
+
+async function authenticate(client, userId) {
+  await client.query('RESET ROLE');
+  await client.query('SET ROLE authenticated');
+  await client.query("SELECT set_config('request.jwt.claim.sub', $1, false)", [userId]);
+}
+
+async function apiCreateContact(client, name, key) {
+  const result = await client.query(
+    'SELECT api.create_contact($1, NULL, NULL, $2) AS value',
+    [name, key]
+  );
+  return asJson(result.rows[0].value);
+}
+
+async function apiOpenObligation(client, contactId, amountMinor, key) {
+  const result = await client.query(
+    "SELECT api.open_obligation($1, 'receivable', 'CUP', $2, 'Native API concurrency fixture', NULL, $3) AS value",
+    [contactId, String(amountMinor), key]
+  );
+  return asJson(result.rows[0].value);
+}
+
+async function apiPreview(client, contactId, amountMinor) {
+  const result = await client.query(
+    "SELECT api.preview_settlement($1, 'CUP', 'cash_received', 'fifo', $2, '[]'::jsonb) AS value",
+    [contactId, String(amountMinor)]
+  );
+  return asJson(result.rows[0].value);
+}
+
+async function apiReceive(client, contactId, amountMinor, fingerprint, key) {
+  const result = await client.query(
+    "SELECT api.receive_cash($1, 'CUP', 'fifo', $2, '[]'::jsonb, $3, false, $4) AS value",
+    [contactId, String(amountMinor), fingerprint, key]
+  );
+  return asJson(result.rows[0].value);
 }
 
 async function waitForLock(observer, pid, scenario) {
@@ -206,8 +309,10 @@ try {
     'CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS; CREATE SCHEMA auth; CREATE TABLE auth.users (id uuid PRIMARY KEY); CREATE TABLE public.perfiles (id uuid PRIMARY KEY)'
   );
   await admin.query(schemaSql);
+  await admin.query(operationsSql);
+  await admin.query(settlementApiSql);
   await admin.query(settlementSql);
-  console.log('PASS — existing FORTUNA test-only schema and settlement helper loaded unchanged');
+  console.log('PASS — FORTUNA schema, owner API, settlement API and native concurrency helper loaded');
 
   await admin.query('INSERT INTO auth.users (id) VALUES ($1)', [ids.owner]);
   await admin.query(
@@ -352,6 +457,104 @@ try {
   const afterConflict = await counts();
   assert.deepEqual(afterConflict, afterConcurrentReplay, 'payload conflict must not create financial rows');
 
+  // Exercise the new owner-scoped preview/confirm RPC path on independent
+  // native PostgreSQL sessions. JWT subject is simulated at the SQL claim layer;
+  // this verifies database locking/idempotency, not Supabase JWT signature checks.
+  await authenticate(clientA, ids.owner);
+  await authenticate(clientB, ids.owner);
+
+  const apiContact = await apiCreateContact(
+    clientA,
+    'Native owner-settlement API replay contact',
+    'native-api-contact-replay-001'
+  );
+  await apiOpenObligation(clientA, apiContact.contact_id, 1000, 'native-api-open-replay-0001');
+  const apiPreviewReplay = await apiPreview(clientA, apiContact.contact_id, 700);
+  const apiReplayArgs = {
+    contactId: apiContact.contact_id,
+    amountMinor: 700,
+    fingerprint: apiPreviewReplay.preview_fingerprint,
+    key: 'native-api-same-key-replay-001',
+  };
+
+  await clientA.query('BEGIN');
+  const apiOriginal = await apiReceive(
+    clientA, apiReplayArgs.contactId, apiReplayArgs.amountMinor,
+    apiReplayArgs.fingerprint, apiReplayArgs.key
+  );
+  const apiDuplicatePid = (await clientB.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
+  const apiDuplicatePromise = apiReceive(
+    clientB, apiReplayArgs.contactId, apiReplayArgs.amountMinor,
+    apiReplayArgs.fingerprint, apiReplayArgs.key
+  );
+
+  let apiReplayWait;
+  try {
+    apiReplayWait = await waitForLock(observer, apiDuplicatePid, 'owner API same-key replay');
+  } catch (error) {
+    await clientA.query('ROLLBACK');
+    await apiDuplicatePromise.catch(() => {});
+    throw error;
+  }
+  assert.match(apiReplayWait.query, /api\.receive_cash/i);
+  await clientA.query('COMMIT');
+  const apiReplay = await apiDuplicatePromise;
+  assert.deepEqual(apiReplay, apiOriginal, 'same-key owner API retry must return original response');
+  assert.equal(await balance(apiReplay.allocations[0].obligation_id), 300n);
+  console.log('PASS — owner API same-key concurrent retry waits on contact lock and replays one original event');
+
+  const staleContact = await apiCreateContact(
+    clientA,
+    'Native owner-settlement stale preview contact',
+    'native-api-contact-stale-001'
+  );
+  const staleObligation = await apiOpenObligation(
+    clientA, staleContact.contact_id, 1000, 'native-api-open-stale-0001'
+  );
+  const stalePreview = await apiPreview(clientA, staleContact.contact_id, 800);
+  const staleAKey = 'native-api-stale-confirm-a01';
+  const staleBKey = 'native-api-stale-confirm-b01';
+
+  await clientA.query('BEGIN');
+  const committedFirst = await apiReceive(
+    clientA, staleContact.contact_id, 800, stalePreview.preview_fingerprint, staleAKey
+  );
+  const staleContenderPid = (await clientB.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
+  const staleContenderPromise = apiReceive(
+    clientB, staleContact.contact_id, 800, stalePreview.preview_fingerprint, staleBKey
+  );
+
+  let staleWait;
+  try {
+    staleWait = await waitForLock(observer, staleContenderPid, 'owner API stale preview serialization');
+  } catch (error) {
+    await clientA.query('ROLLBACK');
+    await staleContenderPromise.catch(() => {});
+    throw error;
+  }
+  assert.match(staleWait.query, /api\.receive_cash/i);
+  await clientA.query('COMMIT');
+  await expectFailure(
+    () => staleContenderPromise,
+    /fortuna_stale_preview/i,
+    'second owner API confirmation based on an old preview is rejected after the first commits'
+  );
+
+  const staleBalance = await balance(staleObligation.obligation_id);
+  assert.equal(staleBalance, 200n);
+  const staleEventCount = await admin.query(
+    'SELECT count(*)::int AS count FROM fortuna_private.financial_events WHERE id = $1',
+    [committedFirst.event_id]
+  );
+  assert.equal(staleEventCount.rows[0].count, 1);
+  const staleIdempotencyCount = await admin.query(
+    'SELECT count(*)::int AS count FROM fortuna_private.financial_idempotency WHERE idempotency_key IN ($1, $2)',
+    [staleAKey, staleBKey]
+  );
+  assert.equal(staleIdempotencyCount.rows[0].count, 1, 'stale contender must roll back its idempotency reservation');
+  console.log('PASS — native concurrent owner API requests serialize and stale preview creates no second event or idempotency row');
+  
+  await admin.query('SELECT 1');
   console.log('PASS — all native PostgreSQL 17.11 concurrency and idempotency invariants verified');
 } catch (error) {
   if (postgresErrors.length) {
@@ -365,10 +568,12 @@ try {
     } catch {}
   }
   if (postgresStarted && postgres) {
-    try {
+    if (process.platform === 'win32') {
+      // embedded-postgres stop() uses an unawaited taskkill process tree on Windows.
+      // pg_ctl performs a graceful, directory-scoped shutdown and waits for child backends.
+      await stopPostgresGracefully();
+    } else {
       await postgres.stop();
-    } catch (error) {
-      console.error('PostgreSQL shutdown warning:', String(error));
     }
   }
   await removeDirectoryWithRetry(databaseDir);
