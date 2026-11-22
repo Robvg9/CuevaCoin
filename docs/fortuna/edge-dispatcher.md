@@ -23,11 +23,11 @@ The dispatcher extracts the bearer token, validates that exact token with `supab
 - Database ownership and isolation remain enforced by the migration's authenticated owner-scoped API.
 - CORS accepts the current CuevaCoin production origin only; requests without an Origin header remain usable by native clients.
 
-## Hosted status — migration applied, API still closed (2026-11-22)
+## HUMAN GATE — API activation only; migration already applied (2026-11-22)
 
 The exact FORTUNA migration is applied to hosted Supabase as migration version `20261122173537`. It creates nine tables in `fortuna_private`, all with RLS enabled, and seeds only CUP/USD/EUR. No books, contacts, obligations, events, ledger entries, allocations, idempotency rows or audit rows were created.
 
-The schemas `api` and `fortuna_private` remain unusable by client roles: `anon` and `authenticated` have no schema `USAGE`, and neither role has direct table privileges. `service_role` has backend-only `USAGE` on `fortuna_private`; it has no `USAGE` on `api`. The actual Data API Exposed Schemas setting is not certified yet and has not been changed. `fortuna_private` must never be added to that allowlist.
+The `api` schema is not exposed to the Data API, and this dispatcher must remain disabled until the separate API activation gate is approved. The schemas `api` and `fortuna_private` remain unusable by client roles: `anon` and `authenticated` have no schema `USAGE`, and neither role has direct table privileges. `service_role` has backend-only `USAGE` on `fortuna_private`; it has no `USAGE` on `api`. The actual Data API Exposed Schemas setting is not certified yet and has not been changed. `fortuna_private` must never be added to that allowlist.
 
 This dispatcher must continue to fail closed with `FORTUNA_API_SCHEMA_NOT_EXPOSED` until a separate release gate verifies the Data API allowlist and explicitly grants the minimum `USAGE` needed on `api` and `fortuna_private` to `authenticated`.
 
