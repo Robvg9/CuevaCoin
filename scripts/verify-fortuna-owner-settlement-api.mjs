@@ -23,6 +23,7 @@ const db = new PGlite();
 const ids = {
   owner1: '10000000-0000-4000-8000-000000000001',
   owner2: '10000000-0000-4000-8000-000000000002',
+  owner3: '10000000-0000-4000-8000-000000000003',
 };
 
 function asJson(value) {
@@ -146,7 +147,7 @@ try {
   await db.exec(schemaSql);
   await db.exec(operationsSql);
   await db.exec(settlementApiSql);
-  await db.query('INSERT INTO auth.users (id) VALUES ($1), ($2)', [ids.owner1, ids.owner2]);
+  await db.query('INSERT INTO auth.users (id) VALUES ($1), ($2), ($3)', [ids.owner1, ids.owner2, ids.owner3]);
   await db.query(
     'INSERT INTO public.cuevacoin_global_admin_fixture (user_id, is_global_admin) VALUES ($1, true)',
     [ids.owner2]
@@ -398,27 +399,73 @@ try {
   assert.ok(payOverageObligation.obligation_id);
   console.log('PASS — confirmed paid excess creates the opposite receivable');
 
-  const crossOwner = await expectFailure(
-    'another owner cannot preview or settle a contact in the first owner book',
+  // Give each principal a real personal book before testing cross-book isolation.
+  // Without this setup, the owner lookup correctly returns fortuna_book_not_found
+  // before the contact-ownership check can be exercised.
+  const owner2Contact = await createContact(
+    'Global admin own book',
+    'settlement-contact-owner2',
+    ids.owner2
+  );
+  const owner3Contact = await createContact(
+    'Ordinary owner own book',
+    'settlement-contact-owner3',
+    ids.owner3
+  );
+  const beforeCrossOwnerAttempts = await counts();
+
+  await expectFailure(
+    'ordinary owner with an existing book cannot preview another owner contact',
     async () => {
-      await authenticateAs(ids.owner2);
+      await authenticateAs(ids.owner3);
       return preview({ contactId, flow: 'cash_received', totalMinor: '100' });
     },
     /fortuna_settlement_resource_not_found/i
   );
   await expectFailure(
-    'global administrator fixture receives no cross-owner settlement access',
+    'ordinary owner with an existing book cannot confirm another owner settlement',
+    async () => {
+      await authenticateAs(ids.owner3);
+      return commit({
+        contactId,
+        flow: 'cash_received',
+        totalMinor: '100',
+        fingerprint: fifoPreview.preview_fingerprint,
+        key: 'settlement-cross-owner-owner3-01',
+      });
+    },
+    /fortuna_settlement_resource_not_found/i
+  );
+
+  await authenticateAs(ids.owner2);
+  await expectFailure(
+    'global administrator fixture with an existing book cannot preview another owner contact',
     () => preview({ contactId, flow: 'cash_received', totalMinor: '100' }),
     /fortuna_settlement_resource_not_found/i
   );
-  assert.equal(crossOwner, undefined);
+  await expectFailure(
+    'global administrator fixture with an existing book cannot confirm another owner settlement',
+    () => commit({
+      contactId,
+      flow: 'cash_received',
+      totalMinor: '100',
+      fingerprint: fifoPreview.preview_fingerprint,
+      key: 'settlement-cross-owner-admin-01',
+    }),
+    /fortuna_settlement_resource_not_found/i
+  );
+  assert.deepEqual(
+    await counts(),
+    beforeCrossOwnerAttempts,
+    'cross-owner preview/confirm attempts must not create financial or idempotency rows'
+  );
 
-  const ownContact = await createContact('Global admin own book', 'settlement-contact-owner2', ids.owner2);
   const owner2Plan = await preview({
-    contactId: ownContact.contact_id, flow: 'cash_received', totalMinor: '100',
+    contactId: owner2Contact.contact_id, flow: 'cash_received', totalMinor: '100',
   });
   assert.equal(owner2Plan.overage_minor, '100');
-  console.log('PASS — global CuevaCoin admin fixture can preview only its own FORTUNA book');
+  assert.ok(owner3Contact.contact_id);
+  console.log('PASS — ordinary owners and global administrators can access only their own FORTUNA books');
 
   await db.exec('RESET ROLE; SET ROLE anon;');
   await expectFailure(
