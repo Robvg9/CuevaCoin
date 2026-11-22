@@ -46,6 +46,7 @@ Deno.serve(async (req: Request) => {
   if (!authHeader || !/^Bearer\s+\S+$/i.test(authHeader)) {
     return reply({ error: 'AUTH_REQUIRED' }, 401, origin)
   }
+  const accessToken = authHeader.replace(/^Bearer\s+/i, '')
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     return reply({ error: 'SERVICE_UNAVAILABLE' }, 503, origin)
   }
@@ -104,7 +105,7 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     })
 
-    const { data: userData, error: authError } = await supabase.auth.getUser()
+    const { data: userData, error: authError } = await supabase.auth.getUser(accessToken)
     if (authError || !userData.user) return reply({ error: 'AUTH_INVALID' }, 401, origin)
 
     const { data, error } = await supabase.schema('api').rpc(rpc, body.args)
