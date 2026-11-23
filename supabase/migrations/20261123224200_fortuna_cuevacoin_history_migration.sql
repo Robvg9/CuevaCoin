@@ -623,6 +623,32 @@ BEGIN
     || COALESCE((
       SELECT pg_catalog.jsonb_agg(pg_catalog.to_jsonb(s) ORDER BY s.creado_en, s.id)::text
         FROM public.solicitudes_retiro s WHERE s.usuario_id = v_profile_id
+    ), '[]')
+    || COALESCE((
+      SELECT pg_catalog.jsonb_agg(pg_catalog.to_jsonb(n) ORDER BY n.creado_en, n.id)::text
+        FROM public.notificaciones n WHERE n.usuario_id = v_profile_id
+    ), '[]')
+    || COALESCE((
+      SELECT pg_catalog.jsonb_agg(pg_catalog.to_jsonb(a) ORDER BY a.creado_en, a.id)::text
+        FROM public.auditoria a WHERE a.usuario_id = v_profile_id
+    ), '[]')
+    || COALESCE((
+      SELECT pg_catalog.jsonb_agg(pg_catalog.to_jsonb(a) ORDER BY a.creado_en, a.idempotency_key)::text
+        FROM public.admin_ajustes_saldo_idempotencia a WHERE a.usuario_id = v_profile_id
+    ), '[]')
+    || COALESCE((
+      SELECT pg_catalog.jsonb_agg(pg_catalog.to_jsonb(b) ORDER BY b.creado_en, b.idempotency_key)::text
+        FROM public.admin_pagos_salario_idempotencia b
+       WHERE pg_catalog.jsonb_typeof(b.payload) = 'array'
+         AND EXISTS (
+           SELECT 1 FROM pg_catalog.jsonb_array_elements(COALESCE(b.payload, '[]'::jsonb)) item
+            WHERE item->>'usuario_id' = v_profile_id::text
+         )
+    ), '[]')
+    || COALESCE((
+      SELECT pg_catalog.jsonb_agg(pg_catalog.to_jsonb(t) ORDER BY t.creado_en, t.idempotency_key)::text
+        FROM public.transferencias_idempotencia t
+       WHERE t.emisor_id = v_profile_id OR t.destinatario_id = v_profile_id
     ), '[]');
   v_digest := pg_catalog.encode(
     pg_catalog.sha256(pg_catalog.convert_to(v_digest_payload, 'UTF8')), 'hex'
