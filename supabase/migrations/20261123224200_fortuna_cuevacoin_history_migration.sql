@@ -1080,6 +1080,7 @@ DECLARE
   v text := NULLIF(trim(p_identificador), '');
   v_lc text;
 BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'No autenticado'; END IF;
   IF v IS NULL THEN RAISE EXCEPTION 'Identificador requerido'; END IF;
   v_lc := lower(v);
   RETURN QUERY
@@ -1101,5 +1102,31 @@ REVOKE ALL ON FUNCTION api.preview_fortuna_profile_history_migration(uuid) FROM 
 GRANT EXECUTE ON FUNCTION api.preview_fortuna_profile_history_migration(uuid) TO authenticated;
 REVOKE ALL ON FUNCTION api.migrate_fortuna_profile_history(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION api.migrate_fortuna_profile_history(uuid) TO authenticated;
+
+
+-- Defense in depth: no CuevaCoin financial RPC may mutate the balance of a
+-- profile classified as FORTUNA-only, even if a future RPC forgets its own guard.
+CREATE OR REPLACE FUNCTION public.proteger_saldo_solo_dependientes()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $function$
+BEGIN
+  IF NEW.saldo IS DISTINCT FROM OLD.saldo
+     AND OLD.es_admin IS DISTINCT FROM true
+     AND OLD.es_dependiente IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'cuenta_solo_fortuna';
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS proteger_saldo_solo_dependientes ON public.perfiles;
+CREATE TRIGGER proteger_saldo_solo_dependientes
+BEFORE UPDATE OF saldo ON public.perfiles
+FOR EACH ROW EXECUTE FUNCTION public.proteger_saldo_solo_dependientes();
+
+REVOKE ALL ON FUNCTION public.proteger_saldo_solo_dependientes() FROM PUBLIC, anon, authenticated;
 
 COMMIT;
