@@ -70,7 +70,8 @@
     "20261104235424_admin_salary_individual_batch.sql",
     "20261121124522_transfer_recipient_id_privacy_active_admin.sql",
     "20261122173537_fortuna_v1_private_ledger_and_owner_api.sql",
-    "20261122192417_fortuna_private_fk_covering_indexes.sql"
+    "20261122192417_fortuna_private_fk_covering_indexes.sql",
+    "20261123182957_fortuna_owner_activity_history.sql"
   ],
   "recovered": [
     {
@@ -403,6 +404,14 @@
       "public_index_count_before": 34,
       "public_index_count_after": 34,
       "financial_data_rows_written": 0
+    },
+    {
+      "file": "20261123182957_fortuna_owner_activity_history.sql",
+      "purpose": "Read-only owner-scoped FORTUNA activity history with cursor pagination and authenticated API wrapper",
+      "live_version": "20261123194707",
+      "applied_to_live": true,
+      "execution_status": "applied_live",
+      "source": "Applied to Supabase LIVE project zqgmjwfvluboiporytcq on 2026-11-23; repository SQL is the deployed migration source."
     }
   ],
   "pending_forward_migrations": []
