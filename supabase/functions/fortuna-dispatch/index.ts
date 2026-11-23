@@ -9,6 +9,7 @@ const RPC_BY_OPERATION = {
   open_obligation: 'open_obligation',
   list_contacts: 'list_contacts',
   list_obligations: 'list_obligations',
+  list_activity: 'list_activity',
   preview_settlement: 'preview_settlement',
   receive_cash: 'receive_cash',
   pay_contact: 'pay_contact',
