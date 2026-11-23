@@ -392,8 +392,8 @@ await assert.rejects(
   (error) => error instanceof FortunaApiError && error.code === 'SERVICE_UNAVAILABLE' && error.retryable === true,
 );
 
-nextResult = { data: { data: [{ profile_id: 'profile-2', username: 'maria', display_name: 'María Pérez' }] }, error: null };
-assert.deepEqual(await searchFortunaProfiles('mar'), [{ profile_id: 'profile-2', username: 'maria', display_name: 'María Pérez' }]);
+nextResult = { data: { data: [{ profile_id: 'profile-2', username: 'maria', display_name: 'María Pérez', is_dependent: false }] }, error: null };
+assert.deepEqual(await searchFortunaProfiles('mar'), [{ profile_id: 'profile-2', username: 'maria', display_name: 'María Pérez', is_dependent: false }]);
 lastCall('search_fortuna_profiles', { p_query: 'mar' });
 nextResult = { data: { data: { contact_id: 'contact-linked', display_name: 'María Pérez', username: 'maria', linked_profile_id: 'profile-2', is_dependent: false, is_new_contact: true, balance_minor: '0' } }, error: null };
 assert.equal((await linkFortunaProfileContact('profile-2')).contact_id, 'contact-linked');
