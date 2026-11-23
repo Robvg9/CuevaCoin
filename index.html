@@ -5791,7 +5791,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.160';
+                const VERSION_FALLBACK = 'V.161';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -6177,7 +6177,7 @@
     <!-- Fase 6 — Enter en inputs de chat (delega a send* modulares) -->
     <script type="module" src="js/chat/chat-enter-keys.js"></script>
     <!-- Lógica restante del monolito (diferida: corre DESPUÉS de los módulos anteriores) -->
-    <script type="module" src="js/finance/fortuna/ui.js?v=160"></script>
+    <script type="module" src="js/finance/fortuna/ui.js?v=161"></script>
     <script defer src="js/legacy-app.js"></script>
 
 <script>
