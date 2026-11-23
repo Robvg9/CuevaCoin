@@ -19,6 +19,12 @@ on:
       - "scripts/e2e-fortuna-authenticated.mjs"
       - ".github/workflows/fortuna-authenticated-e2e.yml"
       - "scripts/verify-step10-release.mjs"
+      - "scripts/verify-transfer-recipient-security.mjs"
+      - "scripts/verify-v156-navigation-ui.mjs"
+      - "scripts/verify-admin-payroll-history.mjs"
+      - "scripts/verify-p1-01-xss.mjs"
+      - "scripts/verify-v149-users-ui.mjs"
+      - "scripts/verify-password-recovery.mjs"
       - "docs/fortuna/FORTUNA_UI_PREVIEW_V1.md"
       - ".github/workflows/fortuna-ui-preview.yml"
   pull_request:
@@ -71,3 +77,12 @@ jobs:
         run: node scripts/verify-fortuna-api-client.mjs
       - name: Verify Step 10 release contract
         run: node scripts/verify-step10-release.mjs
+      - name: Verify Cloudflare Worker build gates without deployment
+        run: |
+          node scripts/verify-password-recovery.mjs
+          node scripts/verify-step10-release.mjs
+          node scripts/verify-v149-users-ui.mjs
+          node scripts/verify-p1-01-xss.mjs
+          node scripts/verify-admin-payroll-history.mjs
+          node scripts/verify-v156-navigation-ui.mjs
+          node scripts/verify-transfer-recipient-security.mjs
