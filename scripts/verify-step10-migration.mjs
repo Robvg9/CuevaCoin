@@ -205,18 +205,18 @@ assert.match(activitySql, /BEGIN;[\s\S]*COMMIT;\s*$/i);
 console.log('PASS — FORTUNA owner activity history migration reconciled to LIVE version 20261123194707; authenticated read-only wrapper tracked without replay');
 
 const profileLinkSql = readFileSync('supabase/migrations/20261123210000_fortuna_link_existing_profiles.sql', 'utf8');
-assert.match(profileLinkSql, /BEGIN;[\\s\\S]*COMMIT;\\s*$/i);
-assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION fortuna_private\\.fortuna_search_profiles/);
-assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION fortuna_private\\.fortuna_link_profile_contact/);
-assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION api\\.search_fortuna_profiles/);
-assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION api\\.link_fortuna_profile_contact/);
-assert.match(profileLinkSql, /p\\.estado = 'activo'/);
+assert.match(profileLinkSql, /BEGIN;[\s\S]*COMMIT;\s*$/i);
+assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_search_profiles/);
+assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_link_profile_contact/);
+assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION api\.search_fortuna_profiles/);
+assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION api\.link_fortuna_profile_contact/);
+assert.match(profileLinkSql, /p\.estado = 'activo'/);
 assert.match(profileLinkSql, /id <> v_actor/);
 assert.match(profileLinkSql, /pg_catalog\.strpos\(/);
 assert.doesNotMatch(profileLinkSql, /pg_catalog\.position\(/);
 assert.match(profileLinkSql, /linked_profile_id/);
-assert.match(profileLinkSql, /REVOKE ALL ON FUNCTION api\\.search_fortuna_profiles/);
-assert.match(profileLinkSql, /GRANT EXECUTE ON FUNCTION api\\.search_fortuna_profiles[\\s\\S]*?TO authenticated/);
+assert.match(profileLinkSql, /REVOKE ALL ON FUNCTION api\.search_fortuna_profiles/);
+assert.match(profileLinkSql, /GRANT EXECUTE ON FUNCTION api\.search_fortuna_profiles[\s\S]*?TO authenticated/);
 assert.doesNotMatch(profileLinkSql, /email|correo|saldo|salario/i, 'Profile search must not expose email, balances or payroll data');
 console.log('PASS — FORTUNA V167 profile-link migration is tracked as pending LIVE and restricted to active-profile identity fields');
 
