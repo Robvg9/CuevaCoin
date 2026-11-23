@@ -59,6 +59,8 @@ La ruta de lectura y escritura se realiza con RPCs de propietario en `api`. Los 
 
 **PASS — despliegue y fuente:** ACTIVE v2, `verify_jwt=true`, fuente exacta del SHA aprobado y contrato estático de siete operaciones/no-service-role.
 
+**CI smoke añadido — pendiente de ejecución:** `scripts/smoke-fortuna-dispatch-auth.mjs` envía una solicitud de lectura con la clave pública del proyecto pero sin JWT y exige que el gateway responda 401 antes de que el handler conteste `AUTH_REQUIRED`. Esto comprueba solo la barrera de JWT ausente; no prueba un JWT válido, Auth completo ni el acceso a PostgREST. La ejecución depende del runner self-hosted `Windows / X64 / cuevacoin`.
+
 **OPEN — Hosted authenticated E2E:** no se ha afirmado una invocación real con un JWT de usuario ni se han probado en Supabase Auth + Edge + PostgREST las operaciones de dos propietarios. Esta sesión no dispone de sesiones/JWTs de dos cuentas de prueba. Las operaciones `create_contact`, `open_obligation`, `receive_cash` y `pay_contact` escriben registros financieros inmutables; no se deben probar contra el proyecto productivo con datos ficticios ni crear movimientos reales.
 
 **OPEN — entorno de prueba aislado:** hace falta un destino hosted autorizado y de coste cero, con dos identidades de prueba, para verificar gateway JWT, owner-A/owner-B, replay de idempotencia y conflicto 409. No crear un proyecto o branch de pago ni reutilizar BattleCruiser o SimpleLife como banco de pruebas.
