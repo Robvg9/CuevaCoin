@@ -29,7 +29,7 @@ const releaseVersion = index.match(/VERSION_FALLBACK = 'V\.(\d+)'/)?.[1];
 assert.ok(releaseVersion, 'HTML fallback must declare the current release version');
 assert.equal(app.match(/VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], releaseVersion, 'App fallback must match the HTML release version');
 assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], releaseVersion, 'PWA cache must match the HTML release version');
-for (const path of ['js/core/app.js?v=156','js/data/notifications.js?v=156','js/ui/menu-dots.js?v=156','js/ui/notif-panel.js?v=156']) {
+for (const path of ['js/core/app.js?v=170','js/data/notifications.js?v=156','js/ui/menu-dots.js?v=156','js/ui/notif-panel.js?v=156']) {
   assert.ok(index.includes(path), 'Changed module must be cache-busted: ' + path);
 }
 
