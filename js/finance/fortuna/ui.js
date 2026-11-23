@@ -116,10 +116,10 @@ function inicializarFortuna() {
     const line = el('div', 'fortuna-contact-position');
     const receivable = el('div', 'is-receivable');
     receivable.append(el('span', '', 'Te debe'));
-    receivable.append(el('strong', '', formatMinorAmount(String(safeMinor(summary.te_debe_minor))) + ' ' + summary.currency));
+    receivable.append(el('strong', '', summary.currency + ': ' + formatMinorAmount(String(safeMinor(summary.te_debe_minor)))));
     const payable = el('div', 'is-payable');
     payable.append(el('span', '', 'Le debes'));
-    payable.append(el('strong', '', formatMinorAmount(String(safeMinor(summary.le_debes_minor))) + ' ' + summary.currency));
+    payable.append(el('strong', '', summary.currency + ': ' + formatMinorAmount(String(safeMinor(summary.le_debes_minor)))));
     line.append(receivable, payable);
     container.append(line);
   }
