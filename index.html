@@ -4521,7 +4521,8 @@
                     </div>
                     <div class="fortuna-primary-actions" aria-label="Acciones del libro">
                         <button type="button" id="fortuna-refresh-btn" class="btn btn-secondary">↻ Actualizar</button>
-                        <button type="button" id="fortuna-new-contact-btn" class="btn btn-primary">＋ Nuevo contacto</button>
+                        <button type="button" id="fortuna-new-contact-btn" class="btn btn-primary">＋ Contacto externo</button>
+                        <button type="button" id="fortuna-link-profile-btn" class="btn btn-secondary">＋ Usuario CuevaCoin</button>
                         <button type="button" id="fortuna-new-obligation-btn" class="btn btn-secondary" disabled>＋ Nueva obligación</button>
                     </div>
                 </div>
@@ -4581,6 +4582,19 @@
                     <div id="fortuna-activity-list" class="fortuna-activity-list" aria-live="polite"><div class="fortuna-empty-state"><span aria-hidden="true">🧾</span><h3>Selecciona un contacto</h3><p>Consulta sus movimientos financieros desde la ficha.</p></div></div>
                 </section>
 
+                <dialog id="fortuna-link-profile-dialog" class="fortuna-dialog" aria-labelledby="fortuna-link-profile-title">
+                    <form id="fortuna-link-profile-form" novalidate>
+                        <div class="fortuna-dialog-heading">
+                            <div><p class="fortuna-kicker">CUENTAS CUEVACOIN</p><h2 id="fortuna-link-profile-title">Vincular usuario</h2></div>
+                            <button type="button" class="fortuna-dialog-close" data-close-dialog="fortuna-link-profile-dialog" aria-label="Cerrar">✕</button>
+                        </div>
+                        <p class="fortuna-dialog-note">Busca por nombre o nombre de usuario. Solo se muestran cuentas activas.</p>
+                        <label class="fortuna-form-field"><span>Usuario o nombre</span><input id="fortuna-profile-query" type="search" minlength="2" maxlength="80" required placeholder="Ej. roberto"></label>
+                        <p id="fortuna-profile-search-error" class="fortuna-form-error" role="alert"></p>
+                        <div class="fortuna-dialog-actions"><button type="submit" class="btn btn-primary">Buscar</button></div>
+                        <div id="fortuna-profile-results" class="fortuna-contact-list" aria-live="polite"></div>
+                    </form>
+                </dialog>
                 <dialog id="fortuna-contact-dialog" class="fortuna-dialog" aria-labelledby="fortuna-contact-dialog-title">
                     <form id="fortuna-contact-form" novalidate>
                         <div class="fortuna-dialog-heading">
