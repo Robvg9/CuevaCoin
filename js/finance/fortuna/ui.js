@@ -365,6 +365,21 @@ function inicializarFortunaPreview() {
     });
   });
 
+  window.resetFortunaPreviewDrafts = () => {
+    closeDialog(contactDialog);
+    closeDialog(obligationDialog);
+    contactForm.reset();
+    obligationForm.reset();
+    byId('fortuna-contact-form-error').textContent = '';
+    byId('fortuna-obligation-form-error').textContent = '';
+    state.contacts = [];
+    state.selectedContactId = null;
+    state.sequence = 0;
+    activateTab('overview');
+    setStatus('Borradores locales eliminados al cambiar la sesión.');
+    renderSummary();
+  };
+
   renderSummary();
 }
 
