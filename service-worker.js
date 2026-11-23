@@ -6,14 +6,16 @@
 // nunca a caché, para que la app nunca muestre saldos ni movimientos
 // desactualizados.
 
-const CACHE_NAME = 'cuevacoin-shell-v160';
+const CACHE_NAME = 'cuevacoin-shell-v161';
 const SHELL_FILES = [
   '/',
   '/index.html',
   '/manifest.json',
   '/icon.png',
   '/icon-192.png',
-  '/badge.png'
+  '/badge.png',
+  '/js/finance/fortuna/ui.js?v=161',
+  '/js/finance/fortuna/preview-domain.mjs'
 ];
 
 const EXTERNAL_SHELL_FILES = [
