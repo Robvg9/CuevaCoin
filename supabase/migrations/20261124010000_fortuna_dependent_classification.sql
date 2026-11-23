@@ -39,6 +39,7 @@ DECLARE
   v_username text;
   v_contact_id uuid;
   v_balance numeric;
+  v_is_new_contact boolean := false;
 BEGIN
   IF v_actor IS NULL THEN
     RAISE EXCEPTION 'fortuna_auth_required' USING ERRCODE = '28000';
@@ -70,11 +71,28 @@ BEGIN
 
   v_book_id := fortuna_private.fortuna_ensure_current_book_id();
 
-  INSERT INTO fortuna_private.financial_contacts(book_id, display_name, linked_profile_id)
-  VALUES (v_book_id, v_name, p_profile_id)
-  ON CONFLICT (book_id, linked_profile_id) WHERE linked_profile_id IS NOT NULL
-  DO UPDATE SET updated_at = now()
-  RETURNING id INTO v_contact_id;
+  SELECT c.id INTO v_contact_id
+    FROM fortuna_private.financial_contacts AS c
+   WHERE c.book_id = v_book_id
+     AND c.linked_profile_id = p_profile_id
+   FOR UPDATE;
+
+  IF NOT FOUND THEN
+    INSERT INTO fortuna_private.financial_contacts(book_id, display_name, linked_profile_id)
+    VALUES (v_book_id, v_name, p_profile_id)
+    ON CONFLICT (book_id, linked_profile_id) WHERE linked_profile_id IS NOT NULL
+    DO NOTHING
+    RETURNING id INTO v_contact_id;
+    IF FOUND THEN
+      v_is_new_contact := true;
+    ELSE
+      SELECT c.id INTO v_contact_id
+        FROM fortuna_private.financial_contacts AS c
+       WHERE c.book_id = v_book_id
+         AND c.linked_profile_id = p_profile_id
+       FOR UPDATE;
+    END IF;
+  END IF;
 
   UPDATE public.perfiles
      SET es_dependiente = p_is_dependent
@@ -87,6 +105,7 @@ BEGIN
     'username', v_username,
     'linked_profile_id', p_profile_id,
     'is_dependent', p_is_dependent,
+    'is_new_contact', v_is_new_contact,
     'balance_minor', CASE WHEN v_balance > 0 THEN pg_catalog.round(v_balance * 100)::bigint::text ELSE '0' END
   );
 END;
