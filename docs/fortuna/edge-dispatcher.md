@@ -15,31 +15,37 @@ The dispatcher extracts the bearer token, validates that exact token with `supab
 
 ## Security invariants
 
-- Supabase Edge Function JWT verification remains enabled by the platform default; no `verify_jwt = false` override is introduced.
-- `supabase.auth.getUser()` validates the caller's bearer token.
+- Deploy with Supabase Edge Function JWT verification explicitly enabled (`verify_jwt=true`).
+- `supabase.auth.getUser()` independently validates the caller's bearer token.
 - The same `Authorization: Bearer <user JWT>` header is forwarded for the RPC request.
 - No service-role/secret key, admin client, or RLS bypass is used.
 - The publishable key is preferred; the legacy anon key is a compatibility fallback only.
-- Database ownership and isolation remain enforced by the migration's authenticated owner-scoped API.
+- Database ownership and isolation remain enforced by the authenticated owner-scoped API.
 - CORS accepts the current CuevaCoin production origin only; requests without an Origin header remain usable by native clients.
 
-## HUMAN GATE — API activation only; migration already applied (2026-11-22)
+## LIVE API activation checkpoint — 2026-11-22
 
-The exact FORTUNA migration is applied to hosted Supabase as migration version `20261122173537`. It creates nine tables in `fortuna_private`, all with RLS enabled, and seeds only CUP/USD/EUR. No books, contacts, obligations, events, ledger entries, allocations, idempotency rows or audit rows were created.
+- The owner confirmed that `api` is included in the Data API Exposed Schemas allowlist, retaining `public` and `graphql_public` and keeping `fortuna_private` excluded. The current allowlist cannot be independently read through the available Supabase database connector; this item is recorded as owner-confirmed Dashboard state.
+- The approved grant `GRANT USAGE ON SCHEMA api, fortuna_private TO authenticated` was applied successfully to hosted Supabase.
+- Post-grant catalog verification: `authenticated` has schema USAGE on `api` and `fortuna_private`; `anon` has no USAGE on either schema.
+- The seven `api` wrappers remain `SECURITY INVOKER`; EXECUTE is granted to `authenticated` and denied to `anon`.
+- All nine private FORTUNA tables retain no direct SELECT/INSERT/UPDATE/DELETE privileges for either `authenticated` or `anon`. No financial rows were created.
+- `fortuna-dispatch` is not deployed. Its deployment remains a separate HUMAN GATE.
 
-The `api` schema is not exposed to the Data API, and this dispatcher must remain disabled until the separate API activation gate is approved. The schemas `api` and `fortuna_private` remain unusable by client roles: `anon` and `authenticated` have no schema `USAGE`, and neither role has direct table privileges. `service_role` has backend-only `USAGE` on `fortuna_private`; it has no `USAGE` on `api`. The actual Data API Exposed Schemas setting is not certified yet and has not been changed. `fortuna_private` must never be added to that allowlist.
+## HUMAN GATE — deploy dispatcher only
 
-This dispatcher must continue to fail closed with `FORTUNA_API_SCHEMA_NOT_EXPOSED` until a separate release gate verifies the Data API allowlist and explicitly grants the minimum `USAGE` needed on `api` and `fortuna_private` to `authenticated`.
+The API schema activation and minimum schema grants are complete. Do not repeat those changes. The next production change is to deploy this Edge Function with `verify_jwt=true`, after a separate explicit approval.
 
-Do not broaden table grants. Keep the migration's function-level grants as the permission boundary. Do not expose the schema, add secrets, deploy this function, or write financial data as part of this code change.
+The dispatcher must continue to fail closed with `FORTUNA_API_SCHEMA_NOT_EXPOSED` if the `api` schema is later removed from the Exposed Schemas allowlist. That response is a configuration-drift safeguard, not the current expected state.
 
-After the separate API activation gate is approved, the rollout sequence is:
-1. Verify the actual Dashboard → API Settings → Exposed schemas list; add only `api` if required. Keep `fortuna_private` absent.
-2. Reconfirm the exact grants and RLS boundary, then grant only the required schema `USAGE` to `authenticated`.
-3. Deploy this function with JWT verification enabled.
-4. Run authenticated owner-A/owner-B E2E checks and verify no service-role key or service-role client is used.
-5. Only then wire the financial UI to the dispatcher.
+Do not broaden table grants. Keep function-level EXECUTE grants as the callable database surface. Do not add secrets, use `service_role`, create financial test data, or connect the financial UI as part of deployment.
+
+After the dispatcher deployment gate is approved, the rollout sequence is:
+1. Deploy `fortuna-dispatch` with `verify_jwt=true`.
+2. Verify the deployed function version and JWT verification setting.
+3. Run authenticated owner-A/owner-B E2E checks for contact/obligation operations, settlement preview, receive/pay, owner isolation, idempotent replay and expected conflict 409 responses, without real money or production financial writes.
+4. Only after hosted E2E passes, wire the financial UI to the dispatcher and verify the complete user flow.
 
 ## Verification
 
-`scripts/verify-fortuna-edge-dispatch.mjs` statically enforces the JWT forwarding, Auth validation, the seven-operation allowlist, publishable-key preference with legacy fallback, payload bound, schema-unavailable fail-closed behavior, and absence of service-role credentials. It does not claim hosted availability or deployment.
+`scripts/verify-fortuna-edge-dispatch.mjs` statically enforces JWT forwarding, Auth validation, the seven-operation allowlist, publishable-key preference with legacy fallback, payload bounds, fail-closed behavior if the API schema is no longer exposed, and absence of service-role credentials. It does not claim hosted availability or deployment.
