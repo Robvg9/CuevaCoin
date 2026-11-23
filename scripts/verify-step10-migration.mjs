@@ -114,7 +114,7 @@ const ledgerManifest = JSON.parse(readFileSync('docs/evidence/revision-6/SUPABAS
 const migrationFiles = readdirSync('supabase/migrations').filter(name => name.length > 18 && [...name.slice(0, 14)].every(ch => ch >= '0' && ch <= '9') && name[14] === '_' && name.endsWith('.sql')).sort();
 assert.equal(ledgerManifest.baseline_ledger_count, 65, 'Recovered LIVE baseline must remain 65 versions');
 assert.equal(ledgerManifest.recovered.length, 58, 'Exactly 58 historical sources must retain provenance hashes');
-assert.equal((ledgerManifest.forward_migrations || []).length, 3, 'Expected the three forward migrations documented in the recovery ledger');
+assert.equal((ledgerManifest.forward_migrations || []).length, 4, 'Expected the four reviewed forward migrations documented in the recovery ledger');
 const fortunaForward = (ledgerManifest.forward_migrations || []).find(entry =>
   entry.file === '20261122173537_fortuna_v1_private_ledger_and_owner_api.sql',
 );
@@ -168,6 +168,31 @@ assert.doesNotMatch(
   'The applied FORTUNA FK migration source must remain index-only',
 );
 console.log('PASS — FORTUNA FK index migration is reconciled to LIVE version 20261122210505 with 14 verified indexes and no pending duplicate');
+
+const activityForward = (ledgerManifest.forward_migrations || []).find(entry =>
+  entry.file === '20261123182957_fortuna_owner_activity_history.sql',
+);
+assert.ok(activityForward, 'FORTUNA owner activity history migration must be tracked as a forward migration');
+assert.equal(activityForward.applied_to_live, true, 'FORTUNA activity history migration must be recorded as applied to LIVE');
+assert.equal(activityForward.live_version, '20261123194707', 'FORTUNA activity history must match the exact LIVE migration registry version');
+assert.equal(activityForward.execution_status, 'applied_live');
+assert.ok(
+  ledgerManifest.expected_files.includes(activityForward.file),
+  'Applied FORTUNA activity history migration must remain in the tracked SQL inventory',
+);
+assert.equal(
+  (ledgerManifest.pending_forward_migrations || []).some(entry => entry.file === activityForward.file),
+  false,
+  'Applied FORTUNA activity history migration must not remain pending',
+);
+const activitySql = readFileSync('supabase/migrations/' + activityForward.file, 'utf8');
+assert.match(activitySql, /CREATE OR REPLACE FUNCTION fortuna_private\\.fortuna_list_activity/);
+assert.match(activitySql, /CREATE OR REPLACE FUNCTION api\\.list_activity/);
+assert.match(activitySql, /SECURITY INVOKER/);
+assert.match(activitySql, /REVOKE ALL ON FUNCTION api\\.list_activity[\\s\\S]*?FROM PUBLIC, anon, authenticated/);
+assert.match(activitySql, /GRANT EXECUTE ON FUNCTION api\\.list_activity[\\s\\S]*?TO authenticated/);
+assert.match(activitySql, /BEGIN;[\\s\\S]*COMMIT;\\s*$/i);
+console.log('PASS — FORTUNA owner activity history migration reconciled to LIVE version 20261123194707; authenticated read-only wrapper tracked without replay');
 
 const recipientForward = (ledgerManifest.forward_migrations || []).find(entry =>
   entry.file === '20261121124522_transfer_recipient_id_privacy_active_admin.sql',
