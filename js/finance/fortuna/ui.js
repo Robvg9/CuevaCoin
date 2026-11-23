@@ -54,7 +54,6 @@ function inicializarFortuna() {
   const linkProfileDialog = byId('fortuna-link-profile-dialog');
   const linkProfileForm = byId('fortuna-link-profile-form');
   const profileResults = byId('fortuna-profile-results');
-  const profileIsDependent = byId('fortuna-profile-is-dependent');
   const contactForm = byId('fortuna-contact-form');
   const obligationForm = byId('fortuna-obligation-form');
   const list = byId('fortuna-contact-list');
@@ -65,7 +64,7 @@ function inicializarFortuna() {
   const currencyFilter = byId('fortuna-contact-currency-filter');
   const status = byId('fortuna-session-status');
 
-  if (![contactDialog, obligationDialog, linkProfileDialog, linkProfileForm, profileResults, profileIsDependent, contactForm, obligationForm, list, detail, history, search, currencyFilter, status].every(Boolean)) {
+  if (![contactDialog, obligationDialog, linkProfileDialog, linkProfileForm, profileResults, contactForm, obligationForm, list, detail, history, search, currencyFilter, status].every(Boolean)) {
     console.error('[FORTUNA] Markup incompleto; no se inicializó la interfaz.');
     return;
   }
@@ -929,7 +928,6 @@ function inicializarFortuna() {
   byId('fortuna-new-contact-btn').addEventListener('click', openNewContact);
   byId('fortuna-link-profile-btn').addEventListener('click', () => {
     byId('fortuna-profile-query').value = '';
-    profileIsDependent.checked = false;
     profileResults.replaceChildren();
     byId('fortuna-profile-search-error').textContent = '';
     openDialog(linkProfileDialog, 'fortuna-profile-query');
@@ -1035,10 +1033,18 @@ function inicializarFortuna() {
         const identity = el('div');
         identity.append(el('strong', '', profile.display_name));
         identity.append(el('small', '', '@' + profile.username));
-        const choose = el('button', 'btn btn-primary', 'Vincular');
-        choose.type = 'button';
-        choose.dataset.linkProfileId = profile.profile_id;
-        row.append(identity, choose);
+        identity.append(el('small', 'fortuna-server-note', 'Clasificación actual: ' + (profile.is_dependent ? 'Dependiente' : 'Solo FORTUNA')));
+        const actions = el('div', 'fortuna-dialog-actions');
+        const privateOnly = el('button', 'btn btn-secondary', 'Solo FORTUNA');
+        privateOnly.type = 'button';
+        privateOnly.dataset.linkProfileId = profile.profile_id;
+        privateOnly.dataset.linkProfileDependent = 'false';
+        const both = el('button', 'btn btn-primary', 'FORTUNA + dependiente');
+        both.type = 'button';
+        both.dataset.linkProfileId = profile.profile_id;
+        both.dataset.linkProfileDependent = 'true';
+        actions.append(privateOnly, both);
+        row.append(identity, actions);
         profileResults.append(row);
       }
     } catch (searchError) {
@@ -1051,7 +1057,8 @@ function inicializarFortuna() {
     if (!button) return;
     button.disabled = true;
     try {
-      const linked = await linkFortunaProfileContact(button.dataset.linkProfileId, profileIsDependent.checked);
+      const isDependent = button.dataset.linkProfileDependent === 'true';
+      const linked = await linkFortunaProfileContact(button.dataset.linkProfileId, isDependent);
       state.selectedContactId = linked.contact_id;
       state.selectedObligations = [];
       closeDialog(linkProfileDialog);
