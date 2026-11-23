@@ -75,11 +75,11 @@ assert.doesNotMatch(html, /fortuna-obligation-due-date/);
 assert.match(html, /aria-live="polite"/);
 assert.match(html, /Te debe[\s\S]*Le debes/);
 assert.match(html, /CUP[\s\S]*USD[\s\S]*EUR/);
-assert.match(html, /ui\.js\?v=163/);
-assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], '163');
-assert.equal(html.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '163');
-assert.equal(app.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '163');
-assert.match(sw, /\/js\/finance\/fortuna\/ui\.js\?v=163/);
+assert.match(html, /ui\.js\?v=164/);
+assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], '164');
+assert.equal(html.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '164');
+assert.equal(app.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '164');
+assert.match(sw, /\/js\/finance\/fortuna\/ui\.js\?v=164/);
 assert.match(sw, /\/js\/finance\/fortuna\/preview-domain\.mjs/);
 assert.match(sw, /\/js\/finance\/fortuna\/api\.mjs/);
 
