@@ -2,6 +2,7 @@
 
 export function showAdminPanel(admin) {
     try {
+        if (typeof window.resetFortunaPreviewDrafts === 'function') window.resetFortunaPreviewDrafts();
         window.ocultarSplashArranque();
         if (typeof window.ocultarCargando === 'function') window.ocultarCargando();
 
