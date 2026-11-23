@@ -696,6 +696,9 @@ function inicializarFortuna() {
       const metadata = item.metadata && typeof item.metadata === 'object' ? item.metadata : {};
       let eventLabel = labels[item.event_type] || 'Movimiento registrado';
       let amountLabel = formatMinorAmount(item.total_amount_minor);
+      if (item.event_type === 'obligation_opened' && selectedContact?.history_migrated === true) {
+        eventLabel = 'Saldo inicial provisional (neutralizado)';
+      }
       if (item.event_type === 'legacy_history') {
         const signedAmount = (value) => {
           const numeric = Number(value);
@@ -718,8 +721,8 @@ function inicializarFortuna() {
         } else if (metadata.source_kind === 'withdrawal_request') {
           eventLabel = 'Solicitud de retiro · ' + String(metadata.original_status || 'sin estado');
         } else if (metadata.source_kind === 'opening_snapshot_replaced') {
-          eventLabel = 'Saldo inicial sustituido por historial importado';
-          amountLabel = '';
+          eventLabel = 'Neutralización del saldo inicial provisional';
+          amountLabel = signedAmount(metadata.delta_amount);
         }
       }
       heading.append(el('strong', '', eventLabel));
