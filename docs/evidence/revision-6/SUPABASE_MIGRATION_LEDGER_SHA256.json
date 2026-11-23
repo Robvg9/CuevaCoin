@@ -71,7 +71,8 @@
     "20261121124522_transfer_recipient_id_privacy_active_admin.sql",
     "20261122173537_fortuna_v1_private_ledger_and_owner_api.sql",
     "20261122192417_fortuna_private_fk_covering_indexes.sql",
-    "20261123182957_fortuna_owner_activity_history.sql"
+    "20261123182957_fortuna_owner_activity_history.sql",
+    "20261123210000_fortuna_link_existing_profiles.sql"
   ],
   "recovered": [
     {
@@ -412,7 +413,19 @@
       "applied_to_live": true,
       "execution_status": "applied_live",
       "source": "Applied to Supabase LIVE project zqgmjwfvluboiporytcq on 2026-11-23; repository SQL is the deployed migration source."
+    },
+    {
+      "file": "20261123210000_fortuna_link_existing_profiles.sql",
+      "purpose": "FORTUNA V167 owner-scoped lookup of active profiles and idempotent linking to the owner's private contact book",
+      "execution_status": "pending_review_not_applied",
+      "applied_to_live": false,
+      "source": "Added in PR #67; not applied to Supabase LIVE. Requires successful local migration/E2E, review and explicit production rollout approval."
     }
   ],
-  "pending_forward_migrations": []
+  "pending_forward_migrations": [
+    {
+      "file": "20261123210000_fortuna_link_existing_profiles.sql",
+      "reason": "New FORTUNA V167 feature in PR #67; pending exact-SHA validation and separate LIVE Human Gate."
+    }
+  ]
 }
