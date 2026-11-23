@@ -50,6 +50,7 @@ DECLARE
   v_profile_state text;
   v_contact_name text;
   v_balance_minor bigint;
+  v_historical_principal_minor bigint := 0;
   v_final_snapshot numeric;
   v_transaction_count integer := 0;
   v_invalid_transaction_count integer := 0;
@@ -143,6 +144,20 @@ BEGIN
 
   v_gap_count := pg_catalog.jsonb_array_length(v_gaps);
 
+  WITH ordered AS (
+    SELECT t.saldo_antes, t.saldo_despues, t.cantidad,
+           lag(t.saldo_despues) OVER (ORDER BY t.creado_en, t.id) AS previous_after
+      FROM public.transacciones t
+     WHERE t.usuario_id = v_profile_id
+  )
+  SELECT COALESCE(
+           pg_catalog.sum(GREATEST(pg_catalog.round((saldo_antes - COALESCE(previous_after, 0)) * 100)::bigint, 0))
+           + pg_catalog.sum(GREATEST(pg_catalog.round(cantidad * 100)::bigint, 0)),
+           0
+         )::bigint
+    INTO v_historical_principal_minor
+    FROM ordered;
+
   SELECT count(*)::integer,
          count(*) FILTER (WHERE s.estado = 'pendiente')::integer
     INTO v_withdrawal_count, v_pending_withdrawal_count
@@ -180,6 +195,7 @@ BEGIN
     AND v_final_snapshot IS NOT NULL
     AND pg_catalog.round(v_final_snapshot * 100)::bigint = v_balance_minor
     AND v_balance_minor >= 0
+    AND v_historical_principal_minor >= v_balance_minor
     AND v_pending_withdrawal_count = 0
     AND v_obligation_count = 1
     AND v_opening_event_count = 1
@@ -201,6 +217,7 @@ BEGIN
     'already_migrated', v_migrated,
     'dependent', v_is_dependent,
     'source_balance_minor', v_balance_minor::text,
+    'historical_principal_minor', v_historical_principal_minor::text,
     'final_snapshot_minor', CASE WHEN v_final_snapshot IS NULL THEN NULL
       ELSE pg_catalog.round(v_final_snapshot * 100)::bigint::text END,
     'transaction_count', v_transaction_count,
@@ -234,7 +251,9 @@ DECLARE
   v_profile_balance numeric;
   v_profile_name text;
   v_obligation_id uuid;
+  v_new_obligation_id uuid;
   v_opening_event_id uuid;
+  v_source_balance_minor bigint;
   v_tx record;
   v_request record;
   v_gap numeric;
@@ -348,42 +367,67 @@ BEGIN
    LIMIT 1;
   IF NOT FOUND THEN RAISE EXCEPTION 'fortuna_profile_migration_opening_event_missing'; END IF;
 
-  -- Preserve the synthetic opening event because the idempotency ledger
-  -- references it. Remove only its placeholder ledger line and turn it into
-  -- a zero-effect migration marker; never break the original idempotency key.
-  DELETE FROM fortuna_private.financial_ledger_entries
-   WHERE book_id = v_book_id AND event_id = v_opening_event_id;
-  UPDATE fortuna_private.financial_events
-     SET event_type = 'legacy_history',
-         total_amount_minor = 1,
-         metadata = pg_catalog.jsonb_build_object(
-           'source_system', 'CuevaCoin',
-           'source_kind', 'opening_snapshot_replaced',
-           'source_profile_id', v_profile_id,
-           'replaced_opening_amount_minor', (
-             SELECT a.details->>'amount_minor'
-               FROM fortuna_private.financial_audit a
-              WHERE a.book_id = v_book_id AND a.event_id = v_opening_event_id
-              ORDER BY a.created_at DESC, a.id DESC LIMIT 1
-           ),
-           'affects_balance', false,
-           'explanation', 'Marcador técnico: el saldo inicial sintético fue sustituido por los movimientos históricos originales.'
-         ),
-         occurred_at = (
-           SELECT min(t.creado_en) - interval '2 microseconds'
-             FROM public.transacciones t WHERE t.usuario_id = v_profile_id
-         )
-   WHERE book_id = v_book_id AND id = v_opening_event_id;
-  UPDATE fortuna_private.financial_audit
-     SET action = 'cuevacoin_opening_snapshot_replaced',
-         details = details || pg_catalog.jsonb_build_object(
-           'source_system', 'CuevaCoin',
-           'source_profile_id', v_profile_id,
-           'replacement', 'legacy_history',
-           'affects_balance', false
-         )
-   WHERE book_id = v_book_id AND event_id = v_opening_event_id
-     AND action = 'obligation_opened';
+  -- FORTUNA is append-only: never edit or delete the original opening
+  -- obligation/event/ledger line. Add a compensating entry to neutralize that
+  -- provisional snapshot, then create a new obligation backed by the full
+  -- historical transaction sequence.
+  v_source_balance_minor := pg_catalog.round(v_profile_balance * 100)::bigint;
+  v_principal_minor := (v_preview->>'historical_principal_minor')::bigint;
+
+  INSERT INTO fortuna_private.financial_events (
+    book_id, contact_id, currency_code, event_type,
+    total_amount_minor, actor_user_id, metadata, occurred_at
+  ) VALUES (
+    v_book_id, p_contact_id, 'CUP', 'legacy_history',
+    v_source_balance_minor, v_actor,
+    pg_catalog.jsonb_build_object(
+      'source_system', 'CuevaCoin',
+      'source_kind', 'opening_snapshot_replaced',
+      'source_profile_id', v_profile_id,
+      'replaces_event_id', v_opening_event_id,
+      'delta_amount', v_profile_balance::text,
+      'affects_balance', true,
+      'explanation', 'Compensación técnica del saldo inicial provisional. No es un pago: evita duplicar el saldo al reconstruir los movimientos históricos originales.'
+    ),
+    (SELECT min(t.creado_en) - interval '2 microseconds'
+       FROM public.transacciones t WHERE t.usuario_id = v_profile_id)
+  ) RETURNING id INTO v_event_id;
+
+  INSERT INTO fortuna_private.financial_ledger_entries (
+    book_id, event_id, contact_id, currency_code,
+    obligation_id, entry_kind, signed_minor, created_at
+  ) VALUES (
+    v_book_id, v_event_id, p_contact_id, 'CUP',
+    v_obligation_id, 'adjustment', v_source_balance_minor,
+    (SELECT min(t.creado_en) - interval '2 microseconds'
+       FROM public.transacciones t WHERE t.usuario_id = v_profile_id)
+  );
+  INSERT INTO fortuna_private.financial_audit (
+    book_id, event_id, actor_user_id, action, details, created_at
+  ) VALUES (
+    v_book_id, v_event_id, v_actor, 'cuevacoin_opening_snapshot_replaced',
+    pg_catalog.jsonb_build_object(
+      'source_system', 'CuevaCoin',
+      'source_profile_id', v_profile_id,
+      'replaces_event_id', v_opening_event_id,
+      'compensating_amount_minor', v_source_balance_minor::text,
+      'affects_balance', true
+    ),
+    (SELECT min(t.creado_en) - interval '2 microseconds'
+       FROM public.transacciones t WHERE t.usuario_id = v_profile_id)
+  );
+
+  INSERT INTO fortuna_private.financial_obligations (
+    book_id, contact_id, currency_code, direction,
+    principal_minor, description, due_at, opened_at, created_by
+  ) VALUES (
+    v_book_id, p_contact_id, 'CUP', 'payable',
+    v_principal_minor,
+    'Historial completo migrado desde CuevaCoin',
+    NULL,
+    (SELECT min(t.creado_en) FROM public.transacciones t WHERE t.usuario_id = v_profile_id),
+    v_actor
+  ) RETURNING id INTO v_new_obligation_id;
 
   FOR v_tx IN
     SELECT t.* FROM public.transacciones t
@@ -418,7 +462,7 @@ BEGIN
         obligation_id, entry_kind, signed_minor, created_at
       ) VALUES (
         v_book_id, v_event_id, p_contact_id, 'CUP',
-        v_obligation_id, 'adjustment', -v_gap_minor,
+        v_new_obligation_id, 'adjustment', -v_gap_minor,
         v_tx.creado_en - interval '1 microsecond'
       );
       INSERT INTO fortuna_private.financial_audit (
@@ -433,7 +477,6 @@ BEGIN
         ),
         v_tx.creado_en - interval '1 microsecond'
       );
-      v_principal_minor := v_principal_minor + GREATEST(v_gap_minor, 0);
       v_reconciliation_count := v_reconciliation_count + 1;
       v_expected_balance := v_tx.saldo_antes;
     END IF;
@@ -472,7 +515,7 @@ BEGIN
         obligation_id, entry_kind, signed_minor, created_at
       ) VALUES (
         v_book_id, v_event_id, p_contact_id, 'CUP',
-        v_obligation_id, 'adjustment', -v_delta_minor, v_tx.creado_en
+        v_new_obligation_id, 'adjustment', -v_delta_minor, v_tx.creado_en
       );
       INSERT INTO fortuna_private.financial_audit (
         book_id, event_id, actor_user_id, action, details, created_at
@@ -488,7 +531,6 @@ BEGIN
         ),
         v_tx.creado_en
       );
-      v_principal_minor := v_principal_minor + GREATEST(v_delta_minor, 0);
     END IF;
     v_expected_balance := v_tx.saldo_despues;
     v_transaction_count := v_transaction_count + 1;
@@ -498,18 +540,9 @@ BEGIN
      pg_catalog.round(v_profile_balance * 100)::bigint THEN
     RAISE EXCEPTION 'fortuna_profile_migration_final_balance_mismatch';
   END IF;
-  IF v_principal_minor <= 0 THEN
+  IF v_principal_minor <= 0 OR v_principal_minor < v_source_balance_minor THEN
     RAISE EXCEPTION 'fortuna_profile_migration_principal_invalid';
   END IF;
-
-  UPDATE fortuna_private.financial_obligations
-     SET principal_minor = v_principal_minor,
-         description = 'Historial migrado desde CuevaCoin — saldo conciliado',
-         opened_at = (
-           SELECT min(t.creado_en) FROM public.transacciones t
-            WHERE t.usuario_id = v_profile_id
-         )
-   WHERE book_id = v_book_id AND id = v_obligation_id;
 
   FOR v_request IN
     SELECT s.* FROM public.solicitudes_retiro s
@@ -657,7 +690,7 @@ BEGIN
   SELECT COALESCE(pg_catalog.sum(le.signed_minor), 0)::bigint
     INTO v_current_ledger_minor
     FROM fortuna_private.financial_ledger_entries le
-   WHERE le.book_id = v_book_id AND le.obligation_id = v_obligation_id;
+   WHERE le.book_id = v_book_id AND le.obligation_id = v_new_obligation_id;
   IF v_current_ledger_minor <> -pg_catalog.round(v_profile_balance * 100)::bigint THEN
     RAISE EXCEPTION 'fortuna_profile_migration_ledger_reconciliation_failed';
   END IF;
