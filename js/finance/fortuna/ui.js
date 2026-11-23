@@ -44,6 +44,7 @@ function inicializarFortuna() {
     pendingObligation: null,
     settlementDraft: null,
     settlementPreviewRequest: 0,
+    newContactNeedsObligation: false,
   };
   const byId = (id) => root.querySelector('#' + id);
   const contactDialog = byId('fortuna-contact-dialog');
@@ -946,7 +947,11 @@ function inicializarFortuna() {
       }
       const loaded = await loadContacts({ preserveStatus: true });
       if (response?.contact_id) activateTab('contacts');
-      setStatus(loaded ? 'Contacto guardado en tu libro.' : 'Contacto guardado. No se pudo actualizar la lista; usa Actualizar.');
+      setStatus(loaded ? 'Contacto guardado. Ahora registra la deuda inicial.' : 'Contacto guardado. No se pudo actualizar la lista; usa Actualizar.');
+      if (response?.contact_id) {
+        state.newContactNeedsObligation = true;
+        openNewObligation();
+      }
     } catch (validationOrApiError) {
       error.textContent = errorMessage(validationOrApiError);
       if (validationOrApiError?.retryable && state.pendingContact) {
@@ -966,6 +971,21 @@ function inicializarFortuna() {
       contactForm.querySelectorAll('input, textarea').forEach((field) => { field.disabled = false; });
       submit.textContent = state.pendingContact?.uncertain ? 'Reintentar mismo envío' : 'Guardar contacto';
     }
+  });
+
+  obligationDialog.addEventListener('cancel', (event) => {
+    if (state.newContactNeedsObligation) {
+      event.preventDefault();
+      byId('fortuna-obligation-form-error').textContent = 'Registra la deuda inicial para terminar de crear este contacto.';
+    }
+  });
+  obligationDialog.querySelectorAll('[data-close-dialog]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      if (state.newContactNeedsObligation) {
+        event.preventDefault();
+        byId('fortuna-obligation-form-error').textContent = 'Registra la deuda inicial para terminar de crear este contacto.';
+      }
+    });
   });
 
   obligationForm.addEventListener('submit', async (event) => {
@@ -1010,9 +1030,10 @@ function inicializarFortuna() {
         idempotencyKey: state.pendingObligation.idempotencyKey,
       });
       state.pendingObligation = null;
+      state.newContactNeedsObligation = false;
       closeDialog(obligationDialog);
       await loadContacts({ preserveStatus: true });
-      setStatus('Obligación guardada en el libro y registrada contablemente.');
+      setStatus('Contacto y deuda inicial guardados correctamente.');
     } catch (validationOrApiError) {
       error.textContent = errorMessage(validationOrApiError);
       if (validationOrApiError?.retryable && state.pendingObligation) {
@@ -1163,6 +1184,7 @@ function inicializarFortuna() {
     state.loadingObligations = false;
     state.pendingContact = null;
     state.pendingObligation = null;
+    state.newContactNeedsObligation = false;
     state.settlementDraft = null;
     state.settlementPreviewRequest += 1;
     contactForm.reset();
