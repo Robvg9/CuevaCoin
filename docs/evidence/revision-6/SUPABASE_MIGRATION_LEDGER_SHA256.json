@@ -74,7 +74,7 @@
     "20261123182957_fortuna_owner_activity_history.sql",
     "20261123210000_fortuna_link_existing_profiles.sql",
     "20261123223000_fortuna_profile_balance_initial_obligation.sql",
-    "supabase/migrations/20261124010000_fortuna_dependent_classification.sql"
+    "20261124010000_fortuna_dependent_classification.sql"
   ],
   "recovered": [
     {
@@ -433,7 +433,7 @@
       "live_version": "20261123211142"
     },
     {
-      "file": "supabase/migrations/20261124010000_fortuna_dependent_classification.sql",
+      "file": "20261124010000_fortuna_dependent_classification.sql",
       "purpose": "Separate FORTUNA private-ledger contacts from CuevaCoin/BattleCruiser dependents; explicit owner-selected classification and server-side payroll guards",
       "applied_to_live": false,
       "execution_status": "pending_review_not_applied",
@@ -443,7 +443,7 @@
   ],
   "pending_forward_migrations": [
     {
-      "file": "supabase/migrations/20261124010000_fortuna_dependent_classification.sql",
+      "file": "20261124010000_fortuna_dependent_classification.sql",
       "reason": "FORTUNA V169 dependent classification and payroll boundary; pending exact-SHA CI, local E2E and coordinated LIVE rollout."
     }
   ]
