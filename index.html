@@ -3819,6 +3819,14 @@
         .fortuna-contact-position strong{font-size:12px;overflow-wrap:anywhere}
         .fortuna-contact-card button{width:100%;min-height:38px}
         .fortuna-contact-detail{margin-top:14px;padding:16px;border:1px solid var(--border-color);border-radius:15px;background:var(--card-bg)}
+        .fortuna-settlement-workbench{display:grid;gap:12px;margin-top:18px;padding:15px;border:1px solid var(--border-color);border-radius:14px;background:color-mix(in srgb,var(--primary-color) 5%,var(--card-bg))}
+        .fortuna-settlement-workbench>h4{font-size:16px;margin:0}
+        .fortuna-settlement-workbench .fortuna-contact-position{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+        .fortuna-settlement-workbench .fortuna-detail-totals{margin:0}
+        .fortuna-settlement-confirmation{display:flex;flex-direction:row;align-items:flex-start;gap:9px}
+        .fortuna-settlement-confirmation input{flex:0 0 auto;width:18px;min-height:18px;margin:1px 0 0;accent-color:var(--secondary-color)}
+        .fortuna-settlement-workbench [disabled]{opacity:.55;cursor:not-allowed}
+        @media(max-width:600px){.fortuna-settlement-workbench .fortuna-contact-position{grid-template-columns:1fr}.fortuna-settlement-workbench .fortuna-detail-totals{grid-template-columns:1fr}}
         .fortuna-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
         .fortuna-detail-head h3{font-size:18px;overflow-wrap:anywhere}
         .fortuna-detail-head p,.fortuna-obligation-row p{font-size:12px;opacity:.72}
