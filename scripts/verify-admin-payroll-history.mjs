@@ -135,8 +135,10 @@ const invalidDate = spawnSync(process.execPath, ['--input-type=module', '-e', "i
 assert.notEqual(invalidDate.status, 0, 'Invalid calendar dates must be rejected');
 console.log('PASS — local date boundaries cover Puerto Rico and 23/25-hour DST days.');
 
-assert.match(app, /VERSION_FALLBACK = 'V\.158'/);
-assert.match(sw, /cuevacoin-shell-v158/);
+const releaseVersion = index.match(/VERSION_FALLBACK = 'V\.(\d+)'/)?.[1];
+assert.ok(releaseVersion, 'HTML fallback must declare the current release version');
+assert.equal(app.match(/VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], releaseVersion, 'App fallback must match the HTML release version');
+assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], releaseVersion, 'PWA cache must match the HTML release version');
 assert.match(index, /destinatarios\.js\?v=155/);
 assert.match(index, /historial-general\.js\?v=155/);
 assert.match(index, /cuevacoin-v155-admin-history-cleanup/);
