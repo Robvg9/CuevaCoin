@@ -19,6 +19,23 @@ on:
       - "scripts/verify-step10-release.mjs"
       - "docs/fortuna/FORTUNA_UI_PREVIEW_V1.md"
       - ".github/workflows/fortuna-ui-preview.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "index.html"
+      - "js/finance/fortuna/**"
+      - "js/ui/navigation.js"
+      - "js/finance/orchestration/show-admin-panel.js"
+      - "js/finance/orchestration/show-user-dashboard.js"
+      - "js/session/logout.js"
+      - "service-worker.js"
+      - "supabase/functions/fortuna-dispatch/index.ts"
+      - "scripts/verify-fortuna-ui-preview.mjs"
+      - "scripts/verify-fortuna-api-client.mjs"
+      - "scripts/verify-step10-release.mjs"
+      - "docs/fortuna/FORTUNA_UI_PREVIEW_V1.md"
+      - ".github/workflows/fortuna-ui-preview.yml"
 
 permissions:
   contents: read
