@@ -27,6 +27,7 @@ on:
       - "scripts/verify-admin-payroll-history.mjs"
       - "scripts/verify-p1-01-xss.mjs"
       - "scripts/verify-v149-users-ui.mjs"
+      - "scripts/verify-v156-navigation-ui.mjs"
       - "js/admin/finance/**"
       - "js/admin/usuarios-estado.js"
       - "js/admin/correo-lista.js"
