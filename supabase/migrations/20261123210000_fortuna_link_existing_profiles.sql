@@ -35,8 +35,8 @@ BEGIN
     WHERE estado = 'activo'
       AND id <> v_actor
       AND (
-        pg_catalog.position(pg_catalog.lower(v_query) IN pg_catalog.lower(COALESCE(usuario, ''))) > 0
-        OR pg_catalog.position(pg_catalog.lower(v_query) IN pg_catalog.lower(pg_catalog.concat_ws(' ', nombre, apellido))) > 0
+        pg_catalog.strpos(pg_catalog.lower(COALESCE(usuario, '')), pg_catalog.lower(v_query)) > 0
+        OR pg_catalog.strpos(pg_catalog.lower(pg_catalog.concat_ws(' ', nombre, apellido)), pg_catalog.lower(v_query)) > 0
       )
     ORDER BY pg_catalog.lower(usuario), id
     LIMIT 20
