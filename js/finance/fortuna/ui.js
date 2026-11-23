@@ -347,7 +347,7 @@ function inicializarFortuna() {
           ? 'quedará como una nueva obligación que tú le debes a esta persona'
           : 'quedará como una nueva obligación que esta persona te debe';
         result.append(el('p', 'fortuna-server-note', 'Exceso: ' + overageDirection + '.'));
-        const confirmation = el('label', 'fortuna-server-note');
+        const confirmation = el('label', 'fortuna-server-note fortuna-settlement-confirmation');
         const checkbox = el('input');
         checkbox.type = 'checkbox';
         checkbox.checked = draft.overageConfirmed;
