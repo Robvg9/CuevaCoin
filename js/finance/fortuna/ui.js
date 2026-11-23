@@ -54,6 +54,7 @@ function inicializarFortuna() {
   const linkProfileDialog = byId('fortuna-link-profile-dialog');
   const linkProfileForm = byId('fortuna-link-profile-form');
   const profileResults = byId('fortuna-profile-results');
+  const profileIsDependent = byId('fortuna-profile-is-dependent');
   const contactForm = byId('fortuna-contact-form');
   const obligationForm = byId('fortuna-obligation-form');
   const list = byId('fortuna-contact-list');
@@ -64,7 +65,7 @@ function inicializarFortuna() {
   const currencyFilter = byId('fortuna-contact-currency-filter');
   const status = byId('fortuna-session-status');
 
-  if (![contactDialog, obligationDialog, linkProfileDialog, linkProfileForm, profileResults, contactForm, obligationForm, list, detail, history, search, currencyFilter, status].every(Boolean)) {
+  if (![contactDialog, obligationDialog, linkProfileDialog, linkProfileForm, profileResults, profileIsDependent, contactForm, obligationForm, list, detail, history, search, currencyFilter, status].every(Boolean)) {
     console.error('[FORTUNA] Markup incompleto; no se inicializó la interfaz.');
     return;
   }
@@ -542,11 +543,13 @@ function inicializarFortuna() {
     detail.replaceChildren();
     if (!contact) {
       detail.hidden = true;
+      if (detail.open) detail.close();
       byId('fortuna-new-obligation-btn').disabled = false;
       return;
     }
 
     detail.hidden = false;
+    if (!detail.open && typeof detail.showModal === 'function') detail.showModal();
     const heading = el('div', 'fortuna-detail-head');
     const identity = el('div');
     identity.append(el('h3', '', contact.display_name));
@@ -1047,16 +1050,15 @@ function inicializarFortuna() {
     if (!button) return;
     button.disabled = true;
     try {
-      const linked = await linkFortunaProfileContact(button.dataset.linkProfileId);
+      const linked = await linkFortunaProfileContact(button.dataset.linkProfileId, profileIsDependent.checked);
       state.selectedContactId = linked.contact_id;
       state.selectedObligations = [];
       closeDialog(linkProfileDialog);
       await loadContacts({ preserveStatus: true });
       activateTab('contacts');
       const balanceMinor = BigInt(String(linked.balance_minor ?? '0'));
-      setStatus(balanceMinor > 0n
-        ? 'Usuario vinculado. Revisa y confirma el saldo de CuevaCoin como deuda en CUP.'
-        : 'Usuario vinculado. Puedes registrar una obligación cuando corresponda.');
+      setStatus((linked.is_dependent ? 'Usuario vinculado como dependiente de CuevaCoin y contacto de FORTUNA. ' : 'Usuario vinculado solo a FORTUNA; no aparecerá en dependientes ni nómina. ')
+        + (balanceMinor > 0n ? 'Revisa y confirma el saldo de CuevaCoin como deuda en CUP.' : 'Puedes registrar una obligación cuando corresponda.'));
       openNewObligation({ defaults: balanceMinor > 0n ? {
         direction: 'payable',
         currency: 'CUP',
@@ -1159,6 +1161,28 @@ function inicializarFortuna() {
     renderActivity();
     setStatus('Consultando ficha, obligaciones y movimientos del contacto…');
     await Promise.all([loadSelectedObligations(), loadSelectedActivity()]);
+  });
+
+  detail.addEventListener('cancel', (event) => {
+    if (state.settlementDraft?.pendingCommit) {
+      event.preventDefault();
+      setStatus('Hay una liquidación sin resultado definitivo. Reintenta la misma confirmación antes de cerrar la ficha.');
+      return;
+    }
+    event.preventDefault();
+    state.selectedContactId = null;
+    state.selectedObligations = [];
+    state.activityItems = [];
+    state.activityHasMore = false;
+    state.activityCursor = null;
+    state.activityRequest += 1;
+    state.loadingActivity = false;
+    state.settlementDraft = null;
+    state.obligationRequest += 1;
+    detail.close();
+    renderContactDetail();
+    renderHistory();
+    renderActivity();
   });
 
   detail.addEventListener('click', (event) => {
