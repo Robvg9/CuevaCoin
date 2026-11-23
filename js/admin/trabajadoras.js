@@ -13,6 +13,7 @@ export async function obtenerTrabajadoras({ incluirArchivadas = false } = {}) {
         .from('perfiles')
         .select('*')
         .eq('es_admin', false)
+        .eq('es_dependiente', true)
         .order('nombre');
     if (error) {
         console.error(error);

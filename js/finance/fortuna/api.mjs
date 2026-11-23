@@ -15,6 +15,7 @@ const ALLOWED_OPERATIONS = new Set([
   'list_activity',
   'search_fortuna_profiles',
   'link_fortuna_profile_contact',
+  'set_fortuna_profile_dependent_role',
   'preview_settlement',
   'receive_cash',
   'pay_contact',
@@ -421,17 +422,38 @@ export async function searchFortunaProfiles(query) {
   const result = await invokeFortuna('search_fortuna_profiles', { p_query: normalized });
   if (!Array.isArray(result)) throw new FortunaApiError('INVALID_RESPONSE', 'La búsqueda de usuarios no es válida.');
   return result.filter((item) => item && typeof item.profile_id === 'string'
-    && typeof item.username === 'string' && typeof item.display_name === 'string');
+    && typeof item.username === 'string' && typeof item.display_name === 'string'
+    && typeof item.is_dependent === 'boolean'
+    && typeof item.is_fortuna_contact === 'boolean');
 }
 
-export async function linkFortunaProfileContact(profileId) {
-  if (typeof profileId !== 'string' || !profileId.trim()) {
-    throw new FortunaApiError('INVALID_ARGUMENTS', 'Selecciona un usuario válido.');
+export async function linkFortunaProfileContact(profileId, isDependent = false) {
+  if (typeof profileId !== 'string' || !profileId.trim() || typeof isDependent !== 'boolean') {
+    throw new FortunaApiError('INVALID_ARGUMENTS', 'Selecciona un usuario y una clasificación válidos.');
   }
-  const result = await invokeFortuna('link_fortuna_profile_contact', { p_profile_id: profileId });
+  const result = await invokeFortuna('link_fortuna_profile_contact', {
+    p_profile_id: profileId,
+    p_is_dependent: isDependent,
+  });
   if (!result || typeof result.contact_id !== 'string'
-    || !/^\d+$/.test(String(result.balance_minor ?? '0'))) {
-    throw new FortunaApiError('INVALID_RESPONSE', 'No se pudo vincular el usuario a tu libro.');
+    || !/^\d+$/.test(String(result.balance_minor ?? '0'))
+    || result.is_dependent !== isDependent
+    || typeof result.is_new_contact !== 'boolean') {
+    throw new FortunaApiError('INVALID_RESPONSE', 'No se pudo vincular y clasificar el usuario.');
   }
   return { ...result, balance_minor: String(result.balance_minor ?? '0') };
+}
+
+export async function setFortunaProfileDependentRole(profileId, isDependent) {
+  if (typeof profileId !== 'string' || !profileId.trim() || typeof isDependent !== 'boolean') {
+    throw new FortunaApiError('INVALID_ARGUMENTS', 'Selecciona una cuenta y una clasificación válidas.');
+  }
+  const result = await invokeFortuna('set_fortuna_profile_dependent_role', {
+    p_profile_id: profileId,
+    p_is_dependent: isDependent,
+  });
+  if (!result || result.profile_id !== profileId || result.is_dependent !== isDependent) {
+    throw new FortunaApiError('INVALID_RESPONSE', 'No se pudo actualizar la clasificación de la cuenta.');
+  }
+  return result;
 }

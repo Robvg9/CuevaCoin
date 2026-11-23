@@ -83,6 +83,10 @@ assert.match(salaryBatchTest, /BEGIN;[\s\S]*ROLLBACK;\s*$/i);
 assert.match(salaryBatchTest, /replayed IS DISTINCT FROM true/);
 assert.match(salaryBatchTest, /idempotency_key_payload_mismatch/);
 assert.match(salaryBatchTest, /No se puede pagar a una cuenta no activa/);
+assert.match(salaryBatchTest, /es_dependiente=false/);
+assert.match(salaryBatchTest, /admin_pagar_saldo/);
+assert.match(salaryBatchTest, /self-promoted into dependent payroll role/);
+assert.match(salaryBatchTest, /no está clasificada como dependiente/);
 console.log('PASS — salary batch transaction test verifies replay, payload mismatch, inactive-worker rejection and rollback');
 
 
@@ -114,7 +118,7 @@ const ledgerManifest = JSON.parse(readFileSync('docs/evidence/revision-6/SUPABAS
 const migrationFiles = readdirSync('supabase/migrations').filter(name => name.length > 18 && [...name.slice(0, 14)].every(ch => ch >= '0' && ch <= '9') && name[14] === '_' && name.endsWith('.sql')).sort();
 assert.equal(ledgerManifest.baseline_ledger_count, 65, 'Recovered LIVE baseline must remain 65 versions');
 assert.equal(ledgerManifest.recovered.length, 58, 'Exactly 58 historical sources must retain provenance hashes');
-assert.equal((ledgerManifest.forward_migrations || []).length, 6, 'Expected four applied forward migrations plus two pending FORTUNA profile-link/balance migrations');
+assert.equal((ledgerManifest.forward_migrations || []).length, 7, 'Expected five applied forward migrations plus the pending FORTUNA V169 dependent-classification migration');
 const fortunaForward = (ledgerManifest.forward_migrations || []).find(entry =>
   entry.file === '20261122173537_fortuna_v1_private_ledger_and_owner_api.sql',
 );
@@ -126,16 +130,18 @@ const pendingFortunaLink = (ledgerManifest.forward_migrations || []).find(entry 
   entry.file === '20261123210000_fortuna_link_existing_profiles.sql',
 );
 assert.ok(pendingFortunaLink, 'FORTUNA V167 profile-link migration must be tracked');
-assert.equal(pendingFortunaLink.applied_to_live, false, 'FORTUNA V167 profile-link migration must not be claimed as LIVE');
-assert.equal(pendingFortunaLink.execution_status, 'pending_review_not_applied');
+assert.equal(pendingFortunaLink.applied_to_live, true, 'FORTUNA V167 profile-link migration must be recorded as LIVE');
+assert.equal(pendingFortunaLink.live_version, '20261123203456');
+assert.equal(pendingFortunaLink.execution_status, 'applied_live');
 assert.equal(
   (ledgerManifest.forward_migrations || []).filter(entry => entry.applied_to_live === false && entry.execution_status === 'pending_review_not_applied').length,
-  2,
-  'Only the two new FORTUNA profile-link and balance migrations may remain pending',
+  1,
+  'Only the new FORTUNA V169 dependent-classification migration may remain pending',
 );
-assert.ok(
+assert.equal(
   (ledgerManifest.pending_forward_migrations || []).some(entry => entry.file === pendingFortunaLink.file),
-  'The FORTUNA V167 migration must appear in the pending migration list',
+  false,
+  'The applied FORTUNA V167 migration must not remain in the pending migration list',
 );
 
 const fkIndexForward = (ledgerManifest.forward_migrations || []).find(entry =>
@@ -218,7 +224,7 @@ assert.match(profileLinkSql, /linked_profile_id/);
 assert.match(profileLinkSql, /REVOKE ALL ON FUNCTION api\.search_fortuna_profiles/);
 assert.match(profileLinkSql, /GRANT EXECUTE ON FUNCTION api\.search_fortuna_profiles[\s\S]*?TO authenticated/);
 assert.doesNotMatch(profileLinkSql, /email|correo|saldo|salario/i, 'Profile search must not expose email, balances or payroll data');
-console.log('PASS — FORTUNA V167 profile-link migration is tracked as pending LIVE and restricted to active-profile identity fields');
+console.log('PASS — FORTUNA V167 profile-link migration is reconciled to LIVE and restricted to active-profile identity fields');
 
 const profileBalanceSql = readFileSync('supabase/migrations/20261123223000_fortuna_profile_balance_initial_obligation.sql', 'utf8');
 assert.match(profileBalanceSql, /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_link_profile_contact/);
@@ -231,11 +237,40 @@ assert.match(profileBalanceSql, /owner_profile\.estado = 'activo'/);
 assert.doesNotMatch(profileBalanceSql, /UPDATE public\.perfiles|INSERT INTO public\.transacciones/i);
 const pendingProfileBalance = (ledgerManifest.forward_migrations || []).find(entry => entry.file === '20261123223000_fortuna_profile_balance_initial_obligation.sql');
 assert.ok(pendingProfileBalance, 'FORTUNA V168 linked-balance migration must be tracked');
-assert.equal(pendingProfileBalance.applied_to_live, false, 'FORTUNA V168 linked-balance migration must not be claimed as LIVE');
-assert.equal(pendingProfileBalance.execution_status, 'pending_review_not_applied');
-assert.ok((ledgerManifest.pending_forward_migrations || []).some(entry => entry.file === pendingProfileBalance.file));
-console.log('PASS — FORTUNA V168 balance prefill is owner-authenticated, read-only against CuevaCoin financial records, and pending LIVE');
+assert.equal(pendingProfileBalance.applied_to_live, true, 'FORTUNA V168 linked-balance migration must be recorded as LIVE');
+assert.equal(pendingProfileBalance.live_version, '20261123211142');
+assert.equal(pendingProfileBalance.execution_status, 'applied_live');
+assert.equal((ledgerManifest.pending_forward_migrations || []).some(entry => entry.file === pendingProfileBalance.file), false);
+console.log('PASS — FORTUNA V168 balance prefill is owner-authenticated, read-only against CuevaCoin financial records, and reconciled to LIVE');
 
+
+
+const dependentRoleSql = readFileSync('supabase/migrations/20261124010000_fortuna_dependent_classification.sql', 'utf8');
+assert.match(dependentRoleSql, /ADD COLUMN IF NOT EXISTS es_dependiente boolean NOT NULL DEFAULT false/);
+assert.match(dependentRoleSql, /UPDATE public\.perfiles AS p[\s\S]*?NOT EXISTS[\s\S]*?financial_contacts[\s\S]*?linked_profile_id = p\.id/);
+assert.match(dependentRoleSql, /p_is_dependent boolean DEFAULT false/);
+assert.match(dependentRoleSql, /fortuna_set_profile_dependent_role/);
+assert.match(dependentRoleSql, /api\.set_fortuna_profile_dependent_role/);
+assert.match(dependentRoleSql, /'is_fortuna_contact'/);
+assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_search_profiles/);
+assert.match(dependentRoleSql, /'is_dependent', p\.es_dependiente/);
+assert.match(dependentRoleSql, /owner_profile\.es_admin IS TRUE/);
+assert.match(dependentRoleSql, /SET es_dependiente = p_is_dependent/);
+assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION public\.proteger_columnas_sensibles_perfil/);
+assert.match(dependentRoleSql, /NEW\.es_dependiente := OLD\.es_dependiente/);
+assert.match(dependentRoleSql, /v_target\.es_dependiente IS DISTINCT FROM true/);
+assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION public\.admin_pagar_saldo/);
+assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION public\.admin_pagar_salarios_individuales/);
+assert.match(dependentRoleSql, /REVOKE EXECUTE ON FUNCTION public\.admin_pagar_saldo/);
+assert.match(dependentRoleSql, /GRANT EXECUTE ON FUNCTION public\.admin_pagar_saldo[\s\S]*?TO authenticated, service_role/);
+const profileLinkBoundary = dependentRoleSql.slice(dependentRoleSql.indexOf('CREATE OR REPLACE FUNCTION fortuna_private.fortuna_link_profile_contact'), dependentRoleSql.indexOf('-- Defense in depth'));
+assert.doesNotMatch(profileLinkBoundary, /UPDATE public\.perfiles[\s\S]{0,80}SET saldo|INSERT INTO public\.transacciones/i);
+const pendingDependentRole = (ledgerManifest.forward_migrations || []).find(entry => entry.file === '20261124010000_fortuna_dependent_classification.sql');
+assert.ok(pendingDependentRole, 'FORTUNA V169 dependent-classification migration must be tracked');
+assert.equal(pendingDependentRole.applied_to_live, false);
+assert.equal(pendingDependentRole.execution_status, 'pending_review_not_applied');
+assert.ok((ledgerManifest.pending_forward_migrations || []).some(entry => entry.file === pendingDependentRole.file));
+console.log('PASS — FORTUNA V169 dependent classification and server-side payroll guards are tracked as pending LIVE');
 
 const recipientForward = (ledgerManifest.forward_migrations || []).find(entry =>
   entry.file === '20261121124522_transfer_recipient_id_privacy_active_admin.sql',

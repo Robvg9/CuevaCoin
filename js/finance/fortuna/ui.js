@@ -21,6 +21,7 @@ import {
   payContact,
   searchFortunaProfiles,
   linkFortunaProfileContact,
+  setFortunaProfileDependentRole,
   FortunaApiError,
 } from './api.mjs';
 
@@ -542,11 +543,13 @@ function inicializarFortuna() {
     detail.replaceChildren();
     if (!contact) {
       detail.hidden = true;
+      if (detail.open) detail.close();
       byId('fortuna-new-obligation-btn').disabled = false;
       return;
     }
 
     detail.hidden = false;
+    if (!detail.open && typeof detail.showModal === 'function') detail.showModal();
     const heading = el('div', 'fortuna-detail-head');
     const identity = el('div');
     identity.append(el('h3', '', contact.display_name));
@@ -1031,10 +1034,25 @@ function inicializarFortuna() {
         const identity = el('div');
         identity.append(el('strong', '', profile.display_name));
         identity.append(el('small', '', '@' + profile.username));
-        const choose = el('button', 'btn btn-primary', 'Vincular');
-        choose.type = 'button';
-        choose.dataset.linkProfileId = profile.profile_id;
-        row.append(identity, choose);
+        const roleLabel = el('small', 'fortuna-server-note', 'Clasificación actual: ' + (profile.is_dependent ? 'Dependiente' : 'No dependiente'));
+        roleLabel.dataset.profileRoleLabel = 'true';
+        identity.append(roleLabel);
+        identity.append(el('small', 'fortuna-server-note', 'Contacto FORTUNA: ' + (profile.is_fortuna_contact ? 'Vinculado' : 'No vinculado')));
+        const actions = el('div', 'fortuna-dialog-actions');
+        const role = el('button', 'btn btn-secondary', profile.is_dependent ? 'Quitar de dependientes' : 'Marcar dependiente');
+        role.type = 'button';
+        role.dataset.setProfileDependentRole = profile.profile_id;
+        role.dataset.nextDependent = String(!profile.is_dependent);
+        const privateOnly = el('button', 'btn btn-secondary', 'Solo FORTUNA');
+        privateOnly.type = 'button';
+        privateOnly.dataset.linkProfileId = profile.profile_id;
+        privateOnly.dataset.linkProfileDependent = 'false';
+        const both = el('button', 'btn btn-primary', 'FORTUNA + dependiente');
+        both.type = 'button';
+        both.dataset.linkProfileId = profile.profile_id;
+        both.dataset.linkProfileDependent = 'true';
+        actions.append(role, privateOnly, both);
+        row.append(identity, actions);
         profileResults.append(row);
       }
     } catch (searchError) {
@@ -1043,29 +1061,55 @@ function inicializarFortuna() {
   });
 
   profileResults.addEventListener('click', async (event) => {
-    const button = event.target.closest('[data-link-profile-id]');
+    const button = event.target.closest('[data-set-profile-dependent-role], [data-link-profile-id]');
     if (!button) return;
-    button.disabled = true;
+    const profileRow = button.closest('.fortuna-contact-card');
+    profileRow?.querySelectorAll('button').forEach((item) => { item.disabled = true; });
     try {
-      const linked = await linkFortunaProfileContact(button.dataset.linkProfileId);
+      if (button.dataset.setProfileDependentRole) {
+        const isDependent = button.dataset.nextDependent === 'true';
+        await setFortunaProfileDependentRole(button.dataset.setProfileDependentRole, isDependent);
+        const roleLabel = profileRow?.querySelector('[data-profile-role-label]');
+        if (roleLabel) roleLabel.textContent = 'Clasificación actual: ' + (isDependent ? 'Dependiente' : 'No dependiente');
+        button.textContent = isDependent ? 'Quitar de dependientes' : 'Marcar dependiente';
+        button.dataset.nextDependent = String(!isDependent);
+        setStatus(isDependent
+          ? 'Cuenta clasificada como dependiente de CuevaCoin. No se creó contacto ni se modificó su saldo.'
+          : 'Cuenta excluida de dependientes y nómina. Su cuenta e historial se conservaron.');
+        return;
+      }
+
+      const isDependent = button.dataset.linkProfileDependent === 'true';
+      const linked = await linkFortunaProfileContact(button.dataset.linkProfileId, isDependent);
       state.selectedContactId = linked.contact_id;
       state.selectedObligations = [];
       closeDialog(linkProfileDialog);
       await loadContacts({ preserveStatus: true });
       activateTab('contacts');
       const balanceMinor = BigInt(String(linked.balance_minor ?? '0'));
-      setStatus(balanceMinor > 0n
-        ? 'Usuario vinculado. Revisa y confirma el saldo de CuevaCoin como deuda en CUP.'
-        : 'Usuario vinculado. Puedes registrar una obligación cuando corresponda.');
-      openNewObligation({ defaults: balanceMinor > 0n ? {
-        direction: 'payable',
-        currency: 'CUP',
-        amount: (balanceMinor / 100n).toString() + ',' + (balanceMinor % 100n).toString().padStart(2, '0'),
-        description: 'Saldo CuevaCoin pendiente de liquidar',
-      } : null });
+      const hasNewBalanceToConfirm = linked.is_new_contact && balanceMinor > 0n;
+      const roleMessage = linked.is_dependent
+        ? 'Usuario clasificado como dependiente y contacto de FORTUNA. '
+        : 'Usuario clasificado solo para FORTUNA; no aparecerá en dependientes ni nómina. ';
+      setStatus(roleMessage + (hasNewBalanceToConfirm
+        ? 'Revisa y confirma el saldo de CuevaCoin como deuda inicial en CUP.'
+        : linked.is_new_contact
+          ? 'Contacto creado. Puedes registrar una obligación cuando corresponda.'
+          : 'Clasificación actualizada. Se conservó la ficha y no se duplicó ninguna deuda.'));
+      if (hasNewBalanceToConfirm) {
+        openNewObligation({ defaults: {
+          direction: 'payable',
+          currency: 'CUP',
+          amount: (balanceMinor / 100n).toString() + ',' + (balanceMinor % 100n).toString().padStart(2, '0'),
+          description: 'Saldo CuevaCoin pendiente de liquidar',
+        } });
+      }
     } catch (linkError) {
-      button.disabled = false;
       byId('fortuna-profile-search-error').textContent = errorMessage(linkError);
+    } finally {
+      if (linkProfileDialog.open) {
+        profileRow?.querySelectorAll('button').forEach((item) => { item.disabled = false; });
+      }
     }
   });
 
@@ -1159,6 +1203,50 @@ function inicializarFortuna() {
     renderActivity();
     setStatus('Consultando ficha, obligaciones y movimientos del contacto…');
     await Promise.all([loadSelectedObligations(), loadSelectedActivity()]);
+  });
+
+  detail.addEventListener('click', (event) => {
+    if (event.target !== detail) return;
+    if (state.settlementDraft?.pendingCommit) {
+      event.stopPropagation();
+      setStatus('Hay una liquidación sin resultado definitivo. Reintenta la misma confirmación antes de cerrar la ficha.');
+      return;
+    }
+    state.selectedContactId = null;
+    state.selectedObligations = [];
+    state.activityItems = [];
+    state.activityHasMore = false;
+    state.activityCursor = null;
+    state.activityRequest += 1;
+    state.loadingActivity = false;
+    state.settlementDraft = null;
+    state.obligationRequest += 1;
+    detail.close();
+    renderContactDetail();
+    renderHistory();
+    renderActivity();
+  });
+
+  detail.addEventListener('cancel', (event) => {
+    if (state.settlementDraft?.pendingCommit) {
+      event.preventDefault();
+      setStatus('Hay una liquidación sin resultado definitivo. Reintenta la misma confirmación antes de cerrar la ficha.');
+      return;
+    }
+    event.preventDefault();
+    state.selectedContactId = null;
+    state.selectedObligations = [];
+    state.activityItems = [];
+    state.activityHasMore = false;
+    state.activityCursor = null;
+    state.activityRequest += 1;
+    state.loadingActivity = false;
+    state.settlementDraft = null;
+    state.obligationRequest += 1;
+    detail.close();
+    renderContactDetail();
+    renderHistory();
+    renderActivity();
   });
 
   detail.addEventListener('click', (event) => {
