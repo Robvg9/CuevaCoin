@@ -317,6 +317,10 @@ function inicializarFortunaPreview() {
         amount: byId('fortuna-obligation-amount').value,
         description: byId('fortuna-obligation-description').value
       });
+      // The server returns bigint totals per currency/direction. Validate the
+      // full local book before mutating draft state so the preview never shows
+      // a balance that the authoritative API cannot represent.
+      summarizeObligations(state.contacts.flatMap((item) => item.obligations).concat(obligation));
       contact.obligations.push({
         ...obligation,
         dueDate: byId('fortuna-obligation-due-date').value,
