@@ -4,7 +4,7 @@ const SUPABASE_URL = 'https://zqgmjwfvluboiporytcq.supabase.co'
 const PUBLISHABLE_API_KEY = 'sb_publishable_fyqk_L78-Kv--pmzbIsqPw_iWFjVLug'
 
 // This is a public client key, not a user JWT or service-role secret.
-// Intentionally omit Authorization: verify_jwt=true must reject at the Edge gateway.
+// No bearer header is sent; verify_jwt=true must reject at the Edge gateway.
 const response = await fetch(`${SUPABASE_URL}/functions/v1/fortuna-dispatch`, {
   method: 'POST',
   headers: {
