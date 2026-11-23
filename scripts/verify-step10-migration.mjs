@@ -114,7 +114,7 @@ const ledgerManifest = JSON.parse(readFileSync('docs/evidence/revision-6/SUPABAS
 const migrationFiles = readdirSync('supabase/migrations').filter(name => name.length > 18 && [...name.slice(0, 14)].every(ch => ch >= '0' && ch <= '9') && name[14] === '_' && name.endsWith('.sql')).sort();
 assert.equal(ledgerManifest.baseline_ledger_count, 65, 'Recovered LIVE baseline must remain 65 versions');
 assert.equal(ledgerManifest.recovered.length, 58, 'Exactly 58 historical sources must retain provenance hashes');
-assert.equal((ledgerManifest.forward_migrations || []).length, 6, 'Expected five applied forward migrations plus two pending FORTUNA profile-link/balance migrations');
+assert.equal((ledgerManifest.forward_migrations || []).length, 6, 'Expected four applied forward migrations plus two pending FORTUNA profile-link/balance migrations');
 const fortunaForward = (ledgerManifest.forward_migrations || []).find(entry =>
   entry.file === '20261122173537_fortuna_v1_private_ledger_and_owner_api.sql',
 );
@@ -226,6 +226,8 @@ assert.match(profileBalanceSql, /p\\.saldo/);
 assert.match(profileBalanceSql, /'balance_minor'/);
 assert.match(profileBalanceSql, /auth\\.uid\\(\\)/);
 assert.match(profileBalanceSql, /fortuna_ensure_current_book_id/);
+assert.match(profileBalanceSql, /owner_profile\.es_admin IS TRUE/);
+assert.match(profileBalanceSql, /owner_profile\.estado = 'activo'/);
 assert.doesNotMatch(profileBalanceSql, /UPDATE public\\.perfiles|INSERT INTO public\\.transacciones/i);
 const pendingProfileBalance = (ledgerManifest.forward_migrations || []).find(entry => entry.file === '20261123223000_fortuna_profile_balance_initial_obligation.sql');
 assert.ok(pendingProfileBalance, 'FORTUNA V168 linked-balance migration must be tracked');
