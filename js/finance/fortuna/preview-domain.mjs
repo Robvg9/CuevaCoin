@@ -22,7 +22,7 @@ export function normalizeContactDraft({ name, phone = '', notes = '' }) {
 export function parseMoneyToMinor(value) {
   const input = String(value ?? '').trim();
   // Accept comma OR dot as decimal separator. Thousands separators are rejected.
-  if (!/^(?:0|[1-9][0-9]*)(?:[.,][0-9]{1,2})?$/.test(input)) {
+  if (input.length > 20 || !/^(?:0|[1-9][0-9]{0,16})(?:[.,][0-9]{1,2})?$/.test(input)) {
     throw new Error('Usa un importe positivo con hasta dos decimales y sin separador de miles.');
   }
 
