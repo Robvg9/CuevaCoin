@@ -434,7 +434,7 @@ export async function linkFortunaProfileContact(profileId, isDependent = false) 
     p_is_dependent: isDependent,
   });
   if (!result || typeof result.contact_id !== 'string'
-    || !/^\\d+$/.test(String(result.balance_minor ?? '0'))
+    || !/^\d+$/.test(String(result.balance_minor ?? '0'))
     || result.is_dependent !== isDependent
     || typeof result.is_new_contact !== 'boolean') {
     throw new FortunaApiError('INVALID_RESPONSE', 'No se pudo vincular y clasificar el usuario.');
