@@ -3,7 +3,7 @@
  * V148: muestra el resumen local inmediatamente y solo lo sustituye
  * cuando las tres consultas de Supabase han terminado sin errores.
  */
-const CACHE_PREFIX = 'cuevacoin_admin_stats_v1:';
+const CACHE_PREFIX = 'cuevacoin_admin_stats_v2:';
 
 function obtenerAdminActual() {
     try {
@@ -18,7 +18,7 @@ function leerResumenCacheado(key) {
     if (!key) return null;
     try {
         const value = JSON.parse(localStorage.getItem(key) || 'null');
-        if (!value || value.version !== 1
+        if (!value || value.version !== 2
             || !Number.isFinite(value.totalUsuarios)
             || !Number.isFinite(value.saldoTotal)
             || !Number.isFinite(value.solicitudesPendientes)
@@ -73,15 +73,17 @@ export async function loadAdminStats() {
 
     try {
         const [perfilesResult, solicitudesResult, transferenciasResult] = await Promise.all([
-            window.supabaseClient.from('perfiles').select('saldo').eq('es_admin', false),
+            window.supabaseClient.from('perfiles').select('saldo').eq('es_admin', false).eq('es_dependiente', true),
             window.supabaseClient.from('solicitudes_retiro')
-                .select('id', { count: 'exact', head: true }).eq('estado', 'pendiente'),
+                .select('id, perfiles!solicitudes_retiro_usuario_id_fkey!inner(es_dependiente)', { count: 'exact', head: true })
+                .eq('estado', 'pendiente').eq('perfiles.es_dependiente', true),
             (() => {
                 const inicioHoy = new Date();
                 inicioHoy.setHours(0, 0, 0, 0);
                 return window.supabaseClient.from('transacciones')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('tipo', 'transferencia').gte('creado_en', inicioHoy.toISOString());
+                    .select('id, trabajadora:perfiles!transacciones_usuario_id_fkey!inner(es_dependiente)', { count: 'exact', head: true })
+                    .eq('tipo', 'transferencia').eq('trabajadora.es_dependiente', true)
+                    .gte('creado_en', inicioHoy.toISOString());
             })()
         ]);
 
@@ -90,7 +92,7 @@ export async function loadAdminStats() {
 
         const perfiles = perfilesResult.data || [];
         const resumen = {
-            version: 1,
+            version: 2,
             totalUsuarios: perfiles.length,
             saldoTotal: perfiles.reduce((total, perfil) => {
                 const saldo = Number(perfil.saldo);
