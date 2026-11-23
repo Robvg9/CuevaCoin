@@ -2,7 +2,16 @@
 
 export function showAdminPanel(admin) {
     try {
-        if (typeof window.resetFortunaPreviewDrafts === 'function') window.resetFortunaPreviewDrafts();
+        // Preserve the current section when the PWA resumes from background.
+        // Reset private drafts only when a different admin account takes over.
+        const ownerKey = 'cuevacoin_fortuna_owner_id';
+        const previousOwnerId = sessionStorage.getItem(ownerKey);
+        const currentOwnerId = String(admin.id || admin.usuario || '');
+        if (previousOwnerId && currentOwnerId && previousOwnerId !== currentOwnerId) {
+            if (typeof window.resetFortunaPreviewDrafts === 'function') window.resetFortunaPreviewDrafts();
+            sessionStorage.removeItem('cuevacoin_admin_last_section');
+        }
+        if (currentOwnerId) sessionStorage.setItem(ownerKey, currentOwnerId);
         window.ocultarSplashArranque();
         if (typeof window.ocultarCargando === 'function') window.ocultarCargando();
 
@@ -39,7 +48,10 @@ export function showAdminPanel(admin) {
         const fortunaItem = document.getElementById('fortuna-link-item');
         if (fortunaItem) fortunaItem.style.display = '';
 
-        if (typeof window.loadSection === 'function') window.loadSection('inicio');
+        const savedSection = sessionStorage.getItem('cuevacoin_admin_last_section');
+        const allowedSections = new Set(['inicio', 'usuarios', 'solicitudes', 'recuperacion', 'historial-general', 'chat', 'bonos', 'anuncios', 'estadisticas', 'fortuna', 'perfil', 'config-cambio-contrasena', 'config-modo-oscuro', 'config-notificaciones', 'como-usar']);
+        const resumeSection = allowedSections.has(savedSection) ? savedSection : 'inicio';
+        if (typeof window.loadSection === 'function') window.loadSection(resumeSection);
         if (typeof window.loadAdminStats === 'function') window.loadAdminStats();
         if (typeof window.loadChatDestinatarios === 'function') window.loadChatDestinatarios();
         if (typeof window.loadGrupalChat === 'function') window.loadGrupalChat('admin');
