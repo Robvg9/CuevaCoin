@@ -303,6 +303,7 @@ function inicializarFortuna() {
       }
       state.loadingContacts = false;
       renderSummary();
+      if (state.selectedContactId) await loadSelectedObligations();
       if (!preserveStatus) setStatus(state.contacts.length
         ? 'Libro actualizado desde el servidor.'
         : 'Tu libro está vacío. Crea tu primer contacto.');
@@ -374,6 +375,10 @@ function inicializarFortuna() {
       setStatus('Primero abre la ficha de un contacto.');
       return;
     }
+    if (state.pendingObligation?.uncertain && state.pendingObligation.payload.contactId !== contact.contact_id) {
+      setStatus('Hay un envío sin resultado confirmado. Vuelve a la ficha original y reintenta allí antes de iniciar otra obligación.');
+      return;
+    }
     if (state.pendingObligation?.uncertain && state.pendingObligation.payload.contactId === contact.contact_id) {
       const pending = state.pendingObligation.payload;
       byId('fortuna-obligation-direction').value = pending.direction;
@@ -425,6 +430,7 @@ function inicializarFortuna() {
         };
       }
       submit.disabled = true;
+      contactDialog.querySelectorAll('[data-close-dialog]').forEach((button) => { button.disabled = true; });
       lockFormFields(contactForm, false);
       contactForm.querySelectorAll('input, textarea').forEach((field) => { field.disabled = true; });
       submit.textContent = 'Guardando…';
@@ -458,6 +464,7 @@ function inicializarFortuna() {
       }
     } finally {
       submit.disabled = false;
+      contactDialog.querySelectorAll('[data-close-dialog]').forEach((button) => { button.disabled = false; });
       contactForm.querySelectorAll('input, textarea').forEach((field) => { field.disabled = false; });
       submit.textContent = state.pendingContact?.uncertain ? 'Reintentar mismo envío' : 'Guardar contacto';
     }
@@ -497,6 +504,7 @@ function inicializarFortuna() {
         };
       }
       submit.disabled = true;
+      obligationDialog.querySelectorAll('[data-close-dialog]').forEach((button) => { button.disabled = true; });
       obligationForm.querySelectorAll('input, textarea, select').forEach((field) => { field.disabled = true; });
       submit.textContent = 'Guardando…';
       await openObligation({
@@ -525,7 +533,10 @@ function inicializarFortuna() {
       }
     } finally {
       submit.disabled = false;
-      obligationForm.querySelectorAll('input, textarea, select').forEach((field) => { field.disabled = false; });
+      obligationDialog.querySelectorAll('[data-close-dialog]').forEach((button) => { button.disabled = false; });
+      obligationForm.querySelectorAll('input, textarea, select').forEach((field) => {
+        field.disabled = field.tagName === 'SELECT' && Boolean(state.pendingObligation?.uncertain);
+      });
       submit.textContent = state.pendingObligation?.uncertain ? 'Reintentar mismo envío' : 'Guardar obligación';
     }
   });
