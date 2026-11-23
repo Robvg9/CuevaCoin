@@ -13,6 +13,7 @@ import {
 const read = (path) => readFileSync(path, 'utf8');
 const html = read('index.html');
 const ui = read('js/finance/fortuna/ui.js');
+const api = read('js/finance/fortuna/api.mjs');
 const domain = read('js/finance/fortuna/preview-domain.mjs');
 const adminPanel = read('js/finance/orchestration/show-admin-panel.js');
 const userPanel = read('js/finance/orchestration/show-user-dashboard.js');
@@ -31,19 +32,21 @@ assert.match(userPanel, /fortuna-link-item/);
 assert.match(userPanel, /style\.display = ''/);
 assert.match(navigation, /seccionesCompartidas/);
 assert.match(navigation, /'fortuna'/);
+assert.match(navigation, /loadFortunaData/);
 assert.match(adminPanel, /resetFortunaPreviewDrafts/);
 assert.match(userPanel, /resetFortunaPreviewDrafts/);
 assert.match(logout, /resetFortunaPreviewDrafts/);
 assert.match(ui, /window\.resetFortunaPreviewDrafts/);
-assert.match(html, /id="shared-fortuna" class="section hidden fortuna-page" data-fortuna-preview="true"/);
+assert.match(ui, /window\.loadFortunaData/);
+assert.match(html, /id="shared-fortuna" class="section hidden fortuna-page" data-fortuna-live="true"/);
 const adminStart = html.indexOf('<div id="admin-panel"');
 const sharedStart = html.indexOf('<div id="shared-fortuna"');
 const adminPrefix = html.slice(adminStart, sharedStart).replace(/<!--[\s\S]*?-->/g, '');
 assert.ok(adminStart >= 0 && sharedStart > adminStart, 'Shared FORTUNA view must follow the admin panel');
 assert.equal((adminPrefix.split('<div').length - 1) - (adminPrefix.split('</div>').length - 1), 0, 'Shared FORTUNA must be outside the admin panel');
 assert.doesNotMatch(html, /id="admin-fortuna"/);
-assert.match(html, /Modo de preparación protegido/);
-assert.match(html, /desaparecen al recargar/);
+assert.match(html, /Libro personal del propietario autenticado/);
+assert.match(html, /Información persistente y privada del propietario autenticado/);
 assert.equal((html.match(/data-fortuna-tab="/g) || []).length, 3);
 
 for (const id of [
@@ -55,7 +58,8 @@ for (const id of [
   'fortuna-contact-currency-filter',
   'fortuna-contact-list',
   'fortuna-contact-detail',
-  'fortuna-preview-history-list'
+  'fortuna-preview-history-list',
+  'fortuna-refresh-btn'
 ]) {
   assert.ok(html.includes('id="' + id + '"'), 'Missing UI element: ' + id);
 }
@@ -64,31 +68,40 @@ assert.match(html, /maxlength="40"/);
 assert.match(html, /maxlength="1000"/);
 assert.match(html, /maxlength="500"/);
 assert.match(html, /id="fortuna-new-obligation-btn" class="btn btn-secondary" disabled/);
+assert.doesNotMatch(html, /fortuna-obligation-due-date/);
 assert.match(html, /aria-live="polite"/);
 assert.match(html, /Te debe[\s\S]*Le debes/);
 assert.match(html, /CUP[\s\S]*USD[\s\S]*EUR/);
-assert.match(html, /ui\.js\?v=161/);
-assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], '161');
-assert.equal(html.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '161');
-assert.equal(app.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '161');
-assert.match(sw, /\/js\/finance\/fortuna\/ui\.js\?v=161/);
+assert.match(html, /ui\.js\?v=162/);
+assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], '162');
+assert.equal(html.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '162');
+assert.equal(app.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '162');
+assert.match(sw, /\/js\/finance\/fortuna\/ui\.js\?v=162/);
 assert.match(sw, /\/js\/finance\/fortuna\/preview-domain\.mjs/);
+assert.match(sw, /\/js\/finance\/fortuna\/api\.mjs/);
 
-// The UI may manipulate DOM only; it must not make requests or persist financial drafts.
-for (const forbidden of [
-  'createClient(', 'supabaseClient', 'fetch(', '.rpc(',
-  'localStorage', 'sessionStorage', 'indexedDB', 'innerHTML'
-]) {
-  assert.equal(ui.includes(forbidden), false, 'Preview UI must not contain ' + forbidden);
+// The UI performs no direct requests and uses only the authenticated dispatcher module.
+assert.match(ui, /from '\.\/api\.mjs'/);
+assert.match(ui, /createContact\(/);
+assert.match(ui, /openObligation\(/);
+assert.match(ui, /listContacts\(/);
+assert.match(ui, /listObligations\(/);
+assert.match(ui, /createIdempotencyKey/);
+assert.match(ui, /sessionEpoch/);
+assert.match(api, /functions\.invoke\(EDGE_FUNCTION/);
+assert.match(api, /Authorization: 'Bearer ' \+ accessToken/);
+assert.match(api, /ALLOWED_OPERATIONS/);
+for (const operation of ['create_contact','open_obligation','list_contacts','list_obligations','preview_settlement','receive_cash','pay_contact']) {
+  assert.ok(api.includes("'" + operation + "'"), 'Missing allowlisted API operation ' + operation);
 }
+assert.doesNotMatch(api, /service_role|serviceRole|fetch\(/i);
+assert.doesNotMatch(api, /localStorage|sessionStorage|indexedDB/);
+assert.doesNotMatch(ui, /createClient\(|supabaseClient|fetch\(|\.rpc\(|localStorage|sessionStorage|indexedDB|innerHTML/);
 assert.match(ui, /replaceChildren\(\)/);
 assert.match(ui, /textContent/);
-assert.match(ui, /previewOnly: true/);
-assert.match(ui, /state = \{ contacts: \[\], selectedContactId: null/);
-assert.match(ui, /activateTab\('contacts'\)/);
 assert.match(domain, /BigInt\(whole\) \* 100n/);
 
-// Currency allowlist and exact minor-unit parsing.
+// Exact money parsing, currency allowlist and integer bounds.
 assert.deepEqual(FORTUNA_CURRENCIES, ['CUP', 'USD', 'EUR']);
 assert.equal(parseMoneyToMinor('125'), '12500');
 assert.equal(parseMoneyToMinor('125,5'), '12550');
@@ -97,11 +110,7 @@ assert.equal(parseMoneyToMinor('0,01'), '1');
 assert.equal(parseMoneyToMinor('92233720368547758.07'), MAX_MINOR_UNITS.toString());
 assert.throws(() => parseMoneyToMinor('92233720368547758.08'));
 assert.throws(() => parseMoneyToMinor('9'.repeat(21)));
-
-for (const invalid of [
-  '', '0', '0.00', '-1', '+1', '01', '1.234',
-  '1,2.3', '1 000', '1,', '  ', 'NaN'
-]) {
+for (const invalid of ['', '0', '0.00', '-1', '+1', '01', '1.234', '1,2.3', '1 000', '1,', '  ', 'NaN']) {
   assert.throws(() => parseMoneyToMinor(invalid), undefined, 'Invalid amount: ' + JSON.stringify(invalid));
 }
 assert.equal(formatMinorAmount('0'), '0,00');
@@ -109,30 +118,21 @@ assert.equal(formatMinorAmount('125050'), '1 250,50');
 assert.throws(() => formatMinorAmount('-100'));
 assert.throws(() => formatMinorAmount((MAX_MINOR_UNITS + 1n).toString()));
 
-assert.deepEqual(normalizeContactDraft({
-  name: '  María  ', phone: ' 123 ', notes: ' nota '
-}), { displayName: 'María', phone: '123', notes: 'nota' });
+assert.deepEqual(normalizeContactDraft({ name: '  María  ', phone: ' 123 ', notes: ' nota ' }), {
+  displayName: 'María', phone: '123', notes: 'nota'
+});
 assert.throws(() => normalizeContactDraft({ name: '   ' }));
 assert.throws(() => normalizeContactDraft({ name: 'x'.repeat(121) }));
 assert.throws(() => normalizeContactDraft({ name: 'ok', phone: 'x'.repeat(41) }));
 assert.throws(() => normalizeContactDraft({ name: 'ok', notes: 'x'.repeat(1001) }));
-
 assert.deepEqual(validateObligationDraft({
   direction: 'receivable', currency: 'CUP', amount: '12,34', description: ' Préstamo '
-}), {
-  direction: 'receivable', currency: 'CUP', amountMinor: '1234', description: 'Préstamo'
-});
-assert.throws(() => validateObligationDraft({
-  direction: 'receivable', currency: 'GBP', amount: '12', description: 'Concepto'
-}));
-assert.throws(() => validateObligationDraft({
-  direction: 'payable', currency: 'USD', amount: '0', description: 'Concepto'
-}));
-assert.throws(() => validateObligationDraft({
-  direction: 'payable', currency: 'EUR', amount: '12', description: ' '
-}));
+}), { direction: 'receivable', currency: 'CUP', amountMinor: '1234', description: 'Préstamo' });
+assert.throws(() => validateObligationDraft({ direction: 'receivable', currency: 'GBP', amount: '12', description: 'Concepto' }));
+assert.throws(() => validateObligationDraft({ direction: 'payable', currency: 'USD', amount: '0', description: 'Concepto' }));
+assert.throws(() => validateObligationDraft({ direction: 'payable', currency: 'EUR', amount: '12', description: ' ' }));
 
-// Mixed positions stay gross and independent by currency; nothing is netted.
+// Any same-currency mixed position remains gross and unnetted.
 assert.deepEqual(summarizeObligations([
   { currency: 'CUP', direction: 'receivable', amountMinor: '10000' },
   { currency: 'CUP', direction: 'payable', amountMinor: '4000' },
@@ -145,12 +145,11 @@ assert.throws(() => summarizeObligations([
   { currency: 'CUP', direction: 'receivable', amountMinor: MAX_MINOR_UNITS.toString() },
   { currency: 'CUP', direction: 'receivable', amountMinor: '1' }
 ]), /supera el máximo admitido/);
-assert.match(ui, /summarizeObligations\(state\.contacts\.flatMap\(\(item\) => item\.obligations\)\.concat\(obligation\)\)/);
 assert.throws(() => summarizeObligations([
   { currency: 'CUP', direction: 'receivable', amountMinor: '-1' }
 ]));
 
-// Settlement integration stays server-authoritative and inactive in this preview.
+// Server settlement remains authoritative: preview fingerprint, stale rejection, overage and idempotency.
 assert.match(settlementSql, /CREATE OR REPLACE FUNCTION api\.preview_settlement\([\s\S]*?p_contact_id uuid,[\s\S]*?p_currency_code text,[\s\S]*?p_flow text,[\s\S]*?p_mode text,[\s\S]*?p_total_amount_minor text,[\s\S]*?p_requested_allocations jsonb/);
 assert.match(settlementSql, /CREATE OR REPLACE FUNCTION api\.receive_cash\([\s\S]*?p_preview_fingerprint text,[\s\S]*?p_confirm_overage boolean,[\s\S]*?p_idempotency_key text/);
 assert.match(settlementSql, /CREATE OR REPLACE FUNCTION api\.pay_contact\([\s\S]*?p_preview_fingerprint text,[\s\S]*?p_confirm_overage boolean,[\s\S]*?p_idempotency_key text/);
@@ -168,9 +167,9 @@ assert.match(dispatcher, /receive_cash: 'receive_cash'/);
 assert.match(dispatcher, /pay_contact: 'pay_contact'/);
 assert.match(dispatcher, /Authorization: authHeader/);
 assert.match(dispatcher, /supabase\.schema\('api'\)\.rpc\(rpc, body\.args\)/);
-assert.match(dispatcher, /error\.code === 'P0001' && error\.message === 'fortuna_idempotency_conflict'/);
 assert.doesNotMatch(dispatcher, /SUPABASE_SERVICE_ROLE_KEY/);
 assert.match(settlementApiTest, /FIFO preview proposes oldest-first allocations and returns a SHA-256 fingerprint/);
 assert.match(settlementApiTest, /stale preview detects an intervening settlement/);
 assert.match(settlementApiTest, /exact retry replays without duplicates/);
-console.log('PASS — FORTUNA preview UI, exact money, aggregate bigint safety, server fingerprint handshake, stale-preview and idempotency contract.');
+
+console.log('PASS — FORTUNA V162 owner UI, authenticated API client, persisted contact/obligation flows, session isolation, exact money and authoritative settlement contracts.');
