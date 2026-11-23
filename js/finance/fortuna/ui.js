@@ -440,14 +440,12 @@ function inicializarFortuna() {
       });
       state.pendingContact = null;
       closeDialog(contactDialog);
-      const loaded = await loadContacts({ preserveStatus: true });
       if (response?.contact_id) {
         state.selectedContactId = response.contact_id;
         state.selectedObligations = [];
-        renderSummary();
-        await loadSelectedObligations();
-        activateTab('contacts');
       }
+      const loaded = await loadContacts({ preserveStatus: true });
+      if (response?.contact_id) activateTab('contacts');
       setStatus(loaded ? 'Contacto guardado en tu libro.' : 'Contacto guardado. No se pudo actualizar la lista; usa Actualizar.');
     } catch (validationOrApiError) {
       error.textContent = errorMessage(validationOrApiError);
@@ -514,8 +512,7 @@ function inicializarFortuna() {
       state.pendingObligation = null;
       closeDialog(obligationDialog);
       await loadContacts({ preserveStatus: true });
-      await loadSelectedObligations();
-      setStatus('Obligación guardada en el libro y registrada en su historial contable.');
+      setStatus('Obligación guardada en el libro y registrada contablemente.');
     } catch (validationOrApiError) {
       error.textContent = errorMessage(validationOrApiError);
       if (validationOrApiError?.retryable && state.pendingObligation) {
