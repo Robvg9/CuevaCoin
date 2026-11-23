@@ -72,7 +72,8 @@
     "20261122173537_fortuna_v1_private_ledger_and_owner_api.sql",
     "20261122192417_fortuna_private_fk_covering_indexes.sql",
     "20261123182957_fortuna_owner_activity_history.sql",
-    "20261123210000_fortuna_link_existing_profiles.sql"
+    "20261123210000_fortuna_link_existing_profiles.sql",
+    "20261123223000_fortuna_profile_balance_initial_obligation.sql"
   ],
   "recovered": [
     {
@@ -420,12 +421,23 @@
       "execution_status": "pending_review_not_applied",
       "applied_to_live": false,
       "source": "Added in PR #67; not applied to Supabase LIVE. Requires successful local migration/E2E, review and explicit production rollout approval."
+    },
+    {
+      "file": "20261123223000_fortuna_profile_balance_initial_obligation.sql",
+      "purpose": "Return the active linked CuevaCoin profile's current CUP balance only during the authenticated owner-scoped link action, as a prefilled Fortuna payable obligation",
+      "applied_to_live": false,
+      "execution_status": "pending_review_not_applied",
+      "source": "Added in FORTUNA V168; not applied to Supabase LIVE. Requires exact-SHA CI, migration/E2E validation and coordinated production rollout."
     }
   ],
   "pending_forward_migrations": [
     {
       "file": "20261123210000_fortuna_link_existing_profiles.sql",
       "reason": "New FORTUNA V167 feature in PR #67; pending exact-SHA validation and separate LIVE Human Gate."
+    },
+    {
+      "file": "20261123223000_fortuna_profile_balance_initial_obligation.sql",
+      "reason": "FORTUNA V168 linked-profile balance prefill; pending exact-SHA validation and coordinated LIVE rollout."
     }
   ]
 }
