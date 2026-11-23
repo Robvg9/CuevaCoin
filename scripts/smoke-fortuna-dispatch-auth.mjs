@@ -16,8 +16,9 @@ async function invoke(headers) {
   })
 }
 
-// Public project API key without a user JWT. The application handler must stop
-// this request with AUTH_REQUIRED before auth.getUser() or any RPC can run.
+// The publishable key in apikey is accepted for compatibility, but it is not
+// a user identity. The handler must stop this request with AUTH_REQUIRED before
+// auth.getUser() or any RPC can run; verify_jwt=true remains enabled.
 const missingJwt = await invoke({})
 const missingBody = await missingJwt.text()
 assert.equal(
