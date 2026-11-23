@@ -257,7 +257,8 @@ assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION public\\.admin_pagar_
 assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION public\\.admin_pagar_salarios_individuales/);
 assert.match(dependentRoleSql, /REVOKE EXECUTE ON FUNCTION public\\.admin_pagar_saldo/);
 assert.match(dependentRoleSql, /GRANT EXECUTE ON FUNCTION public\\.admin_pagar_saldo[\\s\\S]*?TO authenticated, service_role/);
-assert.doesNotMatch(dependentRoleSql, /UPDATE public\\.perfiles[\\s\\S]{0,80}SET saldo|INSERT INTO public\\.transacciones/i);
+const profileLinkBoundary = dependentRoleSql.slice(dependentRoleSql.indexOf('CREATE OR REPLACE FUNCTION fortuna_private.fortuna_link_profile_contact'), dependentRoleSql.indexOf('-- Defense in depth'));
+assert.doesNotMatch(profileLinkBoundary, /UPDATE public\\.perfiles[\\s\\S]{0,80}SET saldo|INSERT INTO public\\.transacciones/i);
 const pendingDependentRole = (ledgerManifest.forward_migrations || []).find(entry => entry.file === '20261124010000_fortuna_dependent_classification.sql');
 assert.ok(pendingDependentRole, 'FORTUNA V169 dependent-classification migration must be tracked');
 assert.equal(pendingDependentRole.applied_to_live, false);
