@@ -81,3 +81,16 @@ No hay movimientos financieros, eventos, contactos ni obligaciones de prueba cre
 ## Verificación estática
 
 `scripts/verify-fortuna-edge-dispatch.mjs` comprueba el patrón de JWT, Auth validation, forwarding, allowlist RPC, preferencia de publishable key, límite de payload, fail-closed ante pérdida de exposición de `api`, ausencia de service-role y el checkpoint documentado del despliegue LIVE. Esas verificaciones estáticas no sustituyen el Hosted authenticated E2E.
+
+
+## UPDATE — LOCAL AUTHENTICATED E2E PASS + PR #64 MERGED — 2026-11-23
+
+- PR [#64](https://github.com/Robvg9/CuevaCoin/pull/64) MERGED by squash. Current `main` SHA: `6e8317c72afa34a9972e6bc7e9f36c0a5799f9c9`.
+- Current dispatcher source in Git `main`: `supabase/functions/fortuna-dispatch/index.ts`, blob `81892bd4d81a20716ae85a484c1e3ea70de5002e`, 5,917 bytes. The LIVE Edge Function remains ACTIVE v2, `verify_jwt=true`, with its earlier deployed source/digest recorded above. **The new HTTP 409 handler is merged in Git but has NOT been deployed to LIVE.** A separate explicit deployment gate is required before changing the LIVE function.
+- The dispatcher now translates the exact SQL error `P0001 / fortuna_idempotency_conflict` to HTTP 409 with stable body `IDEMPOTENCY_CONFLICT`; raw database error details remain hidden.
+- Workflow [45198570303](https://github.com/Robvg9/CuevaCoin/actions/runs/45198570303) SUCCESS on PR head `f76b3f2c217f034bf137190f783af44030f4a0a2`; push workflow [45198557553](https://github.com/Robvg9/CuevaCoin/actions/runs/45198557553) SUCCESS on the same SHA.
+- Actual disposable local Supabase stack PASS: migrations applied; Auth created two distinct local users/JWTs; gateway rejected missing and malformed JWTs (401); owner A/B contacts and obligations remained isolated; duplicate same-key writes returned the original IDs; changed payload under the same key returned 409; cross-owner read/write attempts were rejected; final owner-A obligation count remained one. Cleanup `supabase stop --no-backup` SUCCESS.
+- The test used only the ephemeral GitHub-hosted runner/local containers. No hosted project URL, project ref, hosted JWT, repository Supabase secret, service-role key, production write, or ARIA/SimpleLife/BattleCruiser project was used. No local test identities or financial records persist after the ephemeral runner is discarded.
+- Public repository security: PR triggers were removed from all five workflows that target the self-hosted Windows runner. Push/manual trusted triggers remain. The static Step 10 verifier was updated to assert that public pull requests cannot run on the private Windows runner; Step 10 run [45198195449](https://github.com/Robvg9/CuevaCoin/actions/runs/45198195449) SUCCESS.
+- **Still OPEN — Hosted authenticated E2E:** this local Supabase integration PASS does not prove the hosted CuevaCoin project's JWT signing configuration, Data API exposed-schema settings, or live PostgREST integration. Keep UI FORTUNA blocked until a permitted hosted verification path exists. Never create financial test records in CuevaCoin LIVE.
+- **Still OPEN — LIVE deployment gate:** deploy the new 5,917-byte dispatcher only after explicit owner authorization for the exact reviewed SHA/blob and `verify_jwt=true`. Do not infer that the earlier authorization for the old v2 artifact covers this new source.
