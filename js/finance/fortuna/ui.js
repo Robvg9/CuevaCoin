@@ -696,7 +696,7 @@ function inicializarFortuna() {
       const metadata = item.metadata && typeof item.metadata === 'object' ? item.metadata : {};
       let eventLabel = labels[item.event_type] || 'Movimiento registrado';
       let amountLabel = formatMinorAmount(item.total_amount_minor);
-      if (item.event_type === 'obligation_opened' && selectedContact?.history_migrated === true) {
+      if (item.event_type === 'obligation_opened' && contact?.history_migrated === true) {
         eventLabel = 'Saldo inicial provisional (neutralizado)';
       }
       if (item.event_type === 'legacy_history') {
