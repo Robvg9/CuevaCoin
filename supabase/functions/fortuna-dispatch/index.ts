@@ -132,6 +132,9 @@ Deno.serve(async (req: Request) => {
       if (error.code === 'P0001' && error.message === 'fortuna_idempotency_conflict') {
         return reply({ error: 'IDEMPOTENCY_CONFLICT' }, 409, origin)
       }
+      if (error.code === 'P0001' && error.message === 'fortuna_stale_preview') {
+        return reply({ error: 'STALE_PREVIEW' }, 409, origin)
+      }
       // The api schema must remain in the hosted PostgREST Exposed Schemas allowlist.
       // If that configuration drifts, fail closed rather than falling back to
       // service_role or routing through a broader public schema.
