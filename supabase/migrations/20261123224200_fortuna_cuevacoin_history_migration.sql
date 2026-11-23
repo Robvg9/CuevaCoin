@@ -587,6 +587,30 @@ BEGIN
     v_withdrawal_count := v_withdrawal_count + 1;
   END LOOP;
 
+  -- Preserve the minimum business identity snapshot needed to trace the linked contact.
+  -- Sensitive identity fields, credentials, preferences and recovery data are deliberately excluded.
+  INSERT INTO fortuna_private.financial_audit (
+    book_id, event_id, actor_user_id, action, details, created_at
+  )
+  SELECT v_book_id, NULL, v_actor, 'cuevacoin_profile_snapshot_imported',
+         pg_catalog.jsonb_build_object(
+           'source_system', 'CuevaCoin',
+           'source_table', 'public.perfiles',
+           'source_profile_id', p.id,
+           'usuario', p.usuario,
+           'nombre', p.nombre,
+           'apellido', p.apellido,
+           'correo', p.correo,
+           'telefono', p.telefono,
+           'numero_cuenta', p.numero_cuenta,
+           'estado', p.estado,
+           'saldo_at_migration', p.saldo::text,
+           'es_dependiente', p.es_dependiente,
+           'creado_en', p.creado_en
+         ), now()
+    FROM public.perfiles p
+   WHERE p.id = v_profile_id;
+
   -- Preserve account-level audit and notification history as private audit evidence.
   INSERT INTO fortuna_private.financial_audit (
     book_id, event_id, actor_user_id, action, details, created_at
@@ -630,11 +654,13 @@ BEGIN
          pg_catalog.jsonb_build_object('source_system', 'CuevaCoin', 'source_table', 'public.admin_pagos_salario_idempotencia', 'source_record', pg_catalog.to_jsonb(b)),
          COALESCE(b.completado_en, b.creado_en)
     FROM public.admin_pagos_salario_idempotencia b
-   WHERE pg_catalog.jsonb_typeof(b.payload) = 'array'
-     AND EXISTS (
-       SELECT 1 FROM pg_catalog.jsonb_array_elements(COALESCE(b.payload, '[]'::jsonb)) item
-        WHERE item->>'usuario_id' = v_profile_id::text
-     );
+   WHERE (pg_catalog.jsonb_typeof(b.payload) = 'array'
+          AND EXISTS (
+            SELECT 1 FROM pg_catalog.jsonb_array_elements(COALESCE(b.payload, '[]'::jsonb)) item
+             WHERE item->>'usuario_id' = v_profile_id::text
+          ))
+      OR COALESCE(b.payload, '{}'::jsonb)::text LIKE '%' || v_profile_id::text || '%'
+      OR COALESCE(b.resultado, '{}'::jsonb)::text LIKE '%' || v_profile_id::text || '%';
 
   INSERT INTO fortuna_private.financial_audit (
     book_id, event_id, actor_user_id, action, details, created_at
@@ -682,7 +708,16 @@ BEGIN
       SELECT pg_catalog.jsonb_agg(pg_catalog.to_jsonb(t) ORDER BY t.creado_en, t.idempotency_key)::text
         FROM public.transferencias_idempotencia t
        WHERE t.emisor_id = v_profile_id OR t.destinatario_id = v_profile_id
-    ), '[]');
+    ), '[]')
+    || COALESCE((
+      SELECT pg_catalog.jsonb_build_object(
+        'id', p.id, 'usuario', p.usuario, 'nombre', p.nombre,
+        'apellido', p.apellido, 'correo', p.correo, 'telefono', p.telefono,
+        'numero_cuenta', p.numero_cuenta, 'estado', p.estado,
+        'saldo', p.saldo::text, 'es_dependiente', p.es_dependiente,
+        'creado_en', p.creado_en
+      )::text FROM public.perfiles p WHERE p.id = v_profile_id
+    ), '{}');
   v_digest := pg_catalog.encode(
     pg_catalog.sha256(pg_catalog.convert_to(v_digest_payload, 'UTF8')), 'hex'
   );
