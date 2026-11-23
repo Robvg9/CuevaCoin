@@ -6,7 +6,7 @@
 // nunca a caché, para que la app nunca muestre saldos ni movimientos
 // desactualizados.
 
-const CACHE_NAME = 'cuevacoin-shell-v165';
+const CACHE_NAME = 'cuevacoin-shell-v166';
 const SHELL_FILES = [
   '/',
   '/index.html',
@@ -14,7 +14,10 @@ const SHELL_FILES = [
   '/icon.png',
   '/icon-192.png',
   '/badge.png',
-  '/js/finance/fortuna/ui.js?v=165',
+  '/js/finance/fortuna/ui.js?v=166',
+  '/js/finance/orchestration/show-admin-panel.js?v=166',
+  '/js/finance/orchestration/show-user-dashboard.js?v=166',
+  '/js/ui/navigation.js?v=166',
   '/js/finance/fortuna/preview-domain.mjs',
   '/js/finance/fortuna/api.mjs'
 ];
@@ -103,29 +106,50 @@ self.addEventListener('fetch', (event) => {
 
   if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
 
+  // Las navegaciones HTML son NETWORK-FIRST: nunca devolver HTML antiguo
+  // mientras llega una versión nueva en segundo plano. La caché queda como
+  // respaldo exclusivamente offline.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' }).then(async (response) => {
+        if (response && response.status === 200) {
+          const headers = new Headers(response.headers);
+          headers.set('Cache-Control', 'no-store');
+          await (await caches.open(CACHE_NAME)).put('/index.html', response.clone());
+          return new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers
+          });
+        }
+        return response;
+      }).catch(async () => {
+        const cached = await caches.match(event.request) || await caches.match('/index.html');
+        if (cached) return cached;
+        return new Response('Sin conexión y sin datos guardados en este dispositivo.', {
+          status: 503,
+          statusText: 'Offline',
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        });
+      })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      const network = fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(async () => {
-          if (cached) return cached;
-          if (event.request.mode === 'navigate') {
-            const shell = await caches.match('/index.html');
-            if (shell) return shell;
-          }
-          return new Response('Sin conexión y sin datos guardados en este dispositivo.', {
-            status: 503,
-            statusText: 'Offline',
-            headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-          });
-        });
-      return cached || network;
+      if (cached) return cached;
+      return fetch(event.request).then((response) => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => new Response('Sin conexión y sin datos guardados en este dispositivo.', {
+        status: 503,
+        statusText: 'Offline',
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      }));
     })
   );
 });
