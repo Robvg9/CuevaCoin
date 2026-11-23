@@ -422,7 +422,8 @@ export async function searchFortunaProfiles(query) {
   if (!Array.isArray(result)) throw new FortunaApiError('INVALID_RESPONSE', 'La búsqueda de usuarios no es válida.');
   return result.filter((item) => item && typeof item.profile_id === 'string'
     && typeof item.username === 'string' && typeof item.display_name === 'string'
-    && typeof item.is_dependent === 'boolean');
+    && typeof item.is_dependent === 'boolean'
+    && typeof item.is_fortuna_contact === 'boolean');
 }
 
 export async function linkFortunaProfileContact(profileId, isDependent = false) {
@@ -440,4 +441,18 @@ export async function linkFortunaProfileContact(profileId, isDependent = false) 
     throw new FortunaApiError('INVALID_RESPONSE', 'No se pudo vincular y clasificar el usuario.');
   }
   return { ...result, balance_minor: String(result.balance_minor ?? '0') };
+}
+
+export async function setFortunaProfileDependentRole(profileId, isDependent) {
+  if (typeof profileId !== 'string' || !profileId.trim() || typeof isDependent !== 'boolean') {
+    throw new FortunaApiError('INVALID_ARGUMENTS', 'Selecciona una cuenta y una clasificación válidas.');
+  }
+  const result = await invokeFortuna('set_fortuna_profile_dependent_role', {
+    p_profile_id: profileId,
+    p_is_dependent: isDependent,
+  });
+  if (!result || result.profile_id !== profileId || result.is_dependent !== isDependent) {
+    throw new FortunaApiError('INVALID_RESPONSE', 'No se pudo actualizar la clasificación de la cuenta.');
+  }
+  return result;
 }
