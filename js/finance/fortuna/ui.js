@@ -22,6 +22,8 @@ import {
   searchFortunaProfiles,
   linkFortunaProfileContact,
   setFortunaProfileDependentRole,
+  previewFortunaProfileHistoryMigration,
+  migrateFortunaProfileHistory,
   FortunaApiError,
 } from './api.mjs';
 
@@ -48,6 +50,7 @@ function inicializarFortuna() {
     settlementDraft: null,
     settlementPreviewRequest: 0,
     newContactNeedsObligation: false,
+    migrationBusy: false,
   };
   const byId = (id) => root.querySelector('#' + id);
   const contactDialog = byId('fortuna-contact-dialog');
@@ -560,6 +563,23 @@ function inicializarFortuna() {
     heading.append(identity, close);
     detail.append(heading);
 
+    if (contact.linked_profile_id && contact.is_dependent === false) {
+      if (contact.history_migrated === true) {
+        detail.append(el('p', 'fortuna-history-migration-status', '✓ Historial de CuevaCoin migrado y conciliado'));
+      } else {
+        const migrationPanel = el('section', 'fortuna-history-migration');
+        migrationPanel.append(el('p', 'fortuna-dialog-note',
+          'Esta cuenta está clasificada como Solo FORTUNA. Puedes importar sus movimientos, solicitudes de retiro y evidencias históricas sin duplicar el saldo.'));
+        const migrationButton = el('button', 'btn btn-secondary',
+          state.migrationBusy ? 'Preparando migración…' : 'Importar historial de CuevaCoin');
+        migrationButton.type = 'button';
+        migrationButton.dataset.migrateHistory = 'true';
+        migrationButton.disabled = state.migrationBusy;
+        migrationPanel.append(migrationButton);
+        detail.append(migrationPanel);
+      }
+    }
+
     const summaries = contactCurrencies(contact);
     if (summaries.length) {
       const totals = el('div', 'fortuna-detail-totals');
@@ -673,8 +693,34 @@ function inicializarFortuna() {
     for (const item of state.activityItems) {
       const row = el('article', 'fortuna-activity-row');
       const heading = el('div', 'fortuna-activity-heading');
-      heading.append(el('strong', '', labels[item.event_type] || 'Movimiento registrado'));
-      heading.append(el('span', '', formatMinorAmount(item.total_amount_minor) + ' ' + item.currency));
+      const metadata = item.metadata && typeof item.metadata === 'object' ? item.metadata : {};
+      let eventLabel = labels[item.event_type] || 'Movimiento registrado';
+      let amountLabel = formatMinorAmount(item.total_amount_minor);
+      if (item.event_type === 'legacy_history') {
+        const signedAmount = (value) => {
+          const numeric = Number(value);
+          if (!Number.isFinite(numeric)) return amountLabel;
+          const minor = BigInt(Math.round(Math.abs(numeric) * 100));
+          return (numeric > 0 ? '+' : numeric < 0 ? '−' : '') + formatMinorAmount(minor.toString());
+        };
+        if (metadata.source_kind === 'transaction') {
+          const sourceLabels = {
+            deposito_admin: 'Depósito registrado en CuevaCoin',
+            retiro_admin: 'Ajuste registrado en CuevaCoin',
+            retiro: 'Retiro registrado en CuevaCoin',
+            transferencia: 'Transferencia registrada en CuevaCoin',
+          };
+          eventLabel = sourceLabels[metadata.original_type] || 'Movimiento de CuevaCoin';
+          amountLabel = signedAmount(metadata.original_amount);
+        } else if (metadata.source_kind === 'balance_reconciliation') {
+          eventLabel = 'Conciliación de saldo histórico';
+          amountLabel = signedAmount(metadata.delta_amount);
+        } else if (metadata.source_kind === 'withdrawal_request') {
+          eventLabel = 'Solicitud de retiro · ' + String(metadata.original_status || 'sin estado');
+        }
+      }
+      heading.append(el('strong', '', eventLabel));
+      heading.append(el('span', '', amountLabel + ' ' + item.currency));
       row.append(heading);
       const date = new Date(item.occurred_at);
       row.append(el('small', 'fortuna-activity-meta',
@@ -690,6 +736,21 @@ function inicializarFortuna() {
         }
         row.append(entries);
       }
+      if (item.event_type === 'legacy_history') {
+        const detailText = metadata.original_motive || metadata.explanation;
+        if (detailText) row.append(el('p', 'fortuna-activity-meta', String(detailText)));
+        if (metadata.source_kind === 'withdrawal_request') {
+          row.append(el('small', 'fortuna-activity-meta',
+            'Estado histórico: ' + String(metadata.original_status || 'desconocido')
+            + ' · No modifica el saldo de FORTUNA'));
+        }
+        if (metadata.source_kind === 'transaction') {
+          row.append(el('small', 'fortuna-activity-meta',
+            'Saldo registrado en CuevaCoin: '
+            + String(metadata.original_balance_before ?? '—') + ' → '
+            + String(metadata.original_balance_after ?? '—') + ' CUP'));
+        }
+      }
       if (item.reversal_reason) row.append(el('p', 'fortuna-activity-meta', 'Motivo de reversión: ' + item.reversal_reason));
       if (item.audit_action) {
         row.append(el('small', 'fortuna-activity-audit', 'Auditoría: ' + item.audit_action.replace(/_/g, ' ')));
@@ -704,6 +765,56 @@ function inicializarFortuna() {
       more.dataset.loadMoreActivity = 'true';
       more.disabled = state.loadingActivity;
       activity.append(more);
+    }
+  }
+
+  async function runHistoryMigration() {
+    const contact = selected();
+    if (!contact || state.migrationBusy) return;
+    state.migrationBusy = true;
+    renderContactDetail();
+    setStatus('Verificando movimientos y conciliación histórica…');
+    try {
+      const preview = await previewFortunaProfileHistoryMigration(contact.contact_id);
+      if (!preview.ready) {
+        const reasons = [];
+        if (preview.invalid_transaction_count > 0) reasons.push(preview.invalid_transaction_count + ' movimientos con importe/saldo inconsistente');
+        if (preview.pending_withdrawal_count > 0) reasons.push(preview.pending_withdrawal_count + ' solicitudes de retiro pendientes');
+        if (preview.final_snapshot_minor !== preview.source_balance_minor) reasons.push('el último saldo histórico no coincide con el saldo actual');
+        if (preview.existing_event_count !== 1 || preview.existing_ledger_entry_count !== 1) reasons.push('el contacto ya tiene movimientos adicionales en FORTUNA');
+        setStatus('Migración detenida sin cambios: ' + (reasons.join('; ') || 'la cuenta necesita revisión manual antes de importar.'));
+        return;
+      }
+      const gaps = preview.reconciliation_gaps.map((gap) =>
+        String(gap.delta) + ' CUP (' + String(gap.occurred_at || '').slice(0, 10) + ')'
+      );
+      const confirmation = [
+        'Se importarán ' + preview.transaction_count + ' movimientos y '
+          + preview.withdrawal_request_count + ' solicitudes de retiro.',
+        preview.reconciliation_count + ' conciliaciones de saldo: '
+          + (gaps.length ? gaps.join(', ') : 'ninguna') + '.',
+        'Saldo final a conservar: ' + formatMinorAmount(preview.source_balance_minor) + ' CUP.',
+        'Las solicitudes rechazadas se conservarán como historial y no cambiarán el saldo.',
+        'No se borrará ningún dato original de CuevaCoin.',
+        '',
+        '¿Confirmas importar este historial a FORTUNA?'
+      ].join('\n');
+      if (!window.confirm(confirmation)) {
+        setStatus('Migración cancelada. No se modificó ningún dato.');
+        return;
+      }
+      setStatus('Importando historial de CuevaCoin…');
+      const result = await migrateFortunaProfileHistory(contact.contact_id);
+      await loadContacts({ preserveStatus: true });
+      setStatus('Historial migrado: ' + result.transaction_count + ' movimientos, '
+        + result.withdrawal_request_count + ' solicitudes y '
+        + result.reconciliation_count + ' conciliaciones. Saldo FORTUNA: '
+        + formatMinorAmount(result.source_balance_minor) + ' CUP.');
+    } catch (error) {
+      setStatus(errorMessage(error));
+    } finally {
+      state.migrationBusy = false;
+      renderContactDetail();
     }
   }
 
@@ -1271,6 +1382,14 @@ function inicializarFortuna() {
     if (event.target.closest('[data-add-obligation]')) openNewObligation();
     if (event.target.closest('[data-settlement-preview]')) void previewSettlementDraft();
     if (event.target.closest('[data-settlement-commit]')) void confirmSettlementDraft();
+  });
+
+  detail.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-migrate-history]');
+    if (button) {
+      event.preventDefault();
+      void runHistoryMigration();
+    }
   });
 
   activity.addEventListener('click', (event) => {
