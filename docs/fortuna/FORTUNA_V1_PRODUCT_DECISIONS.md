@@ -78,3 +78,19 @@ La aprobación de este registro no autoriza:
 - usar datos LIVE como fixtures.
 
 Todo cambio LIVE requiere su propio Human Gate explícito.
+
+
+## V169 — Separación entre contactos FORTUNA y dependientes
+
+- La cuenta de CuevaCoin y el contacto de FORTUNA representan a la misma persona, pero no implican la misma relación de negocio.
+- `perfiles.es_dependiente` es la clasificación explícita para nómina y roster de CuevaCoin/BattleCruiser. No es un rol de autenticación ni concede permisos.
+- Un contacto vinculado a FORTUNA puede ser:
+  - Solo FORTUNA (`es_dependiente = false`): no aparece en roster de dependientes y no puede recibir salarios/bonos por las RPC administrativas.
+  - Dependiente y FORTUNA (`es_dependiente = true`): aparece en el roster de dependientes y conserva su libro personal separado.
+- Los contactos externos sin perfil CuevaCoin son exclusivamente FORTUNA.
+- En el flujo de vinculación el administrador elige explícitamente «También es dependiente». Desmarcado significa solo FORTUNA.
+- El backfill conserva como dependientes los perfiles activos existentes no vinculados a FORTUNA; los perfiles ya vinculados a FORTUNA pasan a solo FORTUNA. Los perfiles nuevos nacen no dependientes hasta clasificación explícita.
+- Pagar o cobrar desde FORTUNA solo afecta al libro privado. No toca `perfiles.saldo`, nómina, jornadas ni transacciones de CuevaCoin.
+- Re-vincular un perfil existente actualiza su clasificación sin crear otro contacto ni volver a ofrecer el saldo como una obligación inicial; evita duplicar deudas.
+- La ficha de cada contacto se abre como diálogo modal flotante desde «Abrir ficha»; no queda renderizada permanentemente bajo el listado.
+- Las RPC de nómina individual y de bonos validan `es_dependiente = true` en servidor y bloquean lotes completos antes de cualquier escritura si un destinatario no cumple.
