@@ -109,10 +109,10 @@ function inicializarFortuna() {
 
   function renderBalance(container, summary) {
     const line = el('div', 'fortuna-contact-position');
-    const receivable = el('div');
+    const receivable = el('div', 'is-receivable');
     receivable.append(el('span', '', 'Te debe'));
     receivable.append(el('strong', '', formatMinorAmount(String(safeMinor(summary.te_debe_minor))) + ' ' + summary.currency));
-    const payable = el('div');
+    const payable = el('div', 'is-payable');
     payable.append(el('span', '', 'Le debes'));
     payable.append(el('strong', '', formatMinorAmount(String(safeMinor(summary.le_debes_minor))) + ' ' + summary.currency));
     line.append(receivable, payable);
@@ -593,7 +593,10 @@ function inicializarFortuna() {
     } else {
       detail.append(el('p', '', 'No hay obligaciones pendientes para este contacto.'));
     }
-    detail.append(renderSettlementWorkbench(contact));
+    const settlementDetails = el('details', 'fortuna-settlement-details');
+    const settlementSummary = el('summary', '', '💸 Registrar liquidación');
+    settlementDetails.append(settlementSummary, renderSettlementWorkbench(contact));
+    detail.append(settlementDetails);
     byId('fortuna-new-obligation-btn').disabled = false;
   }
 
@@ -903,7 +906,14 @@ function inicializarFortuna() {
   byId('fortuna-refresh-btn')?.addEventListener('click', () => { void loadContacts(); });
 
   root.querySelectorAll('[data-close-dialog]').forEach((button) => {
-    button.addEventListener('click', () => closeDialog(byId(button.dataset.closeDialog)));
+    button.addEventListener('click', (event) => {
+      if (button.dataset.closeDialog === 'fortuna-obligation-dialog' && state.newContactNeedsObligation) {
+        event.preventDefault();
+        byId('fortuna-obligation-form-error').textContent = 'Registra la deuda inicial para terminar de crear este contacto.';
+        return;
+      }
+      closeDialog(byId(button.dataset.closeDialog));
+    });
   });
   root.querySelectorAll('dialog').forEach((dialog) => {
     dialog.addEventListener('click', (event) => {
