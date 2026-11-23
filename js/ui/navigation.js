@@ -58,7 +58,9 @@ export function loadSection(section) {
     if (seccionesCompartidas.includes(section)) {
         mostrarConAnimacion(document.getElementById(`shared-${section}`));
         actualizarConfigTabsBar(section);
-        if (section === 'perfil') {
+        if (section === 'fortuna') {
+            _call('loadFortunaData');
+        } else if (section === 'perfil') {
             _call('loadUserPerfil', usuarioActual);
         } else if (section === 'config-notificaciones') {
             _call('loadPreferenciasNotificaciones', usuarioActual);
