@@ -1,68 +1,65 @@
-# FORTUNA v1 — UI preview shell
+# FORTUNA v1 — Paso 4: contactos y obligaciones persistentes
 
-**Status:** first UI shell implemented; preview only. No production activation is authorized by this change.
+**Estado:** implementación owner-scoped integrada en PR #66; CI PASS sobre SHA `6433505fffc36bad049a38aec835473c56b76dbc`.
+**PWA:** V162.
+**Alcance de este paso:** consulta y gestión autenticada de contactos y obligaciones abiertas. La liquidación y el historial de eventos completos son capacidades separadas.
 
-## Scope
-- Adds a shared authenticated-user sidebar entry and a responsive FORTUNA page with Overview, Contacts and History tabs.
-- Shows the approved product vocabulary: receivables ("Te debe"), payables ("Le debes"), mixed positions with both gross sides visible, and the CUP/USD/EUR allowlist.
-- Displays em dashes for financial totals. These mean "not queried", not zero balances.
-- Contact and obligation creation run only as volatile local drafts; search and filters operate on those drafts.
+## Experiencia disponible
 
-## Security boundary
-- The preview module imports no data client, issues no fetch requests, calls no RPC and writes no storage.
-- The module shows no production data, sample financial records, test contacts or simulated balances.
-- The navigation item is shown to both administrator and worker sessions because ownership is a user identity, not the global CuevaCoin admin role. The backend still authorizes the book through verified auth.uid().
-- The actual book remains owner-only as specified in `FORTUNA_V1_PRODUCT_DECISIONS.md`; no UI state or global CuevaCoin administrator role grants book access.
-- Do not enable API reads/writes or the action buttons until hosted Auth/JWT and owner-A/owner-B isolation have passed in an authorized isolated target.
+- FORTUNA es una sección compartida para sesiones autenticadas de administrador y trabajador. La propiedad del libro siempre pertenece a la identidad autenticada; un rol de administrador global no concede acceso al libro de otra persona.
+- Resumen por moneda, una ficha por contacto, búsqueda por nombre/teléfono y filtro de moneda.
+- Detalle con obligaciones abiertas, dirección, principal, pendiente, moneda, descripción y vencimiento cuando exista en el modelo.
+- Alta persistente de contacto y apertura persistente de obligación.
+- Los importes se conservan en unidades menores enteras y se muestran por separado como **Te debe** y **Le debes**. No hay neteo automático ni conversión de monedas.
+- La vista «Obligaciones» representa pendientes abiertos del contacto seleccionado; no se presenta como historial completo de eventos.
 
-## Verification
-Run `node scripts/verify-fortuna-ui-preview.mjs`. The GitHub-hosted preview workflow runs on trusted `feat/fortuna-ui/**` pushes and has read-only repository permissions.
+## Ruta de datos y seguridad
 
+El frontend usa el cliente Supabase existente únicamente para obtener la sesión actual y llamar al Edge dispatcher `fortuna-dispatch`.
 
-## Iteration 2 — local-only workflow workbench (V161)
+| Acción de la UI | Operación del dispatcher | RPC owner-scoped |
+| --- | --- | --- |
+| Cargar contactos y resumen | `list_contacts` | `api.list_contacts` |
+| Crear contacto | `create_contact` | `api.create_contact` |
+| Abrir detalle de obligaciones | `list_obligations` | `api.list_obligations` |
+| Registrar obligación | `open_obligation` | `api.open_obligation` |
 
-- Adds contact and obligation draft dialogs, contact detail, search, currency filter, summary and preview history.
-- Every item is volatile in-memory state for the current page only. Reloading or closing the tab removes the drafts.
-- No Supabase client, fetch, RPC, localStorage, sessionStorage or IndexedDB is used; no event, ledger entry, audit row or idempotency row is created.
-- Contact validation follows the backend limits: display name 1–120, phone ≤40, notes ≤1000 characters.
-- Obligation validation follows the backend contract: receivable/payable, CUP/USD/EUR, strictly positive amount, up to two decimal places and description 1–500 characters.
-- Money parsing uses string input plus `BigInt` minor units. Input is bounded before conversion, no floating-point arithmetic or rounding is used, and values are checked against PostgreSQL bigint maximum.
-- Comma or point is accepted as the decimal separator; thousand separators and mixed separators are rejected to avoid ambiguous interpretation.
-- Contact positions group by currency and retain separate gross "Te debe" and "Le debes" values; no netting or currency conversion occurs.
-- This preview deliberately does not simulate cash settlement, allocations, overage or reversals. Those must use the backend preview fingerprint and transactional confirmation after hosted owner-isolation E2E passes.
-- UI contract CI verifies the no-network/no-storage boundary, validation limits, maximum amount, two-decimal precision, mixed balances and currency isolation.
+- El JWT de la sesión actual se transmite como Bearer al dispatcher; el mismo token se valida con Auth y se reenvía a PostgREST.
+- El dispatcher recibe una operación de una allowlist cerrada; el navegador no envía nombres de tablas, esquemas, SQL, actor ID ni propietario.
+- El frontend no accede directamente a tablas privadas, no usa `service_role`, no crea un segundo cliente privilegiado y no contiene llamadas directas a fetch/RPC.
+- Las funciones privadas derivan el actor de `auth.uid()` y resuelven el libro en el servidor.
+- Las escrituras requieren claves idempotentes generadas con el generador criptográfico del navegador. Ante una respuesta de red incierta, el formulario conserva temporalmente el payload y la misma clave en la pestaña; no dispara reintentos automáticos ni inventa una clave nueva.
+- Los datos transitorios y los formularios se limpian al cambiar de cuenta o cerrar sesión.
 
+## Validación y consistencia
 
-## Owner-only navigation correction
+- Nombre de contacto: 1–120 caracteres; teléfono: hasta 40; notas: hasta 1.000.
+- Obligación: `receivable` o `payable`; CUP/USD/EUR; importe positivo en unidades menores; concepto 1–500 caracteres.
+- `BigInt` para parseo, suma y formato; sin aritmética monetaria de punto flotante.
+- Se rechazan valores fuera del rango `bigint` y respuestas del servidor con importes, monedas o estructuras inválidas.
+- Los totales visibles proceden del modelo agregado por el servidor. El cliente no calcula el pendiente contable de cada obligación ni altera el ledger.
+- La fecha de vencimiento se deja sin captura desde esta interfaz hasta que exista una regla explícita para convertir una fecha local en un instante con zona horaria. No se inventa una hora UTC.
 
-- The approved product decision is owner-only, not admin-only. The view now lives in the shared authenticated section (`shared-fortuna`) and is reachable by both administrator and worker sessions.
-- `js/ui/navigation.js` routes `fortuna` through the shared-section allowlist; both session orchestrators reveal the same navigation entry after authentication.
-- This is navigation only. It grants no book access. The backend resolves ownership exclusively from verified `auth.uid()`; a global CuevaCoin administrator who is not the book owner remains denied.
+## Ciclo PWA
 
-- PWA offline optimization: V161 precaches the versioned FORTUNA UI module and its domain helper in the service-worker shell, so the UI does not require a first-use network fetch after install/update.
-## Iteration 3 — settlement handshake and amount-boundary hardening
+- HTML, versión fallback y Service Worker alineados en **V162**.
+- El shell precarga `ui.js?v=162`, `preview-domain.mjs` y `api.mjs`.
+- Las consultas financieras siguen siendo de red; el Service Worker no almacena respuestas del dispatcher ni datos del libro.
 
-- Local draft totals are checked against the PostgreSQL signed-bigint ceiling per currency and direction before an obligation draft is accepted. This prevents the preview from presenting a book total that the server's bigint aggregate cannot represent.
-- The UI remains preview-only. No settlement button, Edge request, RPC call, or financial write is enabled in this iteration.
+## Verificación reproducible
 
-### Server contract for the future settlement UI
+En el workflow GitHub-hosted `FORTUNA owner UI integration contract`:
 
-The existing authenticated dispatcher exposes these operations through POST /functions/v1/fortuna-dispatch and the caller's own JWT:
+1. `node --check` de los módulos UI y API.
+2. `scripts/verify-fortuna-ui-preview.mjs`: navegación owner-only, ciclo de sesión, no acceso directo a tablas, precisión monetaria, contratos SQL/Edge y V162.
+3. `scripts/verify-fortuna-api-client.mjs`: JWT Bearer, allowlist y argumentos exactos de las siete operaciones, validación del modelo de lectura, falta de sesión, generación de clave y manejo HTTP 409/503.
+4. `scripts/verify-step10-release.mjs`: regresión del contrato de release.
 
-1. **preview_settlement** calls api.preview_settlement with contact ID, currency, flow (cash_received or cash_paid), mode (fifo or manual), total amount in integer minor units as a string, and a requested-allocations array.
-2. The server returns the authoritative plan: version, contact, currency, flow, mode, total, eligible obligations, exact allocations, allocated total, overage, optional overage direction, and a 64-character SHA-256 preview_fingerprint. The browser displays this plan and never calculates or forges the fingerprint.
-3. A separate explicit confirmation calls exactly one command: **receive_cash** for money received against receivables, or **pay_contact** for money paid against payables. It resends the same preview inputs plus the server-issued fingerprint, the explicit confirm-overage boolean, and one idempotency key.
-4. The database locks the contact and eligible obligations, recalculates the plan, and rejects a stale fingerprint before any financial event is committed. If overage exists, the user must explicitly confirm it; the overage becomes a new obligation in the opposite direction.
-5. The idempotency key is generated once for the confirmed payload. A retry with the same key and identical payload returns the original committed response; reusing that key with a different payload is a conflict (HTTP 409). Do not mint a new key for an uncertain retry of the same command.
-6. The commit is one database transaction covering event, allocations, ledger entries, optional overage obligation, audit and idempotency result. The UI refreshes server state after success and clears the now-consumed preview.
+**Evidencia:** run [45222786934](https://github.com/Robvg9/CuevaCoin/actions/runs/45222786934) SUCCESS sobre el SHA exacto `6433505fffc36bad049a38aec835473c56b76dbc`; todos los pasos del workflow terminaron correctamente.
 
-### Mandatory UI rules
+## Límites explícitos de este paso
 
-- Any change to contact, currency, direction, mode, amount or manual allocation invalidates the current preview and disables confirmation until a fresh server preview succeeds.
-- FIFO sends an empty manual-allocation array. Manual mode sends one unique obligation ID per selected allocation, in the same contact/currency/direction scope.
-- Show every server-returned allocation and the overage separately; never auto-confirm overage or imply that it is part of an existing obligation.
-- A stale-preview response requires a new preview and a fresh user confirmation. Never retry the commit with a changed fingerprint under the old idempotency key.
-- Keep the caller JWT end-to-end through Auth and PostgREST. Do not introduce a service-role key, direct private-schema access, browser-side ownership, or client-side ledger writes.
-- Do not persist preview fingerprints or pending commit payloads in browser storage. Clear transient state on logout/account change.
-
-**Verification boundary:** the SQL owner-settlement tests already cover FIFO ordering, exact retry replay, manual bounded allocations, stale-preview rejection, overage and owner isolation. The preview CI now asserts that the frontend integration contract still matches those server entry points and that the local amount aggregate cannot overflow. This static/isolated evidence does not substitute for the outstanding hosted authenticated owner-A/owner-B E2E gate.
+- No incluye pagos/abonos, asignación FIFO/manual, excesos, compensaciones ni reversiones en la UI.
+- No incluye historial completo de eventos ni paginación de auditoría.
+- El contrato del backend para vista previa y confirmación de liquidación está disponible para el siguiente paso; esta entrega no expone botones de liquidación.
+- La PR continúa Draft y no forma parte de `main`; no se ha fusionado ni desplegado desde esta rama.
