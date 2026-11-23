@@ -6,6 +6,7 @@ on:
     paths:
       - "supabase/functions/fortuna-dispatch/**"
       - "scripts/verify-fortuna-edge-dispatch.mjs"
+      - "scripts/smoke-fortuna-dispatch-auth.mjs"
       - "docs/fortuna/edge-dispatcher.md"
       - ".github/workflows/fortuna-edge-dispatcher.yml"
   push:
@@ -13,6 +14,7 @@ on:
     paths:
       - "supabase/functions/fortuna-dispatch/**"
       - "scripts/verify-fortuna-edge-dispatch.mjs"
+      - "scripts/smoke-fortuna-dispatch-auth.mjs"
       - "docs/fortuna/edge-dispatcher.md"
       - ".github/workflows/fortuna-edge-dispatcher.yml"
 
@@ -32,6 +34,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Verify hosted gateway rejects requests without a user JWT
+        run: node scripts/smoke-fortuna-dispatch-auth.mjs
+        shell: cmd
       - name: Verify user-JWT dispatcher security contract
         run: node scripts/verify-fortuna-edge-dispatch.mjs
         shell: cmd
