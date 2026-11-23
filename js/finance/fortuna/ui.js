@@ -5,6 +5,7 @@
  */
 import {
   formatMinorAmount,
+  parseMoneyToMinor,
   normalizeContactDraft,
   validateObligationDraft,
 } from './preview-domain.mjs';
@@ -14,6 +15,9 @@ import {
   listContacts,
   listObligations,
   openObligation,
+  previewSettlement,
+  receiveCash,
+  payContact,
   FortunaApiError,
 } from './api.mjs';
 
@@ -32,6 +36,8 @@ function inicializarFortuna() {
     obligationRequest: 0,
     pendingContact: null,
     pendingObligation: null,
+    settlementDraft: null,
+    settlementPreviewRequest: 0,
   };
   const byId = (id) => root.querySelector('#' + id);
   const contactDialog = byId('fortuna-contact-dialog');
@@ -157,6 +163,362 @@ function inicializarFortuna() {
     }
   }
 
+  function ensureSettlementDraft(contact) {
+    if (state.settlementDraft?.contactId === contact.contact_id) return state.settlementDraft;
+    const firstCurrency = contactCurrencies(contact).find((item) => ['CUP', 'USD', 'EUR'].includes(item.currency))?.currency;
+    state.settlementDraft = {
+      contactId: contact.contact_id,
+      currency: firstCurrency || 'CUP',
+      flow: 'cash_received',
+      mode: 'fifo',
+      amount: '',
+      manualAllocations: Object.create(null),
+      preview: null,
+      previewKey: null,
+      previewLoading: false,
+      overageConfirmed: false,
+      pendingCommit: null,
+      commitBusy: false,
+    };
+    return state.settlementDraft;
+  }
+
+  function eligibleSettlementObligations(draft) {
+    const direction = draft.flow === 'cash_received' ? 'receivable' : 'payable';
+    return state.selectedObligations.filter((item) =>
+      item.currency === draft.currency && item.direction === direction);
+  }
+
+  function renderManualSettlementAllocations(container, draft, locked) {
+    container.replaceChildren();
+    const obligations = eligibleSettlementObligations(draft);
+    if (!obligations.length) {
+      container.append(el('p', 'fortuna-empty-state', 'No hay obligaciones abiertas de esta moneda y dirección. Si continúas, todo el importe quedará como exceso y requerirá confirmación expresa.'));
+      return;
+    }
+    for (const obligation of obligations) {
+      const field = el('label', 'fortuna-form-field');
+      field.append(el('span', '', obligation.description + ' · Pendiente: '
+        + formatMinorAmount(obligation.remaining_minor) + ' ' + obligation.currency));
+      const input = el('input');
+      input.type = 'text';
+      input.inputMode = 'decimal';
+      input.maxLength = 24;
+      input.autocomplete = 'off';
+      input.placeholder = 'Importe a asignar';
+      input.value = draft.manualAllocations[obligation.obligation_id] || '';
+      input.dataset.settlementAllocation = obligation.obligation_id;
+      input.disabled = locked;
+      field.append(input);
+      container.append(field);
+    }
+  }
+
+  function settlementPayload(draft) {
+    const totalAmountMinor = parseMoneyToMinor(draft.amount);
+    const requestedAllocations = draft.mode === 'manual'
+      ? eligibleSettlementObligations(draft)
+        .map((obligation) => {
+          const raw = String(draft.manualAllocations[obligation.obligation_id] || '').trim();
+          return raw ? {
+            obligation_id: obligation.obligation_id,
+            amount_minor: parseMoneyToMinor(raw),
+          } : null;
+        })
+        .filter(Boolean)
+        .sort((left, right) => left.obligation_id.localeCompare(right.obligation_id))
+      : [];
+    return {
+      contactId: draft.contactId,
+      currency: draft.currency,
+      flow: draft.flow,
+      mode: draft.mode,
+      totalAmountMinor,
+      requestedAllocations,
+    };
+  }
+
+  function renderSettlementWorkbench(contact) {
+    const draft = ensureSettlementDraft(contact);
+    const locked = draft.commitBusy || Boolean(draft.pendingCommit);
+    const panel = el('section', 'fortuna-settlement-workbench');
+    panel.append(el('h4', '', 'Registrar liquidación'));
+    panel.append(el('p', 'fortuna-dialog-note', 'Primero se consulta al servidor cómo se aplicaría el dinero. No se registra nada hasta que confirmes por separado.'));
+
+    const fields = el('div', 'fortuna-contact-position');
+    const flowField = el('label', 'fortuna-form-field');
+    flowField.append(el('span', '', 'Movimiento'));
+    const flow = el('select');
+    flow.dataset.settlementField = 'flow';
+    flow.disabled = locked;
+    for (const [value, label] of [['cash_received', 'Recibí dinero de esta persona'], ['cash_paid', 'Le pagué dinero a esta persona']]) {
+      const option = el('option', '', label);
+      option.value = value;
+      flow.append(option);
+    }
+    flow.value = draft.flow;
+    flowField.append(flow);
+
+    const currencyField = el('label', 'fortuna-form-field');
+    currencyField.append(el('span', '', 'Moneda'));
+    const currency = el('select');
+    currency.dataset.settlementField = 'currency';
+    currency.disabled = locked;
+    for (const code of ['CUP', 'USD', 'EUR']) {
+      const option = el('option', '', code);
+      option.value = code;
+      currency.append(option);
+    }
+    currency.value = draft.currency;
+    currencyField.append(currency);
+
+    const modeField = el('label', 'fortuna-form-field');
+    modeField.append(el('span', '', 'Forma de asignar'));
+    const mode = el('select');
+    mode.dataset.settlementField = 'mode';
+    mode.disabled = locked;
+    for (const [value, label] of [['fifo', 'Automática · más antigua primero (FIFO)'], ['manual', 'Manual · elegir obligaciones']]) {
+      const option = el('option', '', label);
+      option.value = value;
+      mode.append(option);
+    }
+    mode.value = draft.mode;
+    modeField.append(mode);
+
+    const amountField = el('label', 'fortuna-form-field');
+    amountField.append(el('span', '', 'Importe recibido o pagado'));
+    const amount = el('input');
+    amount.type = 'text';
+    amount.inputMode = 'decimal';
+    amount.maxLength = 24;
+    amount.autocomplete = 'off';
+    amount.placeholder = 'Ej. 1250,50';
+    amount.value = draft.amount;
+    amount.dataset.settlementField = 'amount';
+    amount.disabled = locked;
+    amountField.append(amount);
+    fields.append(flowField, currencyField, modeField, amountField);
+    panel.append(fields);
+
+    const manualList = el('div', 'fortuna-obligation-list');
+    manualList.dataset.settlementManualList = 'true';
+    manualList.hidden = draft.mode !== 'manual';
+    renderManualSettlementAllocations(manualList, draft, locked);
+    panel.append(manualList);
+
+    const actions = el('div', 'fortuna-dialog-actions');
+    const previewButton = el('button', 'btn btn-secondary',
+      draft.previewLoading ? 'Calculando distribución…' : 'Previsualizar distribución');
+    previewButton.type = 'button';
+    previewButton.dataset.settlementPreview = 'true';
+    previewButton.disabled = locked || draft.previewLoading;
+    actions.append(previewButton);
+    panel.append(actions);
+
+    const result = el('section', 'fortuna-detail-totals');
+    result.dataset.settlementPreviewResult = 'true';
+    result.setAttribute('aria-live', 'polite');
+    if (!draft.preview) {
+      result.append(el('p', '', 'La vista previa aparecerá aquí. Los cambios en contacto, moneda, dirección, modo, importe o asignaciones la invalidan.'));
+    } else {
+      const preview = draft.preview;
+      const summary = el('div', 'fortuna-detail-total');
+      summary.append(el('strong', '', 'Importe: ' + formatMinorAmount(preview.total_amount_minor) + ' ' + preview.currency));
+      summary.append(el('span', '', 'Asignado a obligaciones: ' + formatMinorAmount(preview.allocated_minor) + ' ' + preview.currency));
+      summary.append(el('span', '', 'Exceso: ' + formatMinorAmount(preview.overage_minor) + ' ' + preview.currency));
+      result.append(summary);
+      result.append(el('small', '', preview.flow === 'cash_received' ? 'Dirección: dinero recibido' : 'Dirección: dinero pagado'));
+      result.append(el('h5', '', 'Asignaciones calculadas por el servidor'));
+      if (preview.allocations.length) {
+        const rows = el('div', 'fortuna-obligation-list');
+        for (const allocation of preview.allocations) {
+          const obligation = state.selectedObligations.find((item) => item.obligation_id === allocation.obligation_id);
+          const row = el('article', 'fortuna-obligation-row');
+          row.append(el('strong', '', obligation?.description || ('Obligación ' + allocation.obligation_id.slice(0, 8))));
+          row.append(el('span', '', formatMinorAmount(allocation.amount_minor) + ' ' + preview.currency));
+          rows.append(row);
+        }
+        result.append(rows);
+      } else {
+        result.append(el('p', '', 'No se asignará dinero a obligaciones existentes.'));
+      }
+      if (BigInt(preview.overage_minor) > 0n) {
+        const overageDirection = preview.overage_direction === 'payable'
+          ? 'quedará como una nueva obligación que tú le debes a esta persona'
+          : 'quedará como una nueva obligación que esta persona te debe';
+        result.append(el('p', 'fortuna-server-note', 'Exceso: ' + overageDirection + '.'));
+        const confirmation = el('label', 'fortuna-server-note');
+        const checkbox = el('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = draft.overageConfirmed;
+        checkbox.dataset.settlementOverageConfirm = 'true';
+        checkbox.disabled = locked;
+        checkbox.style.width = 'auto';
+        checkbox.style.minHeight = 'auto';
+        confirmation.append(checkbox, el('span', '', 'Confirmo expresamente la creación de esa obligación por el exceso de '
+          + formatMinorAmount(preview.overage_minor) + ' ' + preview.currency + '.'));
+        result.append(confirmation);
+      }
+      result.append(el('small', '', 'Vista previa verificada por el servidor. Identificador de revisión: ' + preview.preview_fingerprint.slice(0, 12) + '…'));
+    }
+    panel.append(result);
+
+    const commitActions = el('div', 'fortuna-dialog-actions');
+    const overage = draft.preview ? BigInt(draft.preview.overage_minor) : 0n;
+    const canCommit = Boolean(draft.preview && !draft.previewLoading && !draft.commitBusy
+      && (!draft.pendingCommit ? (overage === 0n || draft.overageConfirmed) : true));
+    const commitButton = el('button', 'btn btn-primary',
+      draft.pendingCommit?.uncertain ? 'Reintentar la misma confirmación' : 'Confirmar liquidación');
+    commitButton.type = 'button';
+    commitButton.dataset.settlementCommit = 'true';
+    commitButton.disabled = locked ? !draft.pendingCommit?.uncertain : !canCommit;
+    commitActions.append(commitButton);
+    panel.append(commitActions);
+    if (locked) {
+      panel.append(el('p', 'fortuna-server-note', draft.pendingCommit?.uncertain
+        ? 'Respuesta incierta: se conserva exactamente el mismo importe, reparto, fingerprint y clave idempotente. No cambies de contacto ni abras otra liquidación; reintenta esta confirmación.'
+        : 'Confirmación en curso. No cierres ni cambies los datos.'));
+    }
+    return panel;
+  }
+
+  function invalidateSettlementPreview(draft) {
+    if (!draft || draft.pendingCommit) return;
+    state.settlementPreviewRequest += 1;
+    draft.preview = null;
+    draft.previewKey = null;
+    draft.previewLoading = false;
+    draft.overageConfirmed = false;
+    const result = detail.querySelector('[data-settlement-preview-result]');
+    if (result) {
+      result.replaceChildren(el('p', '', 'La vista previa quedó invalidada por un cambio. Genera y revisa un plan nuevo antes de confirmar.'));
+    }
+    const confirmation = detail.querySelector('[data-settlement-overage-confirm]');
+    if (confirmation) confirmation.checked = false;
+    const commit = detail.querySelector('[data-settlement-commit]');
+    if (commit) commit.disabled = true;
+  }
+
+  async function previewSettlementDraft() {
+    const draft = state.settlementDraft;
+    if (!draft || draft.pendingCommit || draft.previewLoading) return;
+    let payload;
+    try {
+      payload = settlementPayload(draft);
+    } catch (error) {
+      setStatus(errorMessage(error));
+      return;
+    }
+    const request = ++state.settlementPreviewRequest;
+    const epoch = state.sessionEpoch;
+    const payloadKey = JSON.stringify(payload);
+    draft.preview = null;
+    draft.previewKey = null;
+    draft.overageConfirmed = false;
+    draft.previewLoading = true;
+    renderContactDetail();
+    try {
+      const plan = await previewSettlement(payload);
+      if (epoch !== state.sessionEpoch || request !== state.settlementPreviewRequest
+        || state.settlementDraft !== draft || draft.contactId !== state.selectedContactId
+        || JSON.stringify(settlementPayload(draft)) !== payloadKey) return;
+      draft.preview = plan;
+      draft.previewKey = payloadKey;
+      setStatus('Vista previa calculada por el servidor. Revisa las asignaciones y el posible exceso.');
+    } catch (error) {
+      if (epoch !== state.sessionEpoch || request !== state.settlementPreviewRequest || state.settlementDraft !== draft) return;
+      setStatus(errorMessage(error));
+    } finally {
+      if (epoch === state.sessionEpoch && request === state.settlementPreviewRequest && state.settlementDraft === draft) {
+        draft.previewLoading = false;
+        renderContactDetail();
+      }
+    }
+  }
+
+  async function confirmSettlementDraft() {
+    const draft = state.settlementDraft;
+    if (!draft || draft.commitBusy) return;
+    let pending = draft.pendingCommit;
+    if (!pending) {
+      let payload;
+      try {
+        payload = settlementPayload(draft);
+      } catch (error) {
+        setStatus(errorMessage(error));
+        return;
+      }
+      if (!draft.preview || draft.previewKey !== JSON.stringify(payload)) {
+        setStatus('La vista previa no corresponde a los datos actuales. Calcula y revisa un plan nuevo.');
+        invalidateSettlementPreview(draft);
+        renderContactDetail();
+        return;
+      }
+      const overage = BigInt(draft.preview.overage_minor);
+      if (overage > 0n && !draft.overageConfirmed) {
+        setStatus('Debes confirmar expresamente la obligación que se creará por el exceso.');
+        return;
+      }
+      pending = {
+        payload,
+        previewFingerprint: draft.preview.preview_fingerprint,
+        confirmOverage: overage > 0n && draft.overageConfirmed,
+        idempotencyKey: createIdempotencyKey(),
+        uncertain: false,
+      };
+      draft.pendingCommit = pending;
+    }
+
+    const epoch = state.sessionEpoch;
+    draft.commitBusy = true;
+    renderContactDetail();
+    try {
+      const commitArgs = {
+        ...pending.payload,
+        previewFingerprint: pending.previewFingerprint,
+        confirmOverage: pending.confirmOverage,
+        idempotencyKey: pending.idempotencyKey,
+      };
+      if (pending.payload.flow === 'cash_received') await receiveCash(commitArgs);
+      else await payContact(commitArgs);
+      draft.pendingCommit = null;
+      draft.preview = null;
+      state.settlementDraft = null;
+      draft.commitBusy = false;
+      const refreshed = await loadContacts({ preserveStatus: true });
+      setStatus(refreshed
+        ? 'Liquidación registrada. Saldos y obligaciones actualizados desde el servidor.'
+        : 'Liquidación confirmada por el servidor. La actualización de la ficha falló; pulsa Actualizar.');
+    } catch (error) {
+      draft.commitBusy = false;
+      const code = error?.code;
+      if (code === 'STALE_PREVIEW') {
+        draft.pendingCommit = null;
+        draft.preview = null;
+        draft.previewKey = null;
+        draft.overageConfirmed = false;
+        setStatus('El saldo cambió después de la vista previa. Se descartó el plan; consulta de nuevo y revisa la nueva distribución.');
+        await loadSelectedObligations();
+      } else if (error?.retryable || code === 'IDEMPOTENCY_CONFLICT') {
+        pending.uncertain = true;
+        setStatus(code === 'IDEMPOTENCY_CONFLICT'
+          ? 'La clave idempotente entró en conflicto. Se bloqueó una nueva liquidación; conserva esta ficha y no cambies los datos.'
+          : 'No se pudo confirmar la respuesta. Reintenta esta misma confirmación: se reutilizarán exactamente los mismos datos, fingerprint y clave.');
+      } else {
+        draft.pendingCommit = null;
+        draft.preview = null;
+        draft.previewKey = null;
+        draft.overageConfirmed = false;
+        setStatus(errorMessage(error));
+      }
+    } finally {
+      if (epoch === state.sessionEpoch && state.settlementDraft === draft) {
+        draft.commitBusy = false;
+        renderContactDetail();
+      }
+    }
+  }
+
   function renderContactDetail() {
     const contact = selected();
     detail.replaceChildren();
@@ -218,6 +580,7 @@ function inicializarFortuna() {
     } else {
       detail.append(el('p', '', 'No hay obligaciones pendientes para este contacto.'));
     }
+    detail.append(renderSettlementWorkbench(contact));
     byId('fortuna-new-obligation-btn').disabled = false;
   }
 
@@ -326,6 +689,9 @@ function inicializarFortuna() {
     const epoch = state.sessionEpoch;
     const request = ++state.obligationRequest;
     const contactId = contact.contact_id;
+    if (state.settlementDraft?.contactId === contactId && !state.settlementDraft.pendingCommit) {
+      invalidateSettlementPreview(state.settlementDraft);
+    }
     state.loadingObligations = true;
     renderContactDetail();
     try {
@@ -541,6 +907,10 @@ function inicializarFortuna() {
   list.addEventListener('click', async (event) => {
     const button = event.target.closest('[data-open-contact]');
     if (!button) return;
+    if (state.settlementDraft?.pendingCommit && state.settlementDraft.contactId !== button.dataset.openContact) {
+      setStatus('Hay una liquidación sin resultado confirmado para otro contacto. Reintenta esa misma confirmación antes de cambiar de ficha.');
+      return;
+    }
     state.selectedContactId = button.dataset.openContact;
     state.selectedObligations = [];
     renderContactDetail();
@@ -551,13 +921,58 @@ function inicializarFortuna() {
 
   detail.addEventListener('click', (event) => {
     if (event.target.closest('[data-close-contact-detail]')) {
+      if (state.settlementDraft?.pendingCommit) {
+        setStatus('Hay una confirmación de liquidación sin resultado definitivo. Reintenta la misma operación antes de cerrar esta ficha.');
+        return;
+      }
       state.selectedContactId = null;
       state.selectedObligations = [];
+      state.settlementDraft = null;
       state.obligationRequest += 1;
       renderContactDetail();
       renderHistory();
     }
     if (event.target.closest('[data-add-obligation]')) openNewObligation();
+    if (event.target.closest('[data-settlement-preview]')) void previewSettlementDraft();
+    if (event.target.closest('[data-settlement-commit]')) void confirmSettlementDraft();
+  });
+
+  detail.addEventListener('input', (event) => {
+    const target = event.target;
+    const draft = state.settlementDraft;
+    if (!draft || draft.pendingCommit) return;
+    if (target.dataset.settlementField === 'amount') {
+      draft.amount = target.value;
+      invalidateSettlementPreview(draft);
+    } else if (target.dataset.settlementAllocation) {
+      draft.manualAllocations[target.dataset.settlementAllocation] = target.value;
+      invalidateSettlementPreview(draft);
+    }
+  });
+
+  detail.addEventListener('change', (event) => {
+    const target = event.target;
+    const draft = state.settlementDraft;
+    if (!draft) return;
+    if (target.dataset.settlementOverageConfirm && !draft.pendingCommit) {
+      draft.overageConfirmed = target.checked;
+      const commit = detail.querySelector('[data-settlement-commit]');
+      if (commit) commit.disabled = !(draft.preview && !draft.commitBusy
+        && (BigInt(draft.preview.overage_minor) === 0n || draft.overageConfirmed));
+      return;
+    }
+    if (target.dataset.settlementField && !draft.pendingCommit) {
+      const field = target.dataset.settlementField;
+      if (['flow', 'currency', 'mode'].includes(field)) {
+        draft[field] = target.value;
+        invalidateSettlementPreview(draft);
+        const manualList = detail.querySelector('[data-settlement-manual-list]');
+        if (manualList) {
+          manualList.hidden = draft.mode !== 'manual';
+          renderManualSettlementAllocations(manualList, draft, false);
+        }
+      }
+    }
   });
 
   search.addEventListener('input', renderContacts);
@@ -590,6 +1005,8 @@ function inicializarFortuna() {
     state.loadingObligations = false;
     state.pendingContact = null;
     state.pendingObligation = null;
+    state.settlementDraft = null;
+    state.settlementPreviewRequest += 1;
     contactForm.reset();
     obligationForm.reset();
     search.value = '';
