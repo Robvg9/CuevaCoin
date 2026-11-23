@@ -19,6 +19,76 @@ UPDATE public.perfiles AS p
  WHERE p.es_admin IS FALSE
    AND p.estado = 'activo';
 
+-- Search only active non-admin accounts, and disclose their current business role
+-- to the authenticated active owner so the role choice is never made blindly.
+CREATE OR REPLACE FUNCTION fortuna_private.fortuna_search_profiles(p_query text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fortuna_search_profiles$
+DECLARE
+  v_actor uuid := auth.uid();
+  v_query text := pg_catalog.btrim(COALESCE(p_query, ''));
+  v_result jsonb;
+BEGIN
+  IF v_actor IS NULL THEN
+    RAISE EXCEPTION 'fortuna_auth_required' USING ERRCODE = '28000';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.perfiles AS owner_profile
+     WHERE owner_profile.id = v_actor
+       AND owner_profile.es_admin IS TRUE
+       AND owner_profile.estado = 'activo'
+  ) THEN
+    RAISE EXCEPTION 'fortuna_owner_required' USING ERRCODE = '42501';
+  END IF;
+  IF pg_catalog.length(v_query) < 2 OR pg_catalog.length(v_query) > 80 THEN
+    RAISE EXCEPTION 'fortuna_profile_query_invalid';
+  END IF;
+
+  SELECT COALESCE(pg_catalog.jsonb_agg(
+    pg_catalog.jsonb_build_object(
+      'profile_id', p.id,
+      'username', p.usuario,
+      'display_name', COALESCE(NULLIF(pg_catalog.btrim(pg_catalog.concat_ws(' ', p.nombre, p.apellido)), ''), p.usuario),
+      'is_dependent', p.es_dependiente
+    )
+    ORDER BY pg_catalog.lower(p.usuario), p.id
+  ), '[]'::jsonb)
+  INTO v_result
+  FROM (
+    SELECT id, usuario, nombre, apellido, es_dependiente
+      FROM public.perfiles
+     WHERE estado = 'activo'
+       AND es_admin IS FALSE
+       AND id <> v_actor
+       AND (
+         pg_catalog.strpos(pg_catalog.lower(COALESCE(usuario, '')), pg_catalog.lower(v_query)) > 0
+         OR pg_catalog.strpos(pg_catalog.lower(pg_catalog.concat_ws(' ', nombre, apellido)), pg_catalog.lower(v_query)) > 0
+       )
+     ORDER BY pg_catalog.lower(usuario), id
+     LIMIT 20
+  ) AS p;
+
+  RETURN v_result;
+END;
+$fortuna_search_profiles$;
+
+CREATE OR REPLACE FUNCTION api.search_fortuna_profiles(p_query text)
+RETURNS jsonb
+LANGUAGE sql
+SECURITY INVOKER
+SET search_path = pg_catalog
+AS $fortuna_api_search_profiles$
+  SELECT fortuna_private.fortuna_search_profiles($1);
+$fortuna_api_search_profiles$;
+
+REVOKE ALL ON FUNCTION fortuna_private.fortuna_search_profiles(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION fortuna_private.fortuna_search_profiles(text) TO authenticated;
+REVOKE ALL ON FUNCTION api.search_fortuna_profiles(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.search_fortuna_profiles(text) TO authenticated;
+
 -- Replace the link operation with an explicit, owner-authorized role choice.
 DROP FUNCTION IF EXISTS api.link_fortuna_profile_contact(uuid);
 DROP FUNCTION IF EXISTS fortuna_private.fortuna_link_profile_contact(uuid);
