@@ -24,6 +24,8 @@ const app = read('js/core/app.js');
 const settlementSql = read('supabase/migrations/20261122173537_fortuna_v1_private_ledger_and_owner_api.sql');
 const dispatcher = read('supabase/functions/fortuna-dispatch/index.ts');
 const settlementApiTest = read('scripts/verify-fortuna-owner-settlement-api.mjs');
+const authenticatedE2E = read('scripts/e2e-fortuna-authenticated.mjs');
+const authenticatedE2EWorkflow = read('.github/workflows/fortuna-authenticated-e2e.yml');
 
 assert.match(html, /<li id="fortuna-link-item" style="display: none;">[\s\S]*loadSection\('fortuna'\)/);
 assert.match(adminPanel, /fortuna-link-item/);
@@ -189,5 +191,14 @@ assert.doesNotMatch(dispatcher, /SUPABASE_SERVICE_ROLE_KEY/);
 assert.match(settlementApiTest, /FIFO preview proposes oldest-first allocations and returns a SHA-256 fingerprint/);
 assert.match(settlementApiTest, /stale preview detects an intervening settlement/);
 assert.match(settlementApiTest, /exact retry replays without duplicates/);
+assert.match(authenticatedE2E, /preview_settlement/);
+assert.match(authenticatedE2E, /receive_cash/);
+assert.match(authenticatedE2E, /pay_contact/);
+assert.match(authenticatedE2E, /STALE_PREVIEW/);
+assert.match(authenticatedE2E, /overage_direction/);
+assert.match(authenticatedE2E, /p_confirm_overage: true/);
+assert.match(authenticatedE2EWorkflow, /supabase start/);
+assert.match(authenticatedE2EWorkflow, /supabase db reset/);
+assert.match(authenticatedE2EWorkflow, /supabase stop --no-backup/);
 
-console.log('PASS — FORTUNA V163 owner UI, authenticated API client, persisted contact/obligation flows, session isolation, exact money and authoritative settlement contracts.');
+console.log('PASS — FORTUNA V163 owner UI, authenticated API client, local Auth/Edge/PostgREST settlement E2E coverage, session isolation, exact money and authoritative settlement contracts.');
