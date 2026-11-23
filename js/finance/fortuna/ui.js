@@ -19,6 +19,8 @@ import {
   previewSettlement,
   receiveCash,
   payContact,
+  searchFortunaProfiles,
+  linkFortunaProfileContact,
   FortunaApiError,
 } from './api.mjs';
 
@@ -44,10 +46,14 @@ function inicializarFortuna() {
     pendingObligation: null,
     settlementDraft: null,
     settlementPreviewRequest: 0,
+    newContactNeedsObligation: false,
   };
   const byId = (id) => root.querySelector('#' + id);
   const contactDialog = byId('fortuna-contact-dialog');
   const obligationDialog = byId('fortuna-obligation-dialog');
+  const linkProfileDialog = byId('fortuna-link-profile-dialog');
+  const linkProfileForm = byId('fortuna-link-profile-form');
+  const profileResults = byId('fortuna-profile-results');
   const contactForm = byId('fortuna-contact-form');
   const obligationForm = byId('fortuna-obligation-form');
   const list = byId('fortuna-contact-list');
@@ -58,7 +64,7 @@ function inicializarFortuna() {
   const currencyFilter = byId('fortuna-contact-currency-filter');
   const status = byId('fortuna-session-status');
 
-  if (![contactDialog, obligationDialog, contactForm, obligationForm, list, detail, history, search, currencyFilter, status].every(Boolean)) {
+  if (![contactDialog, obligationDialog, linkProfileDialog, linkProfileForm, profileResults, contactForm, obligationForm, list, detail, history, search, currencyFilter, status].every(Boolean)) {
     console.error('[FORTUNA] Markup incompleto; no se inicializó la interfaz.');
     return;
   }
@@ -108,10 +114,10 @@ function inicializarFortuna() {
 
   function renderBalance(container, summary) {
     const line = el('div', 'fortuna-contact-position');
-    const receivable = el('div');
+    const receivable = el('div', 'is-receivable');
     receivable.append(el('span', '', 'Te debe'));
     receivable.append(el('strong', '', formatMinorAmount(String(safeMinor(summary.te_debe_minor))) + ' ' + summary.currency));
-    const payable = el('div');
+    const payable = el('div', 'is-payable');
     payable.append(el('span', '', 'Le debes'));
     payable.append(el('strong', '', formatMinorAmount(String(safeMinor(summary.le_debes_minor))) + ' ' + summary.currency));
     line.append(receivable, payable);
@@ -592,7 +598,10 @@ function inicializarFortuna() {
     } else {
       detail.append(el('p', '', 'No hay obligaciones pendientes para este contacto.'));
     }
-    detail.append(renderSettlementWorkbench(contact));
+    const settlementDetails = el('details', 'fortuna-settlement-details');
+    const settlementSummary = el('summary', '', '💸 Registrar liquidación');
+    settlementDetails.append(settlementSummary, renderSettlementWorkbench(contact));
+    detail.append(settlementDetails);
     byId('fortuna-new-obligation-btn').disabled = false;
   }
 
@@ -898,15 +907,34 @@ function inicializarFortuna() {
   }
 
   byId('fortuna-new-contact-btn').addEventListener('click', openNewContact);
+  byId('fortuna-link-profile-btn').addEventListener('click', () => {
+    byId('fortuna-profile-query').value = '';
+    profileResults.replaceChildren();
+    byId('fortuna-profile-search-error').textContent = '';
+    openDialog(linkProfileDialog, 'fortuna-profile-query');
+  });
   byId('fortuna-new-obligation-btn').addEventListener('click', openNewObligation);
   byId('fortuna-refresh-btn')?.addEventListener('click', () => { void loadContacts(); });
 
   root.querySelectorAll('[data-close-dialog]').forEach((button) => {
-    button.addEventListener('click', () => closeDialog(byId(button.dataset.closeDialog)));
+    button.addEventListener('click', (event) => {
+      if (button.dataset.closeDialog === 'fortuna-obligation-dialog' && state.newContactNeedsObligation) {
+        event.preventDefault();
+        byId('fortuna-obligation-form-error').textContent = 'Registra la deuda inicial para terminar de crear este contacto.';
+        return;
+      }
+      closeDialog(byId(button.dataset.closeDialog));
+    });
   });
   root.querySelectorAll('dialog').forEach((dialog) => {
     dialog.addEventListener('click', (event) => {
-      if (event.target === dialog) closeDialog(dialog);
+      if (event.target === dialog) {
+        if (dialog === obligationDialog && state.newContactNeedsObligation) {
+          byId('fortuna-obligation-form-error').textContent = 'Registra la deuda inicial para terminar de crear este contacto.';
+          return;
+        }
+        closeDialog(dialog);
+      }
     });
   });
 
@@ -946,7 +974,11 @@ function inicializarFortuna() {
       }
       const loaded = await loadContacts({ preserveStatus: true });
       if (response?.contact_id) activateTab('contacts');
-      setStatus(loaded ? 'Contacto guardado en tu libro.' : 'Contacto guardado. No se pudo actualizar la lista; usa Actualizar.');
+      setStatus(loaded ? 'Contacto guardado. Ahora registra la deuda inicial.' : 'Contacto guardado. No se pudo actualizar la lista; usa Actualizar.');
+      if (response?.contact_id) {
+        state.newContactNeedsObligation = true;
+        openNewObligation();
+      }
     } catch (validationOrApiError) {
       error.textContent = errorMessage(validationOrApiError);
       if (validationOrApiError?.retryable && state.pendingContact) {
@@ -965,6 +997,69 @@ function inicializarFortuna() {
       contactDialog.querySelectorAll('[data-close-dialog]').forEach((button) => { button.disabled = false; });
       contactForm.querySelectorAll('input, textarea').forEach((field) => { field.disabled = false; });
       submit.textContent = state.pendingContact?.uncertain ? 'Reintentar mismo envío' : 'Guardar contacto';
+    }
+  });
+
+  obligationDialog.addEventListener('cancel', (event) => {
+    if (state.newContactNeedsObligation) {
+      event.preventDefault();
+      byId('fortuna-obligation-form-error').textContent = 'Registra la deuda inicial para terminar de crear este contacto.';
+    }
+  });
+  obligationDialog.querySelectorAll('[data-close-dialog]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      if (state.newContactNeedsObligation) {
+        event.preventDefault();
+        byId('fortuna-obligation-form-error').textContent = 'Registra la deuda inicial para terminar de crear este contacto.';
+      }
+    });
+  });
+
+  linkProfileForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const query = byId('fortuna-profile-query').value.trim();
+    const error = byId('fortuna-profile-search-error');
+    error.textContent = '';
+    profileResults.replaceChildren();
+    try {
+      const matches = await searchFortunaProfiles(query);
+      if (!matches.length) {
+        profileResults.append(el('p', 'fortuna-empty-state', 'No hay usuarios activos coincidentes.'));
+        return;
+      }
+      for (const profile of matches) {
+        const row = el('article', 'fortuna-contact-card');
+        const identity = el('div');
+        identity.append(el('strong', '', profile.display_name));
+        identity.append(el('small', '', '@' + profile.username));
+        const choose = el('button', 'btn btn-primary', 'Vincular');
+        choose.type = 'button';
+        choose.dataset.linkProfileId = profile.profile_id;
+        row.append(identity, choose);
+        profileResults.append(row);
+      }
+    } catch (searchError) {
+      error.textContent = errorMessage(searchError);
+    }
+  });
+
+  profileResults.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-link-profile-id]');
+    if (!button) return;
+    button.disabled = true;
+    try {
+      const linked = await linkFortunaProfileContact(button.dataset.linkProfileId);
+      state.selectedContactId = linked.contact_id;
+      state.selectedObligations = [];
+      state.newContactNeedsObligation = true;
+      closeDialog(linkProfileDialog);
+      await loadContacts({ preserveStatus: true });
+      activateTab('contacts');
+      setStatus('Usuario vinculado a tu libro. Registra la deuda inicial.');
+      openNewObligation();
+    } catch (linkError) {
+      button.disabled = false;
+      byId('fortuna-profile-search-error').textContent = errorMessage(linkError);
     }
   });
 
@@ -1010,9 +1105,10 @@ function inicializarFortuna() {
         idempotencyKey: state.pendingObligation.idempotencyKey,
       });
       state.pendingObligation = null;
+      state.newContactNeedsObligation = false;
       closeDialog(obligationDialog);
       await loadContacts({ preserveStatus: true });
-      setStatus('Obligación guardada en el libro y registrada contablemente.');
+      setStatus('Contacto y deuda inicial guardados correctamente.');
     } catch (validationOrApiError) {
       error.textContent = errorMessage(validationOrApiError);
       if (validationOrApiError?.retryable && state.pendingObligation) {
@@ -1163,6 +1259,7 @@ function inicializarFortuna() {
     state.loadingObligations = false;
     state.pendingContact = null;
     state.pendingObligation = null;
+    state.newContactNeedsObligation = false;
     state.settlementDraft = null;
     state.settlementPreviewRequest += 1;
     contactForm.reset();
@@ -1173,6 +1270,7 @@ function inicializarFortuna() {
     byId('fortuna-obligation-form-error').textContent = '';
     closeDialog(contactDialog);
     closeDialog(obligationDialog);
+    closeDialog(linkProfileDialog);
     activateTab('overview');
     renderSummary();
     renderActivity();
