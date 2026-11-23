@@ -60,11 +60,13 @@ Workflow GitHub-hosted FORTUNA owner UI integration contract:
 3. scripts/verify-fortuna-api-client.mjs: JWT Bearer, allowlist y argumentos exactos, validación de preview/commit, FIFO/manual, dirección del exceso, error 409 por fingerprint obsoleto, ausencia de sesión e idempotencia.
 4. scripts/verify-step10-release.mjs: contrato de release.
 
-Las pruebas de UI/API usan verificaciones de contrato y respuestas simuladas; no crean contactos, obligaciones ni eventos en Supabase LIVE. No sustituyen la aceptación visual en una sesión autenticada.
+- E2E autenticado local [run 45230559473](https://github.com/Robvg9/CuevaCoin/actions/runs/45230559473): SUCCESS sobre el head previo `6fc24fa585d4a0cf367d3325fae47c9327e9b364`. Auth emitió dos JWT; el Edge local con JWT obligatorio y PostgREST local verificaron FIFO, manual, replay de liquidación, HTTP 409 por fingerprint obsoleto, exceso no confirmado rechazado, exceso confirmado convertido en obligación opuesta y aislamiento owner A/B.
+- Este E2E usa una pila Supabase desechable de GitHub Actions; aplica migraciones y grants solamente ahí y ejecuta cleanup al terminar. No accede al proyecto Supabase LIVE.
+- La aceptación visual en una sesión autenticada de navegador/dispositivo sigue siendo una comprobación de presentación, no una operación financiera de prueba.
 
 ## Estado de entrega
 
 - Paso 4: CERRADO por implementación y CI en el SHA b1b93fa816199b61ef040a830da6669ecfc6d70a.
-- Paso 5: implementación añadida en la misma PR #66; su cierre formal depende del CI sobre el nuevo SHA.
-- PR #66 permanece OPEN/DRAFT; no se ha fusionado ni desplegado.
+- Paso 5: CERRADO en implementación, validación de API y E2E autenticado local de los recorridos FIFO/manual, stale-preview y exceso confirmado.
+- Fase 4: CERRADA en alcance de implementación y pruebas automatizadas. PR #66 permanece OPEN/DRAFT como gate independiente de revisión/publicación; no se ha fusionado ni desplegado.
 - No se ejecutó ninguna liquidación real ni se modificaron saldos o movimientos de producción.
