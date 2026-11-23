@@ -206,10 +206,15 @@ export async function openObligation({
   });
 }
 
-function validateSettlementPreview(plan) {
+function validateSettlementPreview(plan, expected) {
   const invalid = () => { throw new FortunaApiError('INVALID_RESPONSE', 'El servidor devolvió una vista previa de liquidación incompleta.'); };
   if (!plan || typeof plan !== 'object' || Array.isArray(plan)
     || !FORTUNA_CURRENCIES.includes(plan.currency)
+    || plan.contact_id !== expected.contactId
+    || plan.currency !== expected.currency
+    || plan.flow !== expected.flow
+    || plan.mode !== expected.mode
+    || plan.total_amount_minor !== expected.totalAmountMinor
     || !['cash_received', 'cash_paid'].includes(plan.flow)
     || !['fifo', 'manual'].includes(plan.mode)
     || !validateMinorString(plan.total_amount_minor)
@@ -221,6 +226,7 @@ function validateSettlementPreview(plan) {
     || !Array.isArray(plan.allocations)) invalid();
 
   const eligibleIds = new Set();
+  const eligibleById = new Map();
   for (const obligation of plan.eligible_obligations) {
     if (!obligation || typeof obligation.obligation_id !== 'string' || !obligation.obligation_id
       || eligibleIds.has(obligation.obligation_id)
@@ -228,6 +234,7 @@ function validateSettlementPreview(plan) {
       || BigInt(obligation.remaining_minor) <= 0n
       || typeof obligation.opened_at !== 'string') invalid();
     eligibleIds.add(obligation.obligation_id);
+    eligibleById.set(obligation.obligation_id, obligation);
   }
 
   const allocatedIds = new Set();
@@ -239,6 +246,7 @@ function validateSettlementPreview(plan) {
       || !validateMinorString(allocation.amount_minor)
       || BigInt(allocation.amount_minor) <= 0n) invalid();
     allocatedIds.add(allocation.obligation_id);
+    if (BigInt(allocation.amount_minor) > BigInt(eligibleById.get(allocation.obligation_id).remaining_minor)) invalid();
     allocationSum += BigInt(allocation.amount_minor);
   }
 
@@ -246,18 +254,27 @@ function validateSettlementPreview(plan) {
   const allocated = BigInt(plan.allocated_minor);
   const overage = BigInt(plan.overage_minor);
   if (total <= 0n || allocationSum !== allocated || allocated + overage !== total) invalid();
+  if (plan.mode === 'fifo') {
+    const eligibleOrder = new Map(plan.eligible_obligations.map((item, index) => [item.obligation_id, index]));
+    const allocationOrder = plan.allocations.map((item) => eligibleOrder.get(item.obligation_id));
+    if (allocationOrder.some((value, index) => index > 0 && value <= allocationOrder[index - 1])) invalid();
+  }
   const expectedOverageDirection = plan.flow === 'cash_received' ? 'payable' : 'receivable';
   if ((overage > 0n && plan.overage_direction !== expectedOverageDirection)
     || (overage === 0n && plan.overage_direction !== null)) invalid();
   return plan;
 }
 
-function validateSettlementCommit(result) {
+function validateSettlementCommit(result, expected) {
   if (!result || typeof result !== 'object' || Array.isArray(result)
     || typeof result.event_id !== 'string' || !result.event_id
     || !['cash_received', 'cash_paid'].includes(result.flow)
     || !['fifo', 'manual'].includes(result.mode)
     || !FORTUNA_CURRENCIES.includes(result.currency)
+    || result.flow !== expected.flow
+    || result.mode !== expected.mode
+    || result.currency !== expected.currency
+    || result.total_amount_minor !== expected.totalAmountMinor
     || !validateMinorString(result.total_amount_minor)
     || !validateMinorString(result.allocated_minor)
     || !validateMinorString(result.overage_minor)
@@ -296,13 +313,14 @@ export async function previewSettlement({
     p_total_amount_minor: totalAmountMinor,
     p_requested_allocations: requestedAllocations,
   });
-  return validateSettlementPreview(result);
+  return validateSettlementPreview(result, { contactId, currency, flow, mode, totalAmountMinor });
 }
 
 export async function receiveCash({
   contactId, currency, mode, totalAmountMinor, requestedAllocations = [],
   previewFingerprint, confirmOverage = false, idempotencyKey,
 }) {
+  validateSettlementCommitRequest({ previewFingerprint, confirmOverage, idempotencyKey, requestedAllocations });
   return validateSettlementCommit(await invokeFortuna('receive_cash', {
     p_contact_id: contactId,
     p_currency_code: currency,
@@ -312,13 +330,23 @@ export async function receiveCash({
     p_preview_fingerprint: previewFingerprint,
     p_confirm_overage: confirmOverage,
     p_idempotency_key: idempotencyKey,
-  }));
+  }), { flow: 'cash_received', mode, currency, totalAmountMinor });
+}
+
+function validateSettlementCommitRequest({ previewFingerprint, confirmOverage, idempotencyKey, requestedAllocations }) {
+  if (typeof previewFingerprint !== 'string' || !/^[0-9a-f]{64}$/.test(previewFingerprint)
+    || typeof confirmOverage !== 'boolean'
+    || typeof idempotencyKey !== 'string' || idempotencyKey.length < 8
+    || !Array.isArray(requestedAllocations)) {
+    throw new FortunaApiError('INVALID_ARGUMENTS', 'Faltan los datos seguros de confirmación de la liquidación.');
+  }
 }
 
 export async function payContact({
   contactId, currency, mode, totalAmountMinor, requestedAllocations = [],
   previewFingerprint, confirmOverage = false, idempotencyKey,
 }) {
+  validateSettlementCommitRequest({ previewFingerprint, confirmOverage, idempotencyKey, requestedAllocations });
   return validateSettlementCommit(await invokeFortuna('pay_contact', {
     p_contact_id: contactId,
     p_currency_code: currency,
@@ -328,5 +356,5 @@ export async function payContact({
     p_preview_fingerprint: previewFingerprint,
     p_confirm_overage: confirmOverage,
     p_idempotency_key: idempotencyKey,
-  }));
+  }), { flow: 'cash_paid', mode, currency, totalAmountMinor });
 }
