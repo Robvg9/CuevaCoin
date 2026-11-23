@@ -21,7 +21,8 @@ const SHELL_FILES = [
   '/js/finance/fortuna/preview-domain.mjs',
   '/js/finance/fortuna/api.mjs',
   '/js/data/profiles.js?v=170',
-  '/js/core/app.js?v=170'
+  '/js/core/app.js?v=170',
+  '/js/legacy-app.js?v=170'
 ];
 
 const EXTERNAL_SHELL_FILES = [
