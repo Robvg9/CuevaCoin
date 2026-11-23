@@ -68,7 +68,6 @@ for (const id of [
   'fortuna-contact-currency-filter',
   'fortuna-contact-list',
   'fortuna-contact-detail',
-  'fortuna-profile-is-dependent',
   'fortuna-preview-history-list',
   'fortuna-refresh-btn',
   'fortuna-link-profile-dialog',
