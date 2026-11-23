@@ -4433,20 +4433,20 @@
         </div>
 
         <!-- FORTUNA v1 — sección compartida; autorización owner-only en servidor. -->
-        <div id="shared-fortuna" class="section hidden fortuna-page" data-fortuna-preview="true">
+        <div id="shared-fortuna" class="section hidden fortuna-page" data-fortuna-live="true">
                 <header class="fortuna-header">
                     <div>
                         <p class="fortuna-kicker">LIBRO PERSONAL · FORTUNA V1</p>
                         <h1>FORTUNA</h1>
                         <p class="fortuna-subtitle">Control de obligaciones personales, por cobrar y por pagar.</p>
                     </div>
-                    <span class="fortuna-preview-badge">Vista previa</span>
+                    <span class="fortuna-preview-badge">Libro conectado</span>
                 </header>
                 <aside class="fortuna-safety-notice" role="status" aria-live="polite">
                     <span class="fortuna-safety-icon" aria-hidden="true">🔒</span>
                     <div>
-                        <strong>Modo de preparación protegido</strong>
-                        <p>Modo de preparación: los borradores creados aquí existen solo en la memoria de esta pestaña. No se guardan, no se sincronizan y desaparecen al recargar.</p>
+                        <strong>Libro personal del propietario autenticado</strong>
+                        <p>Los contactos y obligaciones se consultan y guardan en el servidor mediante operaciones autenticadas. Cada moneda mantiene sus importes brutos por separado.</p>
                     </div>
                 </aside>
                 <section class="fortuna-summary-grid" aria-label="Resumen del libro">
@@ -4468,19 +4468,20 @@
                 </section>
                 <div class="fortuna-local-workbench">
                     <div class="fortuna-workbench-copy">
-                        <strong>Probar los flujos</strong>
-                        <span>Borradores de sesión, no registros contables.</span>
+                        <strong>Gestionar tu libro</strong>
+                        <span>Información persistente y privada del propietario autenticado.</span>
                     </div>
-                    <div class="fortuna-primary-actions" aria-label="Crear borradores locales">
+                    <div class="fortuna-primary-actions" aria-label="Acciones del libro">
+                        <button type="button" id="fortuna-refresh-btn" class="btn btn-secondary">↻ Actualizar</button>
                         <button type="button" id="fortuna-new-contact-btn" class="btn btn-primary">＋ Nuevo contacto</button>
                         <button type="button" id="fortuna-new-obligation-btn" class="btn btn-secondary" disabled>＋ Nueva obligación</button>
                     </div>
                 </div>
-                <p id="fortuna-session-status" class="fortuna-session-status" role="status" aria-live="polite">Aún no hay borradores en esta sesión.</p>
+                <p id="fortuna-session-status" class="fortuna-session-status" role="status" aria-live="polite">Abre esta sección para consultar tu libro.</p>
                 <div class="fortuna-tabs" role="tablist" aria-label="Secciones de FORTUNA">
                     <button type="button" class="fortuna-tab is-active" id="fortuna-tab-overview" role="tab" aria-selected="true" aria-controls="fortuna-panel-overview" data-fortuna-tab="overview">Resumen</button>
                     <button type="button" class="fortuna-tab" id="fortuna-tab-contacts" role="tab" aria-selected="false" aria-controls="fortuna-panel-contacts" data-fortuna-tab="contacts" tabindex="-1">Contactos</button>
-                    <button type="button" class="fortuna-tab" id="fortuna-tab-history" role="tab" aria-selected="false" aria-controls="fortuna-panel-history" data-fortuna-tab="history" tabindex="-1">Historial</button>
+                    <button type="button" class="fortuna-tab" id="fortuna-tab-history" role="tab" aria-selected="false" aria-controls="fortuna-panel-history" data-fortuna-tab="history" tabindex="-1">Obligaciones</button>
                 </div>
                 <section id="fortuna-panel-overview" class="fortuna-tab-panel" role="tabpanel" aria-labelledby="fortuna-tab-overview" data-fortuna-panel="overview">
                     <div class="fortuna-overview-grid">
@@ -4506,47 +4507,47 @@
                 <section id="fortuna-panel-contacts" class="fortuna-tab-panel" role="tabpanel" aria-labelledby="fortuna-tab-contacts" data-fortuna-panel="contacts" hidden>
                     <div class="fortuna-panel-heading">
                         <div><h2>Contactos</h2><p>Una ficha por persona, con sus obligaciones agrupadas por moneda y sentido.</p></div>
-                        <span id="fortuna-draft-contact-count" class="fortuna-panel-count">0 borradores</span>
+                        <span id="fortuna-draft-contact-count" class="fortuna-panel-count">0 contactos</span>
                     </div>
                     <div class="fortuna-local-preview-warning">
-                        <strong>Vista previa local</strong>
-                        <span>Estos contactos no existen en CuevaCoin. Se eliminan al recargar o cerrar la pestaña.</span>
+                        <strong>Datos del libro</strong>
+                        <span>Los contactos se obtienen del libro del propietario autenticado.</span>
                     </div>
                     <div class="fortuna-contact-filters">
                         <label class="fortuna-filter-control"><span>Buscar</span><input type="search" id="fortuna-contact-search" placeholder="Nombre o teléfono..." autocomplete="off"></label>
                         <label class="fortuna-filter-control"><span>Moneda con movimientos</span><select id="fortuna-contact-currency-filter"><option value="">Todas</option><option value="CUP">CUP</option><option value="USD">USD</option><option value="EUR">EUR</option></select></label>
                     </div>
-                    <div id="fortuna-contact-list" class="fortuna-contact-list" role="list" aria-label="Borradores locales de contactos">
+                    <div id="fortuna-contact-list" class="fortuna-contact-list" role="list" aria-label="Contactos de tu libro">
                         <div class="fortuna-empty-state"><span aria-hidden="true">👤</span><h3>No hay borradores todavía</h3><p>Usa «Nuevo contacto» para probar el formulario sin guardar datos reales.</p></div>
                     </div>
                     <section id="fortuna-contact-detail" class="fortuna-contact-detail" aria-label="Detalle del contacto" hidden></section>
                 </section>
                 <section id="fortuna-panel-history" class="fortuna-tab-panel" role="tabpanel" aria-labelledby="fortuna-tab-history" data-fortuna-panel="history" hidden>
                     <div class="fortuna-panel-heading">
-                        <div><h2>Historial del libro</h2><p>Obligaciones, abonos, compensaciones y reversiones con trazabilidad.</p></div>
+                        <div><h2>Obligaciones abiertas</h2><p>Detalle de pendientes del contacto seleccionado. No representa un historial completo de eventos.</p></div>
                     </div>
-                    <div class="fortuna-local-preview-warning"><strong>Historial de vista previa</strong><span>Solo muestra obligaciones creadas como borradores en esta pestaña. No son movimientos confirmados.</span></div>
-                    <div id="fortuna-preview-history-list" class="fortuna-preview-history-list"><div class="fortuna-empty-state"><span aria-hidden="true">📚</span><h3>Sin obligaciones de vista previa</h3><p>Abre la ficha de un contacto y añade una obligación para ver su presentación.</p></div></div>
+                    <div class="fortuna-local-preview-warning"><strong>Obligaciones pendientes</strong><span>Esta vista refleja obligaciones abiertas devueltas por el servidor para el contacto seleccionado.</span></div>
+                    <div id="fortuna-preview-history-list" class="fortuna-preview-history-list"><div class="fortuna-empty-state"><span aria-hidden="true">📚</span><h3>Selecciona un contacto</h3><p>Consulta sus obligaciones abiertas desde la ficha.</p></div></div>
                 </section>
 
                 <dialog id="fortuna-contact-dialog" class="fortuna-dialog" aria-labelledby="fortuna-contact-dialog-title">
                     <form id="fortuna-contact-form" novalidate>
                         <div class="fortuna-dialog-heading">
-                            <div><p class="fortuna-kicker">BORRADOR LOCAL</p><h2 id="fortuna-contact-dialog-title">Nuevo contacto</h2></div>
+                            <div><p class="fortuna-kicker">LIBRO PERSONAL</p><h2 id="fortuna-contact-dialog-title">Nuevo contacto</h2></div>
                             <button type="button" class="fortuna-dialog-close" data-close-dialog="fortuna-contact-dialog" aria-label="Cerrar">✕</button>
                         </div>
-                        <p class="fortuna-dialog-note">No se creará ningún contacto en el servidor. Este formulario es solo para validar la experiencia.</p>
+                        <p class="fortuna-dialog-note">El contacto se guardará en tu libro privado. El servidor valida tu identidad y la propiedad del libro.</p>
                         <label class="fortuna-form-field"><span>Nombre o descripción <b>*</b></span><input id="fortuna-contact-name" type="text" maxlength="120" autocomplete="off" required placeholder="Ej. María Rodríguez"></label>
                         <label class="fortuna-form-field"><span>Teléfono <small>Opcional</small></span><input id="fortuna-contact-phone" type="tel" maxlength="40" autocomplete="off" placeholder="Número de contacto"></label>
                         <label class="fortuna-form-field"><span>Notas <small>Opcional</small></span><textarea id="fortuna-contact-notes" rows="3" maxlength="1000" placeholder="Contexto útil..."></textarea></label>
                         <p id="fortuna-contact-form-error" class="fortuna-form-error" role="alert"></p>
-                        <div class="fortuna-dialog-actions"><button type="button" class="btn btn-secondary" data-close-dialog="fortuna-contact-dialog">Cancelar</button><button type="submit" class="btn btn-primary">Crear borrador local</button></div>
+                        <div class="fortuna-dialog-actions"><button type="button" class="btn btn-secondary" data-close-dialog="fortuna-contact-dialog">Cancelar</button><button type="submit" class="btn btn-primary">Guardar contacto</button></div>
                     </form>
                 </dialog>
                 <dialog id="fortuna-obligation-dialog" class="fortuna-dialog" aria-labelledby="fortuna-obligation-dialog-title">
                     <form id="fortuna-obligation-form" novalidate>
                         <div class="fortuna-dialog-heading">
-                            <div><p class="fortuna-kicker">BORRADOR LOCAL</p><h2 id="fortuna-obligation-dialog-title">Nueva obligación</h2></div>
+                            <div><p class="fortuna-kicker">LIBRO PERSONAL</p><h2 id="fortuna-obligation-dialog-title">Nueva obligación</h2></div>
                             <button type="button" class="fortuna-dialog-close" data-close-dialog="fortuna-obligation-dialog" aria-label="Cerrar">✕</button>
                         </div>
                         <p id="fortuna-obligation-contact" class="fortuna-dialog-note"></p>
@@ -4555,9 +4556,9 @@
                         <label class="fortuna-form-field"><span>Importe <b>*</b></span><input id="fortuna-obligation-amount" type="text" inputmode="decimal" maxlength="24" autocomplete="off" placeholder="Ej. 1250,50" aria-describedby="fortuna-amount-help"></label>
                         <small id="fortuna-amount-help" class="fortuna-field-help">Hasta dos decimales. Usa coma o punto; sin separadores de miles.</small>
                         <label class="fortuna-form-field"><span>Concepto <b>*</b></span><textarea id="fortuna-obligation-description" rows="3" maxlength="500" placeholder="Describe la obligación..."></textarea></label>
-                        <label class="fortuna-form-field"><span>Fecha de vencimiento <small>Opcional</small></span><input id="fortuna-obligation-due-date" type="date"></label>
+                         
                         <p id="fortuna-obligation-form-error" class="fortuna-form-error" role="alert"></p>
-                        <div class="fortuna-dialog-actions"><button type="button" class="btn btn-secondary" data-close-dialog="fortuna-obligation-dialog">Cancelar</button><button type="submit" class="btn btn-primary">Añadir borrador local</button></div>
+                        <div class="fortuna-dialog-actions"><button type="button" class="btn btn-secondary" data-close-dialog="fortuna-obligation-dialog">Cancelar</button><button type="submit" class="btn btn-primary">Guardar obligación</button></div>
                     </form>
                 </dialog>
             </div>
@@ -5791,7 +5792,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.161';
+                const VERSION_FALLBACK = 'V.162';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -6177,7 +6178,7 @@
     <!-- Fase 6 — Enter en inputs de chat (delega a send* modulares) -->
     <script type="module" src="js/chat/chat-enter-keys.js"></script>
     <!-- Lógica restante del monolito (diferida: corre DESPUÉS de los módulos anteriores) -->
-    <script type="module" src="js/finance/fortuna/ui.js?v=161"></script>
+    <script type="module" src="js/finance/fortuna/ui.js?v=162"></script>
     <script defer src="js/legacy-app.js"></script>
 
 <script>
