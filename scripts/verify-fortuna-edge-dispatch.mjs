@@ -21,16 +21,21 @@ assert.match(source, /OPERATION_NOT_ALLOWED/)
 assert.match(source, /Object\.hasOwn\(RPC_BY_OPERATION, body\.operation\)/)
 assert.match(source, /Access-Control-Allow-Origin/)
 assert.doesNotMatch(source, /SUPABASE_SECRET_KEYS|SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|SERVICE_ROLE_KEY|supabaseAdmin/i)
+
 for (const operation of ['create_contact', 'open_obligation', 'list_contacts', 'list_obligations', 'preview_settlement', 'receive_cash', 'pay_contact']) {
   assert.match(source, new RegExp(operation))
 }
-assert.match(docs, /HUMAN GATE/i)
-assert.match(docs, /api.*Exposed Schemas allowlist/)
-assert.match(docs, /fortuna_private.*excluded/)
+
+assert.match(docs, /HUMAN GATE.*APROBADO/i)
+assert.match(docs, /fortuna-dispatch.*ACTIVE v2/i)
+assert.match(docs, /verify_jwt=true/)
+assert.match(docs, /67082fb9f84f7fc6ac4b328f7cdf02efd56ffe87ff3dc106a33eef9e9085597a/)
+assert.match(docs, /api.*Data API Exposed Schemas/)
+assert.match(docs, /fortuna_private.*excluido/)
 assert.match(docs, /authenticated.*schema USAGE/)
 assert.match(docs, /anon.*no USAGE/)
-assert.match(docs, /fortuna-dispatch.*not deployed/)
-assert.match(docs, /verify_jwt=true/)
-assert.match(docs, /service[- ]role/i)
+assert.match(docs, /Hosted authenticated E2E.*OPEN/i)
+assert.match(docs, /service-role/i)
 assert.match(docs, /SUPABASE_PUBLISHABLE_KEYS/)
-console.log('PASS — FORTUNA dispatcher JWT, RPC allowlist, LIVE API/private grants, payload bounds and no-service-role contract')
+
+console.log('PASS — FORTUNA dispatcher source, LIVE deployment checkpoint, JWT, RPC allowlist, API/private grants, hosted E2E gate and no-service-role contract')
