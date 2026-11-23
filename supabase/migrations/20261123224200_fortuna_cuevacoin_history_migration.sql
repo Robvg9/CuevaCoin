@@ -750,6 +750,10 @@ BEGIN
     'notes', c.notes,
     'linked_profile_id', c.linked_profile_id,
     'is_dependent', p.es_dependiente,
+    'history_migrated', EXISTS (
+      SELECT 1 FROM fortuna_private.financial_profile_migrations m
+       WHERE m.book_id = c.book_id AND m.contact_id = c.id
+    ),
     'currencies', COALESCE((
       SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
         'currency', pos.currency_code,
