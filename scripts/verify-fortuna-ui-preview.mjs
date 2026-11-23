@@ -117,6 +117,7 @@ assert.match(html, /<dialog id="fortuna-contact-detail" class="fortuna-dialog fo
 assert.match(ui, /detail\.showModal\(\)/);
 assert.match(ui, /detail\.addEventListener\('cancel'/);
 assert.match(ui, /button\.dataset\.linkProfileDependent === 'true'/);
+assert.match(ui, /profileRow\?\.querySelectorAll\('button'\)\.forEach/);
 assert.match(ui, /profile\.is_dependent \? 'Dependiente' : 'Solo FORTUNA'/);
 assert.match(ui, /linked\.is_new_contact && balanceMinor > 0n/);
 assert.match(api, /typeof item\.is_dependent === 'boolean'/);
