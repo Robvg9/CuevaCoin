@@ -35,6 +35,8 @@ export function showAdminPanel(admin) {
         document.getElementById('anuncios-link-item').style.display = '';
         document.getElementById('estadisticas-link-item').style.display = '';
         document.getElementById('historial-link-item').style.display = 'none';
+        const fortunaItem = document.getElementById('fortuna-link-item');
+        if (fortunaItem) fortunaItem.style.display = '';
 
         if (typeof window.loadSection === 'function') window.loadSection('inicio');
         if (typeof window.loadAdminStats === 'function') window.loadAdminStats();
