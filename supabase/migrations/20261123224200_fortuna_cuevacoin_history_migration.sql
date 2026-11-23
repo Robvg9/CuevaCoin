@@ -295,12 +295,25 @@ BEGIN
    FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'fortuna_profile_migration_contact_not_found'; END IF;
 
-  v_preview := fortuna_private.fortuna_preview_profile_history_migration(p_contact_id);
-  IF v_preview->>'ready' IS DISTINCT FROM 'true' THEN
-    RAISE EXCEPTION 'fortuna_profile_migration_not_ready';
+  -- Recheck after the contact lock so concurrent retries become no-ops.
+  SELECT c.linked_profile_id INTO v_profile_id
+    FROM fortuna_private.financial_contacts c
+   WHERE c.book_id = v_book_id AND c.id = p_contact_id;
+  SELECT m.* INTO v_existing
+    FROM fortuna_private.financial_profile_migrations m
+   WHERE m.book_id = v_book_id AND m.profile_id = v_profile_id;
+  IF FOUND THEN
+    RETURN pg_catalog.jsonb_build_object(
+      'success', true, 'already_migrated', true,
+      'contact_id', p_contact_id, 'profile_id', v_existing.profile_id,
+      'transaction_count', v_existing.source_transaction_count,
+      'withdrawal_request_count', v_existing.source_withdrawal_count,
+      'reconciliation_count', v_existing.reconciliation_count,
+      'source_balance_minor', v_existing.source_balance_minor::text,
+      'completed_at', v_existing.completed_at
+    );
   END IF;
 
-  v_profile_id := (v_preview->>'profile_id')::uuid;
   SELECT p.saldo, COALESCE(NULLIF(pg_catalog.btrim(pg_catalog.concat_ws(' ', p.nombre, p.apellido)), ''), p.usuario)
     INTO v_profile_balance, v_profile_name
     FROM public.perfiles p
@@ -315,6 +328,13 @@ BEGIN
      AND o.description = 'Saldo CuevaCoin pendiente de liquidar'
    FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'fortuna_profile_migration_opening_obligation_missing'; END IF;
+
+  -- Recompute eligibility after locking the source profile and target obligation.
+  v_preview := fortuna_private.fortuna_preview_profile_history_migration(p_contact_id);
+  IF v_preview->>'ready' IS DISTINCT FROM 'true'
+     OR (v_preview->>'profile_id')::uuid IS DISTINCT FROM v_profile_id THEN
+    RAISE EXCEPTION 'fortuna_profile_migration_not_ready';
+  END IF;
 
   SELECT e.id INTO v_opening_event_id
     FROM fortuna_private.financial_events e
@@ -577,10 +597,23 @@ BEGIN
          pg_catalog.jsonb_build_object('source_system', 'CuevaCoin', 'source_table', 'public.admin_pagos_salario_idempotencia', 'source_record', pg_catalog.to_jsonb(b)),
          COALESCE(b.completado_en, b.creado_en)
     FROM public.admin_pagos_salario_idempotencia b
-   WHERE EXISTS (
-     SELECT 1 FROM pg_catalog.jsonb_array_elements(COALESCE(b.payload, '[]'::jsonb)) item
-      WHERE item->>'usuario_id' = v_profile_id::text
-   );
+   WHERE pg_catalog.jsonb_typeof(b.payload) = 'array'
+     AND EXISTS (
+       SELECT 1 FROM pg_catalog.jsonb_array_elements(COALESCE(b.payload, '[]'::jsonb)) item
+        WHERE item->>'usuario_id' = v_profile_id::text
+     );
+
+  INSERT INTO fortuna_private.financial_audit (
+    book_id, event_id, actor_user_id, action, details, created_at
+  )
+  SELECT v_book_id, NULL, v_actor, 'cuevacoin_transfer_idempotency_imported',
+         pg_catalog.jsonb_build_object(
+           'source_system', 'CuevaCoin',
+           'source_table', 'public.transferencias_idempotencia',
+           'source_record', pg_catalog.to_jsonb(t)
+         ), t.creado_en
+    FROM public.transferencias_idempotencia t
+   WHERE t.emisor_id = v_profile_id OR t.destinatario_id = v_profile_id;
 
   v_digest_payload :=
     COALESCE((
