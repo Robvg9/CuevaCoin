@@ -23,6 +23,7 @@ const sw = read('service-worker.js');
 const app = read('js/core/app.js');
 const settlementSql = read('supabase/migrations/20261122173537_fortuna_v1_private_ledger_and_owner_api.sql');
 const activitySql = read('supabase/migrations/20261123182957_fortuna_owner_activity_history.sql');
+const profileLinkSql = read('supabase/migrations/20261123210000_fortuna_link_existing_profiles.sql');
 const dispatcher = read('supabase/functions/fortuna-dispatch/index.ts');
 const settlementApiTest = read('scripts/verify-fortuna-owner-settlement-api.mjs');
 const authenticatedE2E = read('scripts/e2e-fortuna-authenticated.mjs');
@@ -37,6 +38,8 @@ assert.match(navigation, /seccionesCompartidas/);
 assert.match(navigation, /'fortuna'/);
 assert.match(navigation, /loadFortunaData/);
 assert.match(adminPanel, /resetFortunaPreviewDrafts/);
+assert.match(adminPanel, /cuevacoin_admin_last_section/);
+assert.match(navigation, /cuevacoin_admin_last_section/);
 assert.match(userPanel, /resetFortunaPreviewDrafts/);
 assert.match(logout, /resetFortunaPreviewDrafts/);
 assert.match(ui, /window\.resetFortunaPreviewDrafts/);
@@ -62,7 +65,11 @@ for (const id of [
   'fortuna-contact-list',
   'fortuna-contact-detail',
   'fortuna-preview-history-list',
-  'fortuna-refresh-btn'
+  'fortuna-refresh-btn',
+  'fortuna-link-profile-dialog',
+  'fortuna-link-profile-form',
+  'fortuna-profile-query',
+  'fortuna-profile-results'
 ]) {
   assert.ok(html.includes('id="' + id + '"'), 'Missing UI element: ' + id);
 }
@@ -91,6 +98,12 @@ assert.match(html, /navigation\.js\?v=166/);
 // The UI performs no direct requests and uses only the authenticated dispatcher module.
 assert.match(ui, /from '\.\/api\.mjs'/);
 assert.match(ui, /createContact\(/);
+assert.match(ui, /searchFortunaProfiles\(/);
+assert.match(ui, /linkFortunaProfileContact\(/);
+assert.match(ui, /newContactNeedsObligation/);
+assert.match(ui, /fortuna-settlement-details/);
+assert.match(html, /fortuna-link-profile-btn/);
+assert.match(html, /fortuna-contact-position \.is-receivable/);
 assert.match(ui, /openObligation\(/);
 assert.match(ui, /listContacts\(/);
 assert.match(ui, /listObligations\(/);
@@ -205,6 +218,13 @@ assert.match(settlementSql, /INSERT INTO fortuna_private\.financial_ledger_entri
 assert.match(dispatcher, /preview_settlement: 'preview_settlement'/);
 assert.match(dispatcher, /receive_cash: 'receive_cash'/);
 assert.match(dispatcher, /pay_contact: 'pay_contact'/);
+assert.match(dispatcher, /search_fortuna_profiles: 'search_fortuna_profiles'/);
+assert.match(dispatcher, /link_fortuna_profile_contact: 'link_fortuna_profile_contact'/);
+assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION api\.search_fortuna_profiles/);
+assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION api\.link_fortuna_profile_contact/);
+assert.match(profileLinkSql, /p\.estado = 'activo'/);
+assert.match(profileLinkSql, /p\.id <> v_actor/);
+assert.match(profileLinkSql, /linked_profile_id/);
 assert.match(dispatcher, /Authorization: authHeader/);
 assert.match(dispatcher, /supabase\.schema\('api'\)\.rpc\(rpc, body\.args\)/);
 assert.doesNotMatch(dispatcher, /SUPABASE_SERVICE_ROLE_KEY/);
