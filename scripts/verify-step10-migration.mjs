@@ -118,7 +118,7 @@ const ledgerManifest = JSON.parse(readFileSync('docs/evidence/revision-6/SUPABAS
 const migrationFiles = readdirSync('supabase/migrations').filter(name => name.length > 18 && [...name.slice(0, 14)].every(ch => ch >= '0' && ch <= '9') && name[14] === '_' && name.endsWith('.sql')).sort();
 assert.equal(ledgerManifest.baseline_ledger_count, 65, 'Recovered LIVE baseline must remain 65 versions');
 assert.equal(ledgerManifest.recovered.length, 58, 'Exactly 58 historical sources must retain provenance hashes');
-assert.equal((ledgerManifest.forward_migrations || []).length, 8, 'Expected seven applied forward migrations plus the pending FORTUNA history migration');
+assert.equal((ledgerManifest.forward_migrations || []).length, 8, 'Expected eight applied forward migrations including the FORTUNA history migration');
 const fortunaForward = (ledgerManifest.forward_migrations || []).find(entry =>
   entry.file === '20261122173537_fortuna_v1_private_ledger_and_owner_api.sql',
 );
@@ -135,8 +135,8 @@ assert.equal(pendingFortunaLink.live_version, '20261123203456');
 assert.equal(pendingFortunaLink.execution_status, 'applied_live');
 assert.equal(
   (ledgerManifest.forward_migrations || []).filter(entry => entry.applied_to_live === false && entry.execution_status === 'pending_review_not_applied').length,
-  1,
-  'Exactly one reviewed FORTUNA history migration remains pending; all previously applied forward migrations stay reconciled to LIVE',
+  0,
+  'All tracked forward migrations must be reconciled to LIVE',
 );
 assert.equal(
   (ledgerManifest.pending_forward_migrations || []).some(entry => entry.file === pendingFortunaLink.file),
@@ -274,15 +274,16 @@ assert.equal((ledgerManifest.pending_forward_migrations || []).some(entry => ent
 console.log('PASS — FORTUNA V169 dependent classification and server-side payroll guards are reconciled to LIVE');
 
 const pendingHistoryMigration = (ledgerManifest.forward_migrations || []).find(entry =>
-  entry.file === '20261123224200_fortuna_cuevacoin_history_migration.sql',
+  entry.file === '20261123233558_fortuna_cuevacoin_history_migration.sql',
 );
-assert.ok(pendingHistoryMigration, 'FORTUNA history migration must be tracked before LIVE application');
-assert.equal(pendingHistoryMigration.applied_to_live, false);
-assert.equal(pendingHistoryMigration.execution_status, 'pending_review_not_applied');
+assert.ok(pendingHistoryMigration, 'FORTUNA history migration must be tracked');
+assert.equal(pendingHistoryMigration.applied_to_live, true);
+assert.equal(pendingHistoryMigration.live_version, '20261123233558');
+assert.equal(pendingHistoryMigration.execution_status, 'applied_live');
 assert.equal(
   (ledgerManifest.pending_forward_migrations || []).filter(entry => entry.file === pendingHistoryMigration.file).length,
-  1,
-  'The history migration must remain explicitly pending until its exact-SHA checks pass',
+  0,
+  'The applied history migration must not remain in the pending list',
 );
 const historyMigrationSql = readFileSync('supabase/migrations/' + pendingHistoryMigration.file, 'utf8');
 assert.match(historyMigrationSql, /fortuna_preview_profile_history_migration/);
@@ -298,7 +299,7 @@ assert.doesNotMatch(
   /(?:DELETE FROM|UPDATE) fortuna_private\.financial_(?:events|ledger_entries|obligations|audit)/i,
   'The migration must preserve FORTUNA immutable financial records and use compensating entries',
 );
-console.log('PASS — FORTUNA legacy history migration is pending, append-only, reconciled and source-audited');
+console.log('PASS — FORTUNA legacy history migration is applied LIVE, append-only, reconciled and source-audited');
 
 
 const recipientForward = (ledgerManifest.forward_migrations || []).find(entry =>
