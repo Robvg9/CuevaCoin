@@ -928,7 +928,13 @@ function inicializarFortuna() {
   });
   root.querySelectorAll('dialog').forEach((dialog) => {
     dialog.addEventListener('click', (event) => {
-      if (event.target === dialog) closeDialog(dialog);
+      if (event.target === dialog) {
+        if (dialog === obligationDialog && state.newContactNeedsObligation) {
+          byId('fortuna-obligation-form-error').textContent = 'Registra la deuda inicial para terminar de crear este contacto.';
+          return;
+        }
+        closeDialog(dialog);
+      }
     });
   });
 
