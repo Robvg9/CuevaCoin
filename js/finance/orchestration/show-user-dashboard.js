@@ -38,7 +38,7 @@ export function showUserDashboard(usuario) {
         document.getElementById('estadisticas-link-item').style.display = 'none';
         document.getElementById('historial-link-item').style.display = '';
         const fortunaItem = document.getElementById('fortuna-link-item');
-        if (fortunaItem) fortunaItem.style.display = 'none';
+        if (fortunaItem) fortunaItem.style.display = '';
 
         document.getElementById('user-inicio').classList.remove('hidden');
         if (typeof window.loadUserInicio === 'function') window.loadUserInicio(usuario);
