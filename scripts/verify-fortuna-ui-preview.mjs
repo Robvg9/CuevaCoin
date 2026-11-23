@@ -28,7 +28,7 @@ const settlementApiTest = read('scripts/verify-fortuna-owner-settlement-api.mjs'
 const authenticatedE2E = read('scripts/e2e-fortuna-authenticated.mjs');
 const authenticatedE2EWorkflow = read('.github/workflows/fortuna-authenticated-e2e.yml');
 
-assert.match(html, /<li id="fortuna-link-item" style="display: none;">[\s\S]*loadSection\('fortuna'\)/);
+assert.match(html, /<li id="fortuna-link-item">[\\s\\S]*loadSection\\('fortuna'\\)/);
 assert.match(adminPanel, /fortuna-link-item/);
 assert.match(adminPanel, /fortunaItem[\s\S]{0,100}style\.display = ''/);
 assert.match(userPanel, /fortuna-link-item/);
@@ -79,7 +79,7 @@ assert.match(html, /ui\.js\?v=164/);
 assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], '164');
 assert.equal(html.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '164');
 assert.equal(app.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '164');
-assert.match(sw, /\/js\/finance\/fortuna\/ui\.js\?v=164/);
+assert.match(sw, /\/js\/finance\/fortuna\/ui\.js\?v=165/);
 assert.match(sw, /\/js\/finance\/fortuna\/preview-domain\.mjs/);
 assert.match(sw, /\/js\/finance\/fortuna\/api\.mjs/);
 
@@ -216,4 +216,4 @@ assert.match(authenticatedE2EWorkflow, /supabase start/);
 assert.match(authenticatedE2EWorkflow, /supabase db reset/);
 assert.match(authenticatedE2EWorkflow, /supabase stop --no-backup/);
 
-console.log('PASS — FORTUNA V164 owner UI and paginated activity history, authenticated API client, local Auth/Edge/PostgREST E2E coverage, owner isolation, exact money and authoritative settlement contracts.');
+console.log('PASS — FORTUNA V165 owner UI and paginated activity history, authenticated API client, local Auth/Edge/PostgREST E2E coverage, owner isolation, exact money and authoritative settlement contracts.');
