@@ -1060,12 +1060,14 @@ function inicializarFortuna() {
       const balanceMinor = BigInt(String(linked.balance_minor ?? '0'));
       setStatus((linked.is_dependent ? 'Usuario vinculado como dependiente de CuevaCoin y contacto de FORTUNA. ' : 'Usuario vinculado solo a FORTUNA; no aparecerá en dependientes ni nómina. ')
         + (balanceMinor > 0n ? 'Revisa y confirma el saldo de CuevaCoin como deuda en CUP.' : 'Puedes registrar una obligación cuando corresponda.'));
-      openNewObligation({ defaults: balanceMinor > 0n ? {
-        direction: 'payable',
-        currency: 'CUP',
-        amount: (balanceMinor / 100n).toString() + ',' + (balanceMinor % 100n).toString().padStart(2, '0'),
-        description: 'Saldo CuevaCoin pendiente de liquidar',
-      } : null });
+      if (linked.is_new_contact && balanceMinor > 0n) {
+        openNewObligation({ defaults: {
+          direction: 'payable',
+          currency: 'CUP',
+          amount: (balanceMinor / 100n).toString() + ',' + (balanceMinor % 100n).toString().padStart(2, '0'),
+          description: 'Saldo CuevaCoin pendiente de liquidar',
+        } });
+      }
     } catch (linkError) {
       button.disabled = false;
       byId('fortuna-profile-search-error').textContent = errorMessage(linkError);
@@ -1162,6 +1164,28 @@ function inicializarFortuna() {
     renderActivity();
     setStatus('Consultando ficha, obligaciones y movimientos del contacto…');
     await Promise.all([loadSelectedObligations(), loadSelectedActivity()]);
+  });
+
+  detail.addEventListener('click', (event) => {
+    if (event.target !== detail) return;
+    if (state.settlementDraft?.pendingCommit) {
+      event.stopPropagation();
+      setStatus('Hay una liquidación sin resultado definitivo. Reintenta la misma confirmación antes de cerrar la ficha.');
+      return;
+    }
+    state.selectedContactId = null;
+    state.selectedObligations = [];
+    state.activityItems = [];
+    state.activityHasMore = false;
+    state.activityCursor = null;
+    state.activityRequest += 1;
+    state.loadingActivity = false;
+    state.settlementDraft = null;
+    state.obligationRequest += 1;
+    detail.close();
+    renderContactDetail();
+    renderHistory();
+    renderActivity();
   });
 
   detail.addEventListener('cancel', (event) => {
