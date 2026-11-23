@@ -799,7 +799,8 @@ function inicializarFortuna() {
           + preview.withdrawal_request_count + ' solicitudes de retiro.',
         preview.reconciliation_count + ' conciliaciones de saldo: '
           + (gaps.length ? gaps.join(', ') : 'ninguna') + '.',
-        'Saldo final a conservar: ' + formatMinorAmount(preview.source_balance_minor) + ' CUP.',
+        'Principal histórico reconstruido: ' + formatMinorAmount(preview.historical_principal_minor) + ' CUP.',
+        'Saldo pendiente actual a conservar: ' + formatMinorAmount(preview.source_balance_minor) + ' CUP.',
         'Las solicitudes rechazadas se conservarán como historial y no cambiarán el saldo.',
         'No se borrará ningún dato original de CuevaCoin.',
         '',
