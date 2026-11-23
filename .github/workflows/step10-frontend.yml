@@ -58,6 +58,7 @@ on:
       - "js/finance/orchestration/show-user-dashboard.js"
       - "js/session/logout.js"
       - "scripts/verify-v149-users-ui.mjs"
+      - "scripts/verify-v158-compact-ui.mjs"
       - "wrangler.jsonc"
       - "js/admin/finance/pagos.js"
       - "js/admin/finance/usuarios.js"
