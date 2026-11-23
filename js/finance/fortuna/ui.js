@@ -717,10 +717,13 @@ function inicializarFortuna() {
           amountLabel = signedAmount(metadata.delta_amount);
         } else if (metadata.source_kind === 'withdrawal_request') {
           eventLabel = 'Solicitud de retiro · ' + String(metadata.original_status || 'sin estado');
+        } else if (metadata.source_kind === 'opening_snapshot_replaced') {
+          eventLabel = 'Saldo inicial sustituido por historial importado';
+          amountLabel = '';
         }
       }
       heading.append(el('strong', '', eventLabel));
-      heading.append(el('span', '', amountLabel + ' ' + item.currency));
+      if (amountLabel) heading.append(el('span', '', amountLabel + ' ' + item.currency));
       row.append(heading);
       const date = new Date(item.occurred_at);
       row.append(el('small', 'fortuna-activity-meta',
