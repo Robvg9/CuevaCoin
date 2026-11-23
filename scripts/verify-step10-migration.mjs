@@ -212,6 +212,8 @@ assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION api\\.search_fortuna_pr
 assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION api\\.link_fortuna_profile_contact/);
 assert.match(profileLinkSql, /p\\.estado = 'activo'/);
 assert.match(profileLinkSql, /id <> v_actor/);
+assert.match(profileLinkSql, /pg_catalog\.strpos\(/);
+assert.doesNotMatch(profileLinkSql, /pg_catalog\.position\(/);
 assert.match(profileLinkSql, /linked_profile_id/);
 assert.match(profileLinkSql, /REVOKE ALL ON FUNCTION api\\.search_fortuna_profiles/);
 assert.match(profileLinkSql, /GRANT EXECUTE ON FUNCTION api\\.search_fortuna_profiles[\\s\\S]*?TO authenticated/);
