@@ -32,6 +32,7 @@ const adminStats = read('js/admin/finance/stats.js');
 const adminCharts = read('js/admin/finance/charts.js');
 const generalHistory = read('js/admin/finance/historial-general.js');
 const withdrawalQueue = read('js/finance/withdrawals/admin-solicitudes-ui.js');
+const legacyApp = read('js/legacy-app.js');
 const employeeRoster = read('js/admin/trabajadoras.js');
 const dispatcher = read('supabase/functions/fortuna-dispatch/index.ts');
 const settlementApiTest = read('scripts/verify-fortuna-owner-settlement-api.mjs');
