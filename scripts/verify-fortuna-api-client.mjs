@@ -47,8 +47,8 @@ function lastCall(operation, args) {
 
 assert.match(createIdempotencyKey(), /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
 
-nextResult = { data: { data: [{ contact_id: 'c1' }] }, error: null };
-assert.deepEqual(await listContacts(), [{ contact_id: 'c1' }]);
+nextResult = { data: { data: [{ contact_id: 'c1', display_name: 'María', currencies: [{ currency: 'CUP', te_debe_minor: '10000', le_debes_minor: '0', position_type: 'receivable' }] }] }, error: null };
+assert.deepEqual(await listContacts(), [{ contact_id: 'c1', display_name: 'María', currencies: [{ currency: 'CUP', te_debe_minor: '10000', le_debes_minor: '0', position_type: 'receivable' }] }]);
 lastCall('list_contacts', {});
 
 const contactKey = 'contact-idempotency-0001';
@@ -66,9 +66,9 @@ lastCall('create_contact', {
   p_idempotency_key: contactKey,
 });
 
-nextResult = { data: { data: [{ obligation_id: 'o1', remaining_minor: '10000' }] }, error: null };
+nextResult = { data: { data: [{ obligation_id: 'o1', contact_id: 'c1', currency: 'CUP', direction: 'receivable', principal_minor: '10000', remaining_minor: '10000', description: 'Préstamo', due_at: null }] }, error: null };
 assert.deepEqual(await listObligations('c1', 'CUP', 'receivable'), [
-  { obligation_id: 'o1', remaining_minor: '10000' },
+  { obligation_id: 'o1', contact_id: 'c1', currency: 'CUP', direction: 'receivable', principal_minor: '10000', remaining_minor: '10000', description: 'Préstamo', due_at: null },
 ]);
 lastCall('list_obligations', {
   p_contact_id: 'c1',
@@ -180,6 +180,23 @@ await assert.rejects(
 await assert.rejects(
   () => listObligations('', null, null),
   (error) => error instanceof FortunaApiError && error.code === 'INVALID_ARGUMENTS',
+);
+
+nextResult = { data: { data: [{ contact_id: 'c2', display_name: 'Bad', currencies: [{ currency: 'CUP', te_debe_minor: '-1', le_debes_minor: '0' }] }] }, error: null };
+await assert.rejects(
+  () => listContacts(),
+  (error) => error instanceof FortunaApiError && error.code === 'INVALID_RESPONSE',
+);
+
+nextError = {
+  context: new Response(JSON.stringify({ error: 'SERVICE_UNAVAILABLE' }), {
+    status: 503,
+    headers: { 'Content-Type': 'application/json' },
+  }),
+};
+await assert.rejects(
+  () => listContacts(),
+  (error) => error instanceof FortunaApiError && error.code === 'SERVICE_UNAVAILABLE' && error.retryable === true,
 );
 
 console.log('PASS — authenticated dispatcher client: caller JWT, allowlisted contact/obligation/settlement operations, exact args, secure idempotency keys, missing-session rejection and HTTP 409 mapping.');
