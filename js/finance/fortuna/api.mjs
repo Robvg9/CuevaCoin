@@ -15,6 +15,7 @@ const ALLOWED_OPERATIONS = new Set([
   'list_activity',
   'search_fortuna_profiles',
   'link_fortuna_profile_contact',
+  'set_fortuna_profile_dependent_role',
   'preview_settlement',
   'receive_cash',
   'pay_contact',
