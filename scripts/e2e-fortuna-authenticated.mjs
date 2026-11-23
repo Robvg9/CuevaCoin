@@ -179,6 +179,56 @@ const ownerAAfterFifo = await dispatch(ownerA.token, 'list_obligations', {
 assert.equal(ownerAAfterFifo.response.status, 200)
 assert.equal(ownerAAfterFifo.body?.data?.length, 1)
 assert.equal(ownerAAfterFifo.body.data[0].remaining_minor, '7500')
+
+const firstActivityPage = await dispatch(ownerA.token, 'list_activity', {
+  p_contact_id: ownerAContactId,
+  p_limit: 1,
+  p_before_occurred_at: null,
+  p_before_event_id: null,
+})
+assert.equal(firstActivityPage.response.status, 200, `Owner A activity history failed: ${JSON.stringify(firstActivityPage.body)}`)
+assert.equal(firstActivityPage.body?.data?.items?.length, 1)
+assert.equal(firstActivityPage.body?.data?.has_more, true)
+const activityCursor = firstActivityPage.body?.data?.next_cursor
+assert.equal(activityCursor?.event_id, firstActivityPage.body.data.items[0].event_id)
+assert.equal(activityCursor?.occurred_at, firstActivityPage.body.data.items[0].occurred_at)
+
+const secondActivityPage = await dispatch(ownerA.token, 'list_activity', {
+  p_contact_id: ownerAContactId,
+  p_limit: 1,
+  p_before_occurred_at: activityCursor.occurred_at,
+  p_before_event_id: activityCursor.event_id,
+})
+assert.equal(secondActivityPage.response.status, 200)
+assert.equal(secondActivityPage.body?.data?.items?.length, 1)
+assert.equal(secondActivityPage.body?.data?.has_more, false)
+assert.equal(secondActivityPage.body?.data?.next_cursor, null)
+const contactActivity = [...firstActivityPage.body.data.items, ...secondActivityPage.body.data.items]
+assert.deepEqual(
+  new Set(contactActivity.map((item) => item.event_type)),
+  new Set(['obligation_opened', 'cash_received']),
+)
+assert.ok(contactActivity.every((item) => item.currency === 'CUP' && item.ledger_entries.length === 1))
+assert.ok(contactActivity.every((item) => typeof item.audit_action === 'string'))
+assert.ok(contactActivity.some((item) => item.ledger_entries[0].description === obligationArgs.p_description))
+
+const ownerBActivity = await dispatch(ownerB.token, 'list_activity', {
+  p_contact_id: ownerBContactId,
+  p_limit: 50,
+  p_before_occurred_at: null,
+  p_before_event_id: null,
+})
+assert.equal(ownerBActivity.response.status, 200)
+assert.deepEqual(ownerBActivity.body?.data, { items: [], has_more: false, next_cursor: null })
+const crossOwnerActivity = await dispatch(ownerB.token, 'list_activity', {
+  p_contact_id: ownerAContactId,
+  p_limit: 50,
+  p_before_occurred_at: null,
+  p_before_event_id: null,
+})
+assert.equal(crossOwnerActivity.response.status, 400)
+assert.equal(crossOwnerActivity.body?.error, 'FORTUNA_OPERATION_REJECTED')
+console.log('PASS — paginated financial history is owner-scoped, cursor-stable, includes ledger lines and audit action, and rejects cross-owner reads')
 console.log('PASS — authenticated FIFO preview/confirm; exact settlement replay returned original event without duplicate balance changes')
 
 // Manual cash-paid settlement.
