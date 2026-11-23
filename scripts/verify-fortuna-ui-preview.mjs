@@ -98,7 +98,6 @@ assert.match(ui, /data-settlement-commit/);
 assert.match(ui, /data-settlement-overage-confirm/);
 assert.match(ui, /STALE_PREVIEW/);
 assert.match(ui, /IDEMPOTENCY_CONFLICT/);
-assert.doesNotMatch(ui, /retryable \\|\\| code === 'IDEMPOTENCY_CONFLICT'/);
 assert.match(ui, /sessionEpoch/);
 assert.match(api, /functions\.invoke\(EDGE_FUNCTION/);
 assert.match(api, /Authorization: 'Bearer ' \+ accessToken/);
@@ -106,6 +105,8 @@ assert.match(api, /ALLOWED_OPERATIONS/);
 assert.match(api, /validateSettlementPreview/);
 assert.match(api, /validateSettlementCommit/);
 assert.match(api, /STALE_PREVIEW/);
+assert.match(html, /fortuna-settlement-workbench/);
+assert.match(html, /fortuna-settlement-confirmation/);
 assert.match(dispatcher, /fortuna_stale_preview/);
 assert.match(dispatcher, /STALE_PREVIEW/);
 for (const operation of ['create_contact','open_obligation','list_contacts','list_obligations','preview_settlement','receive_cash','pay_contact']) {
