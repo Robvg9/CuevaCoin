@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS fortuna_private.financial_profile_migrations (
 );
 
 ALTER TABLE fortuna_private.financial_profile_migrations ENABLE ROW LEVEL SECURITY;
+CREATE UNIQUE INDEX IF NOT EXISTS financial_profile_migrations_contact_uidx
+  ON fortuna_private.financial_profile_migrations (book_id, contact_id);
 REVOKE ALL ON TABLE fortuna_private.financial_profile_migrations FROM PUBLIC, anon, authenticated, service_role;
 
 ALTER TABLE fortuna_private.financial_events
