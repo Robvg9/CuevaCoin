@@ -1,12 +1,20 @@
 -- CuevaCoin — salary batch verification. All writes are rolled back.
 BEGIN;
 DO $test$
-DECLARE v_admin uuid;v_worker uuid;v_second uuid;v_key uuid:=gen_random_uuid();v_payload jsonb;v_first record;v_replay record;v_before numeric;v_after numeric;v_tx_before bigint;v_tx_after bigint;v_error text;
+DECLARE v_admin uuid;v_worker uuid;v_second uuid;v_key uuid:=gen_random_uuid();v_payload jsonb;v_first record;v_replay record;v_before numeric;v_after numeric;v_tx_before bigint;v_tx_after bigint;v_error text;v_is_dependent boolean;
 BEGIN
  SELECT id INTO v_admin FROM public.perfiles WHERE es_admin=true AND estado='activo' ORDER BY id LIMIT 1;
  SELECT id INTO v_worker FROM public.perfiles WHERE es_admin=false AND estado='activo' AND es_dependiente IS TRUE ORDER BY id LIMIT 1;
  IF v_admin IS NULL OR v_worker IS NULL THEN RAISE EXCEPTION 'TEST SETUP: active admin and worker required';END IF;
  PERFORM set_config('request.jwt.claim.sub',v_admin::text,true);
+ -- An ordinary profile owner cannot promote themselves into the payroll roster.
+ UPDATE public.perfiles SET es_dependiente=false WHERE id=v_worker;
+ PERFORM set_config('request.jwt.claim.sub',v_worker::text,true);
+ UPDATE public.perfiles SET es_dependiente=true WHERE id=v_worker;
+ SELECT es_dependiente INTO v_is_dependent FROM public.perfiles WHERE id=v_worker;
+ IF v_is_dependent IS DISTINCT FROM false THEN RAISE EXCEPTION 'FAIL: profile owner self-promoted into dependent payroll role'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',v_admin::text,true);
+ UPDATE public.perfiles SET es_dependiente=true WHERE id=v_worker;
  SELECT saldo INTO v_before FROM public.perfiles WHERE id=v_worker;SELECT count(*) INTO v_tx_before FROM public.transacciones WHERE usuario_id=v_worker;
  v_payload:=jsonb_build_array(jsonb_build_object('usuario_id',v_worker,'monto',1.25,'dias',jsonb_build_array(current_date::text,(current_date-1)::text)));
  SELECT * INTO v_first FROM public.admin_pagar_salarios_individuales(v_payload,v_key);
@@ -58,7 +66,7 @@ BEGIN
   RAISE EXCEPTION 'FAIL: non-dependent rejection changed balance or transaction ledger';
  END IF;
  UPDATE public.perfiles SET es_dependiente=true WHERE id=v_worker;
- RAISE NOTICE 'PASS: salary batch, idempotent replay, mismatch rejection, inactive worker, non-dependent salary/bonus rejection and batch rollback';
+ RAISE NOTICE 'PASS: salary batch, idempotent replay, mismatch rejection, inactive worker, self-promotion rejection, non-dependent salary/bonus rejection and batch rollback';
 END;
 $test$;
 ROLLBACK;
