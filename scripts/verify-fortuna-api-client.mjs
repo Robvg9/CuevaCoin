@@ -395,9 +395,12 @@ await assert.rejects(
 nextResult = { data: { data: [{ profile_id: 'profile-2', username: 'maria', display_name: 'María Pérez' }] }, error: null };
 assert.deepEqual(await searchFortunaProfiles('mar'), [{ profile_id: 'profile-2', username: 'maria', display_name: 'María Pérez' }]);
 lastCall('search_fortuna_profiles', { p_query: 'mar' });
-nextResult = { data: { data: { contact_id: 'contact-linked', display_name: 'María Pérez', username: 'maria', linked_profile_id: 'profile-2' } }, error: null };
+nextResult = { data: { data: { contact_id: 'contact-linked', display_name: 'María Pérez', username: 'maria', linked_profile_id: 'profile-2', is_dependent: false, is_new_contact: true, balance_minor: '0' } }, error: null };
 assert.equal((await linkFortunaProfileContact('profile-2')).contact_id, 'contact-linked');
-lastCall('link_fortuna_profile_contact', { p_profile_id: 'profile-2' });
+lastCall('link_fortuna_profile_contact', { p_profile_id: 'profile-2', p_is_dependent: false });
+nextResult = { data: { data: { contact_id: 'contact-linked', display_name: 'María Pérez', username: 'maria', linked_profile_id: 'profile-2', is_dependent: true, is_new_contact: false, balance_minor: '0' } }, error: null };
+assert.equal((await linkFortunaProfileContact('profile-2', true)).is_dependent, true);
+lastCall('link_fortuna_profile_contact', { p_profile_id: 'profile-2', p_is_dependent: true });
 await assert.rejects(() => searchFortunaProfiles('x'), (error) => error.code === 'INVALID_ARGUMENTS');
 await assert.rejects(() => linkFortunaProfileContact(''), (error) => error.code === 'INVALID_ARGUMENTS');
 
