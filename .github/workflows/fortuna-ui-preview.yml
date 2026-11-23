@@ -1,0 +1,37 @@
+name: FORTUNA UI preview contract
+
+on:
+  # Trusted branch pushes only. Never execute public fork code on a self-hosted runner.
+  push:
+    branches:
+      - "feat/fortuna-ui/**"
+    paths:
+      - "index.html"
+      - "js/finance/fortuna/**"
+      - "js/finance/orchestration/show-admin-panel.js"
+      - "js/finance/orchestration/show-user-dashboard.js"
+      - "service-worker.js"
+      - "scripts/verify-fortuna-ui-preview.mjs"
+      - "docs/fortuna/FORTUNA_UI_PREVIEW_V1.md"
+      - ".github/workflows/fortuna-ui-preview.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fortuna-ui-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify FORTUNA preview boundary
+        run: node scripts/verify-fortuna-ui-preview.mjs
