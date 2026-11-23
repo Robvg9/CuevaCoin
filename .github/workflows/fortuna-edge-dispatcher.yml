@@ -1,7 +1,8 @@
 name: FORTUNA Edge Dispatcher contract
 
 on:
-  # Public-repo safety: self-hosted Windows jobs must not run fork PR code.
+  # Run trusted branch checks on a disposable public GitHub-hosted Linux runner.
+  # No pull_request trigger: public fork code never reaches private self-hosted machines.
   push:
     branches: [main, "feat/**"]
     paths:
@@ -20,16 +21,14 @@ concurrency:
 
 jobs:
   edge-dispatcher-contract:
-    runs-on: [self-hosted, Windows, X64, cuevacoin]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Verify dispatcher rejects missing and malformed user JWTs
+      - name: Verify LIVE dispatcher rejects missing and malformed user JWTs
         run: node scripts/smoke-fortuna-dispatch-auth.mjs
-        shell: cmd
       - name: Verify user-JWT dispatcher security contract
         run: node scripts/verify-fortuna-edge-dispatch.mjs
-        shell: cmd
