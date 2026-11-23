@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 
 const source = await readFile(new URL('../supabase/functions/fortuna-dispatch/index.ts', import.meta.url), 'utf8')
 const docs = await readFile(new URL('../docs/fortuna/edge-dispatcher.md', import.meta.url), 'utf8')
+const smoke = await readFile(new URL('./smoke-fortuna-dispatch-auth.mjs', import.meta.url), 'utf8')
 
 assert.match(source, /createClient\(SUPABASE_URL, SUPABASE_PUBLIC_KEY/)
 assert.match(source, /Deno\.env\.get\('SUPABASE_PUBLISHABLE_KEYS'\)/)
@@ -38,5 +39,11 @@ assert.match(docs, /Hosted authenticated E2E/i)
 assert.match(docs, /OPEN — Hosted/i)
 assert.match(docs, /service-role/i)
 assert.match(docs, /SUPABASE_PUBLISHABLE_KEYS/)
+assert.match(smoke, /functions\\/v1\\/fortuna-dispatch/)
+assert.match(smoke, /apikey:/)
+assert.match(smoke, /response\\.status,[\\s\\S]*401/)
+assert.match(smoke, /AUTH_REQUIRED/)
+assert.doesNotMatch(smoke, /Authorization:/)
+assert.doesNotMatch(smoke, /SERVICE_ROLE|SUPABASE_SECRET/i)
 
 console.log('PASS — FORTUNA dispatcher source, LIVE deployment checkpoint, JWT, RPC allowlist, API/private grants, hosted E2E gate and no-service-role contract')
