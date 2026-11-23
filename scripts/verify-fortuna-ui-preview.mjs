@@ -72,11 +72,11 @@ assert.doesNotMatch(html, /fortuna-obligation-due-date/);
 assert.match(html, /aria-live="polite"/);
 assert.match(html, /Te debe[\s\S]*Le debes/);
 assert.match(html, /CUP[\s\S]*USD[\s\S]*EUR/);
-assert.match(html, /ui\.js\?v=162/);
-assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], '162');
-assert.equal(html.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '162');
-assert.equal(app.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '162');
-assert.match(sw, /\/js\/finance\/fortuna\/ui\.js\?v=162/);
+assert.match(html, /ui\.js\?v=163/);
+assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], '163');
+assert.equal(html.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '163');
+assert.equal(app.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '163');
+assert.match(sw, /\/js\/finance\/fortuna\/ui\.js\?v=163/);
 assert.match(sw, /\/js\/finance\/fortuna\/preview-domain\.mjs/);
 assert.match(sw, /\/js\/finance\/fortuna\/api\.mjs/);
 
@@ -87,10 +87,24 @@ assert.match(ui, /openObligation\(/);
 assert.match(ui, /listContacts\(/);
 assert.match(ui, /listObligations\(/);
 assert.match(ui, /createIdempotencyKey/);
+assert.match(ui, /renderSettlementWorkbench/);
+assert.match(ui, /previewSettlementDraft/);
+assert.match(ui, /confirmSettlementDraft/);
+assert.match(ui, /invalidateSettlementPreview/);
+assert.match(ui, /settlementPreviewRequest/);
+assert.match(ui, /pendingCommit/);
+assert.match(ui, /data-settlement-preview/);
+assert.match(ui, /data-settlement-commit/);
+assert.match(ui, /data-settlement-overage-confirm/);
 assert.match(ui, /sessionEpoch/);
 assert.match(api, /functions\.invoke\(EDGE_FUNCTION/);
 assert.match(api, /Authorization: 'Bearer ' \+ accessToken/);
 assert.match(api, /ALLOWED_OPERATIONS/);
+assert.match(api, /validateSettlementPreview/);
+assert.match(api, /validateSettlementCommit/);
+assert.match(api, /STALE_PREVIEW/);
+assert.match(dispatcher, /fortuna_stale_preview/);
+assert.match(dispatcher, /STALE_PREVIEW/);
 for (const operation of ['create_contact','open_obligation','list_contacts','list_obligations','preview_settlement','receive_cash','pay_contact']) {
   assert.ok(api.includes("'" + operation + "'"), 'Missing allowlisted API operation ' + operation);
 }
@@ -172,4 +186,4 @@ assert.match(settlementApiTest, /FIFO preview proposes oldest-first allocations 
 assert.match(settlementApiTest, /stale preview detects an intervening settlement/);
 assert.match(settlementApiTest, /exact retry replays without duplicates/);
 
-console.log('PASS — FORTUNA V162 owner UI, authenticated API client, persisted contact/obligation flows, session isolation, exact money and authoritative settlement contracts.');
+console.log('PASS — FORTUNA V163 owner UI, authenticated API client, persisted contact/obligation flows, session isolation, exact money and authoritative settlement contracts.');
