@@ -47,7 +47,8 @@ function dateFiltered(query, filters) {
 }
 function transactionQuery(filters) {
     let query = window.supabaseClient.from('transacciones')
-        .select('id,usuario_id,admin_id,contraparte_id,tipo,cantidad,motivo,creado_en,trabajadora:perfiles!transacciones_usuario_id_fkey(nombre, usuario),admin:perfiles!transacciones_admin_id_fkey(nombre, usuario),contraparte:perfiles!transacciones_contraparte_id_fkey(nombre, usuario)')
+        .select('id,usuario_id,admin_id,contraparte_id,tipo,cantidad,motivo,creado_en,trabajadora:perfiles!transacciones_usuario_id_fkey!inner(nombre, usuario, es_dependiente),admin:perfiles!transacciones_admin_id_fkey(nombre, usuario),contraparte:perfiles!transacciones_contraparte_id_fkey(nombre, usuario)')
+        .eq('trabajadora.es_dependiente', true)
         .order('creado_en', { ascending: false })
         .order('id', { ascending: false })
         .limit(HISTORY_PAGE_SIZE);
@@ -97,7 +98,8 @@ async function fetchNextStream(kind, filters) {
         let mirrorTransactions = [];
         if (timestamps.length) {
             const { data: candidates, error: mirrorError } = await window.supabaseClient.from('transacciones')
-                .select('id,tipo,cantidad,motivo,creado_en,trabajadora:perfiles!transacciones_usuario_id_fkey(nombre, usuario),admin:perfiles!transacciones_admin_id_fkey(nombre, usuario),contraparte:perfiles!transacciones_contraparte_id_fkey(nombre, usuario)')
+                .select('id,tipo,cantidad,motivo,creado_en,trabajadora:perfiles!transacciones_usuario_id_fkey!inner(nombre, usuario, es_dependiente),admin:perfiles!transacciones_admin_id_fkey(nombre, usuario),contraparte:perfiles!transacciones_contraparte_id_fkey(nombre, usuario)')
+                .eq('trabajadora.es_dependiente', true)
                 .in('creado_en', timestamps)
                 .limit(1000);
             if (mirrorError) throw mirrorError;

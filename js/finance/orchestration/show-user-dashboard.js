@@ -6,6 +6,22 @@ export function showUserDashboard(usuario) {
         window.ocultarSplashArranque();
         if (typeof window.ocultarCargando === 'function') window.ocultarCargando();
 
+        const migratedScreen = document.getElementById('fortuna-only-screen');
+        if (migratedScreen) migratedScreen.classList.add('hidden');
+
+        // Cuentas Solo FORTUNA conservan su identidad vinculada, pero no
+        // acceden al dashboard, saldo, chat ni operaciones de CuevaCoin.
+        if (usuario.esDependiente !== true) {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('admin-panel').classList.add('hidden');
+            document.getElementById('user-dashboard').classList.add('hidden');
+            document.getElementById('sidebar').classList.add('hidden');
+            document.getElementById('app-topbar').classList.add('hidden');
+            document.getElementById('google-vinculacion-screen').classList.add('hidden');
+            if (migratedScreen) migratedScreen.classList.remove('hidden');
+            return;
+        }
+
         // En módulos ES los identificadores libres NO resuelven a window.*
         // (ReferenceError). Usar siempre window. para bridges del monolito.
         if (typeof window.aplicarColorAcento === 'function') {

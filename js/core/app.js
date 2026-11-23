@@ -65,6 +65,8 @@ export function showLoginScreen() {
     if (topbar) topbar.classList.add('hidden');
     const googleScreen = document.getElementById('google-vinculacion-screen');
     if (googleScreen) googleScreen.classList.add('hidden');
+    const fortunaOnlyScreen = document.getElementById('fortuna-only-screen');
+    if (fortunaOnlyScreen) fortunaOnlyScreen.classList.add('hidden');
     document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
     if (typeof window !== 'undefined' && typeof window.closeSidebar === 'function') {
         window.closeSidebar();
@@ -88,7 +90,7 @@ export async function mostrarVersionApp() {
     const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
     if (els.length === 0) return;
 
-    const VERSION_FALLBACK = 'V.169';
+    const VERSION_FALLBACK = 'V.170';
     const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
 
     try {

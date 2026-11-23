@@ -50,12 +50,21 @@ Deno.serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+    const { data: caller, error: callerError } = await supabaseAdmin
+      .from('perfiles')
+      .select('es_admin, es_dependiente, estado')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (callerError || !caller || caller.es_admin || caller.es_dependiente !== true || caller.estado !== 'activo') {
+      return jsonResponse({ error: 'cuenta_solo_fortuna' }, 403)
+    }
 
     // Búsqueda case-insensitive exacta (no parcial, para no exponer una
     // lista de coincidencias de otros nombres de usuario reales).
     const { data: destinatario, error: destError } = await supabaseAdmin
       .from('perfiles')
-      .select('id, nombre, apellido, usuario, estado')
+      .select('id, nombre, apellido, usuario, estado, es_dependiente')
+      .eq('es_dependiente', true)
       .ilike('usuario', nombreUsuario.trim())
       .maybeSingle()
     if (destError) {

@@ -773,7 +773,8 @@
 
                 const mismaIdentidadYRol = usuarioAnterior
                     && usuarioAnterior.id === usuarioActualizado.id
-                    && usuarioAnterior.esAdmin === usuarioActualizado.esAdmin;
+                    && usuarioAnterior.esAdmin === usuarioActualizado.esAdmin
+                    && usuarioAnterior.esDependiente === usuarioActualizado.esDependiente;
 
                 if (mismaIdentidadYRol) {
                     const topbarUser = document.getElementById('topbar-user');

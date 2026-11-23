@@ -26,7 +26,8 @@ export async function loadAdminSolicitudesCorreo() {
 
     const { data: solicitudes, error } = await client
         .from('solicitudes_cambio_correo')
-        .select('id, correo_actual, correo_nuevo, motivo, creado_en, usuario_id, perfiles!solicitudes_cambio_correo_usuario_id_fkey(nombre, usuario)')
+        .select('id, correo_actual, correo_nuevo, motivo, creado_en, usuario_id, perfiles!solicitudes_cambio_correo_usuario_id_fkey!inner(nombre, usuario, es_dependiente)')
+        .eq('perfiles.es_dependiente', true)
         .eq('estado', 'pendiente')
         .order('creado_en');
     if (error) {

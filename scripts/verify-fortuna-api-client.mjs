@@ -89,6 +89,7 @@ const activityPage = {
     occurred_at: '2026-11-23T18:00:00.000Z',
     reversal_reason: null,
     audit_action: 'cash_received',
+    metadata: {},
     ledger_entries: [{
       obligation_id: 'o1',
       description: 'Préstamo',

@@ -16,6 +16,8 @@ const ALLOWED_OPERATIONS = new Set([
   'search_fortuna_profiles',
   'link_fortuna_profile_contact',
   'set_fortuna_profile_dependent_role',
+  'preview_fortuna_profile_history_migration',
+  'migrate_fortuna_profile_history',
   'preview_settlement',
   'receive_cash',
   'pay_contact',
@@ -144,7 +146,10 @@ export async function listContacts() {
   if (!Array.isArray(result)) throw new FortunaApiError('INVALID_RESPONSE', 'La lista de contactos no es válida.');
   for (const contact of result) {
     if (!contact || typeof contact.contact_id !== 'string' || !contact.contact_id
-      || typeof contact.display_name !== 'string' || !Array.isArray(contact.currencies)) {
+      || typeof contact.display_name !== 'string' || !Array.isArray(contact.currencies)
+      || (contact.linked_profile_id !== undefined && contact.linked_profile_id !== null && typeof contact.linked_profile_id !== 'string')
+      || (contact.is_dependent !== undefined && contact.is_dependent !== null && typeof contact.is_dependent !== 'boolean')
+      || (contact.history_migrated !== undefined && typeof contact.history_migrated !== 'boolean')) {
       throw new FortunaApiError('INVALID_RESPONSE', 'El servidor devolvió un contacto incompleto.');
     }
     for (const position of contact.currencies) {
@@ -193,6 +198,40 @@ export async function listObligations(contactId, currencyCode = null, direction 
   return result;
 }
 
+export async function previewFortunaProfileHistoryMigration(contactId) {
+  if (typeof contactId !== 'string' || !contactId.trim()) {
+    throw new FortunaApiError('INVALID_ARGUMENTS', 'Selecciona un contacto válido.');
+  }
+  const result = await invokeFortuna('preview_fortuna_profile_history_migration', {
+    p_contact_id: contactId,
+  });
+  if (!result || typeof result !== 'object' || typeof result.ready !== 'boolean'
+    || typeof result.transaction_count !== 'number'
+    || typeof result.withdrawal_request_count !== 'number'
+    || typeof result.reconciliation_count !== 'number'
+    || typeof result.source_balance_minor !== 'string'
+    || typeof result.historical_principal_minor !== 'string'
+    || !Array.isArray(result.reconciliation_gaps)) {
+    throw new FortunaApiError('INVALID_RESPONSE', 'La vista previa de migración no es válida.');
+  }
+  return result;
+}
+
+export async function migrateFortunaProfileHistory(contactId) {
+  if (typeof contactId !== 'string' || !contactId.trim()) {
+    throw new FortunaApiError('INVALID_ARGUMENTS', 'Selecciona un contacto válido.');
+  }
+  const result = await invokeFortuna('migrate_fortuna_profile_history', {
+    p_contact_id: contactId,
+  });
+  if (!result || result.success !== true || typeof result.transaction_count !== 'number'
+    || typeof result.withdrawal_request_count !== 'number'
+    || typeof result.source_balance_minor !== 'string') {
+    throw new FortunaApiError('INVALID_RESPONSE', 'El resultado de la migración no es válido.');
+  }
+  return result;
+}
+
 export async function listActivity(contactId, { limit = 50, before = null } = {}) {
   if (typeof contactId !== 'string' || !contactId.trim()
     || !Number.isInteger(limit) || limit < 1 || limit > 100
@@ -208,7 +247,7 @@ export async function listActivity(contactId, { limit = 50, before = null } = {}
     p_before_event_id: before?.event_id ?? null,
   });
   const invalid = () => { throw new FortunaApiError('INVALID_RESPONSE', 'El servidor devolvió un historial incompleto o inválido.'); };
-  const eventTypes = new Set(['obligation_opened', 'cash_received', 'cash_paid', 'compensation', 'reversal', 'adjustment']);
+  const eventTypes = new Set(['obligation_opened', 'cash_received', 'cash_paid', 'compensation', 'reversal', 'adjustment', 'legacy_history']);
   const entryKinds = new Set(['obligation_opened', 'cash_received', 'cash_paid', 'compensation', 'reversal', 'adjustment']);
   if (!result || typeof result !== 'object' || Array.isArray(result)
     || !Array.isArray(result.items) || typeof result.has_more !== 'boolean') invalid();
@@ -222,6 +261,7 @@ export async function listActivity(contactId, { limit = 50, before = null } = {}
       || typeof item.occurred_at !== 'string' || Number.isNaN(Date.parse(item.occurred_at))
       || !(item.reversal_reason === null || typeof item.reversal_reason === 'string')
       || !(item.audit_action === null || typeof item.audit_action === 'string')
+      || !item.metadata || typeof item.metadata !== 'object' || Array.isArray(item.metadata)
       || !Array.isArray(item.ledger_entries)) invalid();
     for (const entry of item.ledger_entries) {
       if (!entry || typeof entry !== 'object' || Array.isArray(entry)

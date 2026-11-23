@@ -1,7 +1,7 @@
 {
   "source": "supabase_migrations.schema_migrations.statements[1]",
   "project_ref": "zqgmjwfvluboiporytcq",
-  "captured_at": "2026-11-22",
+  "captured_at": "2026-11-23",
   "expected_files": [
     "20260801194832_cuevacoin_esquema_inicial.sql",
     "20260801203412_permitir_ver_perfiles_de_admins.sql",
@@ -74,7 +74,8 @@
     "20261123194707_fortuna_owner_activity_history.sql",
     "20261123203456_fortuna_link_existing_profiles.sql",
     "20261123211142_fortuna_profile_balance_initial_obligation.sql",
-    "20261123221127_fortuna_dependent_classification.sql"
+    "20261123221127_fortuna_dependent_classification.sql",
+    "20261123233558_fortuna_cuevacoin_history_migration.sql"
   ],
   "recovered": [
     {
@@ -440,6 +441,14 @@
       "characters": 21083,
       "source": "Verified in Supabase LIVE migration registry on 2026-11-23; applied before V169 PWA rollout.",
       "live_version": "20261123221127"
+    },
+    {
+      "file": "20261123233558_fortuna_cuevacoin_history_migration.sql",
+      "purpose": "Importar de forma idempotente el historial financiero CuevaCoin de perfiles Solo FORTUNA, conciliar saltos de saldo, conservar solicitudes/auditoría/notificaciones y neutralizar el saldo provisional sin editar el ledger append-only.",
+      "applied_to_live": true,
+      "execution_status": "applied_live",
+      "source": "Applied to Supabase LIVE after exact-SHA CI, reversible live-data validation and append-only ledger reconciliation.",
+      "live_version": "20261123233558"
     }
   ],
   "pending_forward_migrations": []

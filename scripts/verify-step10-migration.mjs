@@ -118,7 +118,7 @@ const ledgerManifest = JSON.parse(readFileSync('docs/evidence/revision-6/SUPABAS
 const migrationFiles = readdirSync('supabase/migrations').filter(name => name.length > 18 && [...name.slice(0, 14)].every(ch => ch >= '0' && ch <= '9') && name[14] === '_' && name.endsWith('.sql')).sort();
 assert.equal(ledgerManifest.baseline_ledger_count, 65, 'Recovered LIVE baseline must remain 65 versions');
 assert.equal(ledgerManifest.recovered.length, 58, 'Exactly 58 historical sources must retain provenance hashes');
-assert.equal((ledgerManifest.forward_migrations || []).length, 7, 'Expected seven forward migrations, including the applied FORTUNA V169 dependent-classification migration');
+assert.equal((ledgerManifest.forward_migrations || []).length, 8, 'Expected eight applied forward migrations including the FORTUNA history migration');
 const fortunaForward = (ledgerManifest.forward_migrations || []).find(entry =>
   entry.file === '20261122173537_fortuna_v1_private_ledger_and_owner_api.sql',
 );
@@ -273,6 +273,35 @@ assert.equal(pendingDependentRole.execution_status, 'applied_live');
 assert.equal((ledgerManifest.pending_forward_migrations || []).some(entry => entry.file === pendingDependentRole.file), false);
 console.log('PASS — FORTUNA V169 dependent classification and server-side payroll guards are reconciled to LIVE');
 
+const pendingHistoryMigration = (ledgerManifest.forward_migrations || []).find(entry =>
+  entry.file === '20261123233558_fortuna_cuevacoin_history_migration.sql',
+);
+assert.ok(pendingHistoryMigration, 'FORTUNA history migration must be tracked');
+assert.equal(pendingHistoryMigration.applied_to_live, true);
+assert.equal(pendingHistoryMigration.live_version, '20261123233558');
+assert.equal(pendingHistoryMigration.execution_status, 'applied_live');
+assert.equal(
+  (ledgerManifest.pending_forward_migrations || []).filter(entry => entry.file === pendingHistoryMigration.file).length,
+  0,
+  'The applied history migration must not remain in the pending list',
+);
+const historyMigrationSql = readFileSync('supabase/migrations/' + pendingHistoryMigration.file, 'utf8');
+assert.match(historyMigrationSql, /fortuna_preview_profile_history_migration/);
+assert.match(historyMigrationSql, /fortuna_migrate_profile_history/);
+assert.match(historyMigrationSql, /historical_principal_minor/);
+assert.match(historyMigrationSql, /source_kind', 'balance_reconciliation'/);
+assert.match(historyMigrationSql, /source_kind', 'withdrawal_request'/);
+assert.match(historyMigrationSql, /source_kind', 'opening_snapshot_replaced'/);
+assert.match(historyMigrationSql, /INSERT INTO fortuna_private\.financial_obligations/);
+assert.match(historyMigrationSql, /proteger_saldo_solo_dependientes/);
+assert.doesNotMatch(
+  historyMigrationSql,
+  /(?:DELETE FROM|UPDATE) fortuna_private\.financial_(?:events|ledger_entries|obligations|audit)/i,
+  'The migration must preserve FORTUNA immutable financial records and use compensating entries',
+);
+console.log('PASS — FORTUNA legacy history migration is applied LIVE, append-only, reconciled and source-audited');
+
+
 const recipientForward = (ledgerManifest.forward_migrations || []).find(entry =>
   entry.file === '20261121124522_transfer_recipient_id_privacy_active_admin.sql',
 );
@@ -318,4 +347,4 @@ for (const forward of ledgerManifest.forward_migrations || []) {
   const source = readFileSync('supabase/migrations/' + forward.file, 'utf8');
   assert.ok(source.trim().length > 0, 'Forward migration source must not be empty: ' + forward.file);
 }
-console.log('PASS — all ' + ledgerManifest.baseline_ledger_count + ' LIVE baseline and forward filenames plus ' + (ledgerManifest.forward_migrations || []).length + ' applied forward migration record(s) match; all ' + ledgerManifest.recovered.length + ' recovered SQL files retain ledger SHA-256 provenance');
+console.log('PASS — all ' + ledgerManifest.baseline_ledger_count + ' LIVE baseline and forward filenames plus ' + (ledgerManifest.forward_migrations || []).length + ' tracked forward migration record(s) match; all ' + ledgerManifest.recovered.length + ' recovered SQL files retain ledger SHA-256 provenance');

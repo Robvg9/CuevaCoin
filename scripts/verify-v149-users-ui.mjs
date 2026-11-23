@@ -18,11 +18,11 @@ assert.equal(app.match(/VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], releaseVersion, 'A
 assert.match(index, /usuarios\.js\?v=150/);
 assert.match(index, /historial\.js\?v=150/);
 
-// V148 offline-first behavior remains in the current release.
+// V148+ offline-first behavior remains in the current release.
 assert.match(index, /comprobarActualizacionAutomatica/);
 assert.match(index, /registration\.update\(\)/);
 assert.match(index, /60 \* 60 \* 1000/);
-assert.match(stats, /cuevacoin_admin_stats_v1:/);
+assert.match(stats, /cuevacoin_admin_stats_v2:/);
 assert.match(stats, /pintarResumen\(cached, 'cache'\)/);
 assert.match(stats, /if \(error\) throw error/);
 assert.match(stats, /Sin conexión y sin un resumen anterior guardado/);
@@ -54,6 +54,6 @@ assert.match(index, /#admin-usuarios-seccion \.usuario-card-archivado \.usuario-
 assert.match(index, /#admin-usuarios-seccion \.usuario-card-correo/);
 
 console.log('PASS — PWA release/version/cache assets aligned dynamically');
-console.log('PASS — V148 offline dashboard, local history and automatic PWA update checks preserved');
+console.log('PASS — Offline dashboard, dependent-only finance totals, local history and automatic PWA update checks preserved');
 console.log('PASS — V149 compact user cards preserved in current release with identity, status, balance, email, activity and savings goal');
 console.log('PASS — current release preserves history, balance adjustment, activate/deactivate, archive and restore actions');

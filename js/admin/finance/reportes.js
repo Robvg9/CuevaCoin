@@ -33,7 +33,8 @@ export async function generarReporteDiario() {
     try {
         const { data: transacciones, error } = await window.supabaseClient
             .from('transacciones')
-            .select('cantidad')
+            .select('cantidad, trabajadora:perfiles!transacciones_usuario_id_fkey!inner(es_dependiente)')
+            .eq('trabajadora.es_dependiente', true)
             .gte('creado_en', hoy.toISOString());
         if (error) throw error;
 

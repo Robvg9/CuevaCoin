@@ -19,7 +19,8 @@ function crearAccionSolicitud(label, className, action) {
 export async function loadAdminSolicitudes() {
     const { data: solicitudes, error } = await window.supabaseClient
         .from('solicitudes_retiro')
-        .select('id, cantidad, motivo, creado_en, usuario_id, perfiles!solicitudes_retiro_usuario_id_fkey(nombre, usuario)')
+        .select('id, cantidad, motivo, creado_en, usuario_id, perfiles!solicitudes_retiro_usuario_id_fkey!inner(nombre, usuario, es_dependiente)')
+        .eq('perfiles.es_dependiente', true)
         .eq('estado', 'pendiente')
         .order('creado_en');
     if (error) {

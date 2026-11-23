@@ -22,7 +22,8 @@ export async function loadEstadisticasAdmin(rangoParam) {
 export async function cargarChartPagosPorMes(rango, desde, buckets) {
     const { data, error } = await window.supabaseClient
         .from('transacciones')
-        .select('cantidad, motivo, creado_en')
+        .select('cantidad, motivo, creado_en, trabajadora:perfiles!transacciones_usuario_id_fkey!inner(es_dependiente)')
+        .eq('trabajadora.es_dependiente', true)
         .eq('tipo', 'deposito_admin')
         .gte('creado_en', desde.toISOString());
     if (error) {
@@ -66,7 +67,8 @@ export async function cargarChartPagosPorMes(rango, desde, buckets) {
 export async function cargarChartRetirosPorEstado(desde) {
     const { data, error } = await window.supabaseClient
         .from('solicitudes_retiro')
-        .select('estado')
+        .select('estado, perfil:perfiles!solicitudes_retiro_usuario_id_fkey!inner(es_dependiente)')
+        .eq('perfil.es_dependiente', true)
         .gte('creado_en', desde.toISOString());
     if (error) {
         console.error('Error cargando retiros por estado:', error);
@@ -96,7 +98,8 @@ export async function cargarChartRetirosPorEstado(desde) {
 export async function cargarChartTrabajadorasActivas(desde) {
     const { data, error } = await window.supabaseClient
         .from('transacciones')
-        .select('usuario_id')
+        .select('usuario_id, trabajadora:perfiles!transacciones_usuario_id_fkey!inner(es_dependiente)')
+        .eq('trabajadora.es_dependiente', true)
         .gte('creado_en', desde.toISOString());
     if (error) {
         console.error('Error cargando trabajadoras activas:', error);
@@ -123,6 +126,7 @@ export async function cargarChartTrabajadorasActivas(desde) {
     const { data: perfilesData, error: errorPerfiles } = await window.supabaseClient
         .from('perfiles')
         .select('id, nombre, usuario')
+        .eq('es_dependiente', true)
         .in('id', idsOrdenados);
     if (errorPerfiles) console.error('Error cargando nombres de trabajadoras activas:', errorPerfiles);
     const nombrePorId = {};

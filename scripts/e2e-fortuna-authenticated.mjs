@@ -79,6 +79,16 @@ const ownerAContactId = firstContact.body?.data?.contact_id
 assert.ok(ownerAContactId, 'Owner A create_contact response omitted contact_id.')
 assert.equal(replayContact.body?.data?.contact_id, ownerAContactId, 'Contact replay did not return the original id.')
 
+// A manual FORTUNA contact has no linked CuevaCoin source and must never
+// be treated as a migration candidate.
+const unlinkedHistoryPreview = await dispatch(ownerA.token, 'preview_fortuna_profile_history_migration', {
+  p_contact_id: ownerAContactId,
+})
+assert.equal(unlinkedHistoryPreview.response.status, 400)
+assert.equal(unlinkedHistoryPreview.body?.error, 'FORTUNA_OPERATION_REJECTED')
+assert.equal(unlinkedHistoryPreview.body?.data, undefined, 'An unlinked contact must not leak CuevaCoin profile details through the migration preview.')
+
+
 // Reusing a key with a changed payload must be translated to HTTP 409.
 const conflict = await dispatch(ownerA.token, 'create_contact', {
   ...ownerAContactArgs,
@@ -210,6 +220,7 @@ assert.deepEqual(
 )
 assert.ok(contactActivity.every((item) => item.currency === 'CUP' && item.ledger_entries.length === 1))
 assert.ok(contactActivity.every((item) => typeof item.audit_action === 'string'))
+assert.ok(contactActivity.every((item) => item.metadata && typeof item.metadata === 'object' && !Array.isArray(item.metadata)))
 assert.ok(contactActivity.some((item) => item.ledger_entries[0].description === obligationArgs.p_description))
 
 const ownerBActivity = await dispatch(ownerB.token, 'list_activity', {
