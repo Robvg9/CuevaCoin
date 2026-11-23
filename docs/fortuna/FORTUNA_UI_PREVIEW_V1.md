@@ -1,7 +1,7 @@
 # FORTUNA v1 — Fase 4, pasos 4–5: libro persistente y liquidaciones
 
 **Estado:** Paso 4 y Paso 5 implementados en PR #66 (OPEN/DRAFT). Verificación CI pendiente para el nuevo SHA.
-**PWA:** V163.
+**PWA:** V164.
 **Producción:** no fusionado ni desplegado desde esta rama. No se ejecutaron movimientos financieros reales.
 
 ## Paso 4 — contactos y obligaciones persistentes
@@ -48,8 +48,8 @@ El frontend utiliza el cliente Supabase existente únicamente para obtener el JW
 
 ## PWA y caché
 
-- HTML, versión fallback y Service Worker alineados en V163.
-- El shell precarga ui.js?v=163, preview-domain.mjs y api.mjs.
+- HTML, versión fallback y Service Worker alineados en V164.
+- El shell precarga ui.js?v=164, preview-domain.mjs y api.mjs.
 - Se renueva el nombre de caché del shell para que los dispositivos adopten el módulo de liquidación.
 
 ## Verificación reproducible
@@ -64,9 +64,19 @@ Workflow GitHub-hosted FORTUNA owner UI integration contract:
 - Este E2E usa una pila Supabase desechable de GitHub Actions; aplica migraciones y grants solamente ahí y ejecuta cleanup al terminar. No accede al proyecto Supabase LIVE.
 - La aceptación visual en una sesión autenticada de navegador/dispositivo sigue siendo una comprobación de presentación, no una operación financiera de prueba.
 
+## Fase 5 — historial real de movimientos y auditoría (en implementación)
+
+- Se añade una RPC de solo lectura `api.list_activity` detrás del dispatcher autenticado. La función privada resuelve el libro usando `auth.uid()` y comprueba que el contacto pertenezca a ese libro antes de devolver eventos.
+- La consulta devuelve eventos financieros ordenados por `occurred_at DESC, id DESC`, con cursor compuesto para paginar sin saltos ni duplicados.
+- Cada evento expone tipo, moneda, total exacto, fecha, motivo de reversión cuando corresponda, acción de auditoría y líneas del ledger con descripción e importe.
+- No devuelve `financial_audit.details`, UUID del actor, datos de otro propietario ni acceso directo a tablas privadas.
+- La UI separa las obligaciones abiertas del historial cronológico, muestra importes exactos y permite cargar páginas anteriores.
+- El E2E local añade verificación de cursor, detalle contable, auditoría y rechazo de lecturas cruzadas entre Owner A y Owner B.
+- La migración creada por `supabase migration new fortuna_owner_activity_history` es nueva y pendiente de revisión/merge. No se aplicó a Supabase LIVE.
+- El código de la rama incorpora el mapeo de `fortuna_stale_preview` a HTTP 409. Supabase LIVE sigue ejecutando `fortuna-dispatch v3`; su actualización requiere el gate de despliegue separado.
+
 ## Estado de entrega
 
-- Paso 4: CERRADO por implementación y CI en el SHA b1b93fa816199b61ef040a830da6669ecfc6d70a.
-- Paso 5: CERRADO en implementación, validación de API y E2E autenticado local de los recorridos FIFO/manual, stale-preview y exceso confirmado.
-- Fase 4: CERRADA en alcance de implementación y pruebas automatizadas. PR #66 permanece OPEN/DRAFT como gate independiente de revisión/publicación; no se ha fusionado ni desplegado.
+- Fase 4: implementación y CI sobre libro/liquidaciones cerrados; PR #66 sigue OPEN/DRAFT y no se ha fusionado ni publicado.
+- Fase 5: historial paginado implementado en la rama; requiere CI PASS sobre el SHA final, revisión y aceptación visual antes de considerar cerrado el alcance técnico.
 - No se ejecutó ninguna liquidación real ni se modificaron saldos o movimientos de producción.
