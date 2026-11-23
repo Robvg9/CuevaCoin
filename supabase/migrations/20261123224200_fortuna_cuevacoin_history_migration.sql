@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS fortuna_private.financial_profile_migrations (
 );
 
 ALTER TABLE fortuna_private.financial_profile_migrations ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE fortuna_private.financial_profile_migrations FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE fortuna_private.financial_profile_migrations FROM PUBLIC, anon, authenticated, service_role;
 
 ALTER TABLE fortuna_private.financial_events
   DROP CONSTRAINT IF EXISTS financial_events_event_type_check;
@@ -795,13 +795,13 @@ AS $function$
   SELECT fortuna_private.fortuna_migrate_profile_history($1);
 $function$;
 
-REVOKE ALL ON FUNCTION fortuna_private.fortuna_preview_profile_history_migration(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION fortuna_private.fortuna_preview_profile_history_migration(uuid) FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION fortuna_private.fortuna_preview_profile_history_migration(uuid) TO authenticated;
-REVOKE ALL ON FUNCTION fortuna_private.fortuna_migrate_profile_history(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION fortuna_private.fortuna_migrate_profile_history(uuid) FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION fortuna_private.fortuna_migrate_profile_history(uuid) TO authenticated;
-REVOKE ALL ON FUNCTION api.preview_fortuna_profile_history_migration(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION api.preview_fortuna_profile_history_migration(uuid) FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION api.preview_fortuna_profile_history_migration(uuid) TO authenticated;
-REVOKE ALL ON FUNCTION api.migrate_fortuna_profile_history(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION api.migrate_fortuna_profile_history(uuid) FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION api.migrate_fortuna_profile_history(uuid) TO authenticated;
 
 CREATE OR REPLACE FUNCTION fortuna_private.fortuna_list_activity(
@@ -1283,11 +1283,11 @@ GRANT EXECUTE ON FUNCTION api.migrate_fortuna_profile_history(uuid) TO authentic
 
 -- Defense in depth: no CuevaCoin financial RPC may mutate the balance of a
 -- profile classified as FORTUNA-only, even if a future RPC forgets its own guard.
-CREATE OR REPLACE FUNCTION public.proteger_saldo_solo_dependientes()
+CREATE OR REPLACE FUNCTION fortuna_private.proteger_saldo_solo_dependientes()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = pg_catalog, public
+SET search_path = pg_catalog
 AS $function$
 BEGIN
   IF NEW.saldo IS DISTINCT FROM OLD.saldo
@@ -1302,8 +1302,8 @@ $function$;
 DROP TRIGGER IF EXISTS proteger_saldo_solo_dependientes ON public.perfiles;
 CREATE TRIGGER proteger_saldo_solo_dependientes
 BEFORE UPDATE OF saldo ON public.perfiles
-FOR EACH ROW EXECUTE FUNCTION public.proteger_saldo_solo_dependientes();
+FOR EACH ROW EXECUTE FUNCTION fortuna_private.proteger_saldo_solo_dependientes();
 
-REVOKE ALL ON FUNCTION public.proteger_saldo_solo_dependientes() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION fortuna_private.proteger_saldo_solo_dependientes() FROM PUBLIC, anon, authenticated, service_role;
 
 COMMIT;
