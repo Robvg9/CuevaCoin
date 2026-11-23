@@ -274,4 +274,4 @@ assert.match(authenticatedE2EWorkflow, /supabase start/);
 assert.match(authenticatedE2EWorkflow, /supabase db reset/);
 assert.match(authenticatedE2EWorkflow, /supabase stop --no-backup/);
 
-console.log('PASS — FORTUNA V165 owner UI and paginated activity history, authenticated API client, local Auth/Edge/PostgREST E2E coverage, owner isolation, exact money and authoritative settlement contracts.');
+console.log('PASS — FORTUNA V169 dependent classification, modal contact detail and paginated activity history, authenticated API client, local Auth/Edge/PostgREST E2E coverage, owner isolation, exact money and authoritative settlement contracts.');
