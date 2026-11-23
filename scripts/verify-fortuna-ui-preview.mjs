@@ -106,6 +106,9 @@ assert.match(sw, /event\.request\.mode === 'navigate'[\s\S]*fetch\(event\.reques
 assert.match(html, /service-worker\.js\?v=170', \{ updateViaCache: 'none' \}/);
 assert.match(html, /show-admin-panel\.js\?v=170/);
 assert.match(html, /show-user-dashboard\.js\?v=170/);
+assert.match(html, /legacy-app\.js\?v=170/);
+assert.match(sw, /legacy-app\.js\?v=170/);
+assert.match(legacyApp, /usuarioAnterior\.esDependiente === usuarioActualizado\.esDependiente/);
 assert.match(html, /navigation\.js\?v=170/);
 
 // The UI performs no direct requests and uses only the authenticated dispatcher module.
