@@ -17,12 +17,13 @@ for (const id of ['btn-escanear-qr-transferir', 'btn-mi-qr-transferir', 'btn-bus
 assert.match(index, /transfer-recipient-actions[\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/, 'Transfer actions must use a compact three-column grid');
 assert.match(index, /admin-quick-action/g, 'Admin quick actions must use compact icon-first markup');
 for (const action of ['Pagar salario', 'Dar bono', 'Anuncio', 'Reporte']) assert.ok(index.includes(action), 'Admin action label must remain understandable: ' + action);
-assert.match(index, /VERSION_FALLBACK = 'V\.158'/, 'HTML fallback must identify V158');
-assert.match(app, /VERSION_FALLBACK = 'V\.158'/, 'App fallback must identify V158');
-assert.match(sw, /cuevacoin-shell-v158/, 'Service Worker cache must be versioned to V158');
+const releaseVersion = index.match(/VERSION_FALLBACK = 'V\.(\d+)'/)?.[1];
+assert.ok(releaseVersion, 'HTML must declare a release fallback version');
+assert.equal(app.match(/VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], releaseVersion, 'App fallback must match the current HTML release');
+assert.equal(sw.match(/cuevacoin-shell-v(\d+)/)?.[1], releaseVersion, 'Service Worker cache must match the current HTML release');
 assert.match(index, /:focus-visible/, 'Keyboard/touch focus treatment must remain available');
 assert.match(index, /prefers-reduced-motion/, 'Reduced-motion preference must be respected');
 console.log('PASS — V158 transfer recipient actions are compact, icon-first and accessible');
 console.log('PASS — administrator quick actions retain concise labels and icon-first layout');
-console.log('PASS — HTML, app fallback and PWA cache versions are aligned to V158');
+console.log('PASS — HTML, app fallback and PWA cache versions are dynamically aligned to the current release');
 console.log('PASS — focus-visible and reduced-motion accessibility contracts');
