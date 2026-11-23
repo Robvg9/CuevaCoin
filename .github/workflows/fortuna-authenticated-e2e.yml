@@ -53,6 +53,9 @@ jobs:
           supabase --version
           supabase config validate
 
+      - name: Verify dispatcher security and source contract
+        run: node scripts/verify-fortuna-edge-dispatch.mjs
+
       - name: Start disposable local Supabase stack
         run: |
           supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,logflare,vector,supavisor
