@@ -61,7 +61,7 @@ jobs:
         env:
           FORTUNA_TEST_HOME: ${{ runner.temp }}\fortuna-native-pg-${{ github.run_id }}
           FORTUNA_MIGRATION_SQL_FILE: ${{ github.workspace }}\supabase\migrations\20261122173537_fortuna_v1_private_ledger_and_owner_api.sql
-          FORTUNA_FK_INDEX_MIGRATION_SQL_FILE: ${{ github.workspace }}\supabase\migrations\20261122192417_fortuna_private_fk_covering_indexes.sql
+          FORTUNA_FK_INDEX_MIGRATION_SQL_FILE: ${{ github.workspace }}\supabase\migrations\20261122210505_fortuna_private_fk_covering_indexes.sql
         run: |
           copy /Y scripts\verify-fortuna-production-migration.mjs "%FORTUNA_TEST_HOME%\verify-production-migration.mjs"
           node "%FORTUNA_TEST_HOME%\verify-production-migration.mjs"
