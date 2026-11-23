@@ -12,6 +12,7 @@ import {
   payContact,
   searchFortunaProfiles,
   linkFortunaProfileContact,
+  setFortunaProfileDependentRole,
 } from '../js/finance/fortuna/api.mjs';
 
 const calls = [];
@@ -393,7 +394,7 @@ await assert.rejects(
 );
 
 nextResult = { data: { data: [{ profile_id: 'profile-2', username: 'maria', display_name: 'María Pérez', is_dependent: false }] }, error: null };
-assert.deepEqual(await searchFortunaProfiles('mar'), [{ profile_id: 'profile-2', username: 'maria', display_name: 'María Pérez', is_dependent: false }]);
+assert.deepEqual(await searchFortunaProfiles('mar'), [{ profile_id: 'profile-2', username: 'maria', display_name: 'María Pérez', is_dependent: false, is_fortuna_contact: false }]);
 lastCall('search_fortuna_profiles', { p_query: 'mar' });
 nextResult = { data: { data: { contact_id: 'contact-linked', display_name: 'María Pérez', username: 'maria', linked_profile_id: 'profile-2', is_dependent: false, is_new_contact: true, balance_minor: '0' } }, error: null };
 assert.equal((await linkFortunaProfileContact('profile-2')).contact_id, 'contact-linked');
@@ -401,6 +402,9 @@ lastCall('link_fortuna_profile_contact', { p_profile_id: 'profile-2', p_is_depen
 nextResult = { data: { data: { contact_id: 'contact-linked', display_name: 'María Pérez', username: 'maria', linked_profile_id: 'profile-2', is_dependent: true, is_new_contact: false, balance_minor: '0' } }, error: null };
 assert.equal((await linkFortunaProfileContact('profile-2', true)).is_dependent, true);
 lastCall('link_fortuna_profile_contact', { p_profile_id: 'profile-2', p_is_dependent: true });
+nextResult = { data: { data: { profile_id: 'profile-2', is_dependent: false } }, error: null };
+assert.deepEqual(await setFortunaProfileDependentRole('profile-2', false), { profile_id: 'profile-2', is_dependent: false });
+lastCall('set_fortuna_profile_dependent_role', { p_profile_id: 'profile-2', p_is_dependent: false });
 await assert.rejects(() => searchFortunaProfiles('x'), (error) => error.code === 'INVALID_ARGUMENTS');
 await assert.rejects(() => linkFortunaProfileContact(''), (error) => error.code === 'INVALID_ARGUMENTS');
 
