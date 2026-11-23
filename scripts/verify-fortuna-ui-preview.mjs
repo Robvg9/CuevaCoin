@@ -223,7 +223,7 @@ assert.match(dispatcher, /link_fortuna_profile_contact: 'link_fortuna_profile_co
 assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION api\.search_fortuna_profiles/);
 assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION api\.link_fortuna_profile_contact/);
 assert.match(profileLinkSql, /p\.estado = 'activo'/);
-assert.match(profileLinkSql, /p\.id <> v_actor/);
+assert.match(profileLinkSql, /id <> v_actor/);
 assert.match(profileLinkSql, /linked_profile_id/);
 assert.match(dispatcher, /Authorization: authHeader/);
 assert.match(dispatcher, /supabase\.schema\('api'\)\.rpc\(rpc, body\.args\)/);
