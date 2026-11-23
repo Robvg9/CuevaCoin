@@ -63,6 +63,7 @@ AS $fortuna_search_profiles$
 DECLARE
   v_actor uuid := auth.uid();
   v_query text := pg_catalog.btrim(COALESCE(p_query, ''));
+  v_book_id uuid;
   v_result jsonb;
 BEGIN
   IF v_actor IS NULL THEN
@@ -76,6 +77,7 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'fortuna_owner_required' USING ERRCODE = '42501';
   END IF;
+  v_book_id := fortuna_private.fortuna_get_current_book_id();
   IF pg_catalog.length(v_query) < 2 OR pg_catalog.length(v_query) > 80 THEN
     RAISE EXCEPTION 'fortuna_profile_query_invalid';
   END IF;
@@ -85,7 +87,11 @@ BEGIN
       'profile_id', p.id,
       'username', p.usuario,
       'display_name', COALESCE(NULLIF(pg_catalog.btrim(pg_catalog.concat_ws(' ', p.nombre, p.apellido)), ''), p.usuario),
-      'is_dependent', p.es_dependiente
+      'is_dependent', p.es_dependiente,
+      'is_fortuna_contact', EXISTS (
+        SELECT 1 FROM fortuna_private.financial_contacts AS c
+         WHERE c.book_id = v_book_id AND c.linked_profile_id = p.id
+      )
     )
     ORDER BY pg_catalog.lower(p.usuario), p.id
   ), '[]'::jsonb)
@@ -116,6 +122,72 @@ SET search_path = pg_catalog
 AS $fortuna_api_search_profiles$
   SELECT fortuna_private.fortuna_search_profiles($1);
 $fortuna_api_search_profiles$;
+
+CREATE OR REPLACE FUNCTION fortuna_private.fortuna_set_profile_dependent_role(
+  p_profile_id uuid,
+  p_is_dependent boolean
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fortuna_set_profile_dependent_role$
+DECLARE
+  v_actor uuid := auth.uid();
+BEGIN
+  IF v_actor IS NULL THEN
+    RAISE EXCEPTION 'fortuna_auth_required' USING ERRCODE = '28000';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.perfiles AS owner_profile
+     WHERE owner_profile.id = v_actor
+       AND owner_profile.es_admin IS TRUE
+       AND owner_profile.estado = 'activo'
+  ) THEN
+    RAISE EXCEPTION 'fortuna_owner_required' USING ERRCODE = '42501';
+  END IF;
+  IF p_profile_id IS NULL OR p_profile_id = v_actor OR p_is_dependent IS NULL THEN
+    RAISE EXCEPTION 'fortuna_profile_invalid';
+  END IF;
+
+  PERFORM 1
+    FROM public.perfiles AS target_profile
+   WHERE target_profile.id = p_profile_id
+     AND target_profile.es_admin IS FALSE
+     AND target_profile.estado = 'activo'
+   FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'fortuna_profile_not_found';
+  END IF;
+
+  UPDATE public.perfiles
+     SET es_dependiente = p_is_dependent
+   WHERE id = p_profile_id
+     AND es_admin IS FALSE;
+
+  RETURN pg_catalog.jsonb_build_object(
+    'profile_id', p_profile_id,
+    'is_dependent', p_is_dependent
+  );
+END;
+$fortuna_set_profile_dependent_role$;
+
+CREATE OR REPLACE FUNCTION api.set_fortuna_profile_dependent_role(
+  p_profile_id uuid,
+  p_is_dependent boolean
+)
+RETURNS jsonb
+LANGUAGE sql
+SECURITY INVOKER
+SET search_path = pg_catalog
+AS $fortuna_api_set_profile_dependent_role$
+  SELECT fortuna_private.fortuna_set_profile_dependent_role($1, $2);
+$fortuna_api_set_profile_dependent_role$;
+
+REVOKE ALL ON FUNCTION fortuna_private.fortuna_set_profile_dependent_role(uuid, boolean) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION fortuna_private.fortuna_set_profile_dependent_role(uuid, boolean) TO authenticated;
+REVOKE ALL ON FUNCTION api.set_fortuna_profile_dependent_role(uuid, boolean) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.set_fortuna_profile_dependent_role(uuid, boolean) TO authenticated;
 
 REVOKE ALL ON FUNCTION fortuna_private.fortuna_search_profiles(text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION fortuna_private.fortuna_search_profiles(text) TO authenticated;
