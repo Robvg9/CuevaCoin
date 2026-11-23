@@ -29,8 +29,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: fortuna-authenticated-local-e2e-${{ github.ref }}-${{ github.run_id }}
-  cancel-in-progress: false
+  group: cuevacoin-fortuna-authenticated-local-e2e
+  cancel-in-progress: true
 
 jobs:
   authenticated-local-e2e:
