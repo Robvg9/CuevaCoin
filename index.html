@@ -5789,7 +5789,7 @@
             });
 
             window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/service-worker.js?v=169', { updateViaCache: 'none' }).then(
+                navigator.serviceWorker.register('/service-worker.js?v=170', { updateViaCache: 'none' }).then(
                     function(registration) {
                         console.log('ServiceWorker registration successful');
                         mostrarVersionApp();
@@ -5841,7 +5841,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.169';
+                const VERSION_FALLBACK = 'V.170';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
