@@ -128,6 +128,8 @@ assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION fortuna_private\.fort
 assert.match(dependentRoleSql, /'is_dependent', p\.es_dependiente/);
 assert.match(dependentRoleSql, /p_is_dependent boolean DEFAULT false/);
 assert.match(dependentRoleSql, /SET es_dependiente = p_is_dependent/);
+assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION public\.proteger_columnas_sensibles_perfil/);
+assert.match(dependentRoleSql, /NEW\.es_dependiente := OLD\.es_dependiente/);
 assert.match(dependentRoleSql, /v_target\.es_dependiente IS DISTINCT FROM true/);
 assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION public\.admin_pagar_saldo/);
 assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION public\.admin_pagar_salarios_individuales/);
