@@ -45,6 +45,7 @@ assert.match(userPanel, /resetFortunaPreviewDrafts/);
 assert.match(logout, /resetFortunaPreviewDrafts/);
 assert.match(ui, /window\.resetFortunaPreviewDrafts/);
 assert.match(ui, /window\.loadFortunaData/);
+assert.match(ui, /summary\.currency \+ ': ' \+ formatMinorAmount/);
 assert.match(html, /id="shared-fortuna" class="section hidden fortuna-page" data-fortuna-live="true"/);
 const adminStart = html.indexOf('<div id="admin-panel"');
 const sharedStart = html.indexOf('<div id="shared-fortuna"');
