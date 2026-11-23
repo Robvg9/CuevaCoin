@@ -148,7 +148,8 @@ export async function listContacts() {
     if (!contact || typeof contact.contact_id !== 'string' || !contact.contact_id
       || typeof contact.display_name !== 'string' || !Array.isArray(contact.currencies)
       || (contact.linked_profile_id !== undefined && contact.linked_profile_id !== null && typeof contact.linked_profile_id !== 'string')
-      || (contact.is_dependent !== undefined && contact.is_dependent !== null && typeof contact.is_dependent !== 'boolean')) {
+      || (contact.is_dependent !== undefined && contact.is_dependent !== null && typeof contact.is_dependent !== 'boolean')
+      || (contact.history_migrated !== undefined && typeof contact.history_migrated !== 'boolean')) {
       throw new FortunaApiError('INVALID_RESPONSE', 'El servidor devolvió un contacto incompleto.');
     }
     for (const position of contact.currencies) {
