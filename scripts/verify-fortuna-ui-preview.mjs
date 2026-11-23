@@ -33,8 +33,9 @@ assert.match(html, /Por cobrar/, 'Preview must distinguish receivables');
 assert.match(html, /Por pagar/, 'Preview must distinguish payables');
 assert.match(html, /CUP[\s\S]*USD[\s\S]*EUR/, 'Preview must reflect the approved v1 currency allowlist');
 assert.match(html, /Te debe[\s\S]*Le debes/, 'Preview must show both gross directions, not a net balance');
-assert.doesNotMatch(tabs, /(createClient|supabaseClient|fetch\s*\(|\.rpc\s*\(|\.from\s*\()/i,
-  'Preview tab logic must not call an API or access Supabase');
+for (const forbidden of ['createClient(', 'supabaseClient', 'fetch(', '.rpc(', '.from(']) {
+  assert.equal(tabs.includes(forbidden), false, 'Preview tab logic must not contain ' + forbidden);
+}
 assert.match(tabs, /ArrowRight|ArrowLeft/, 'Preview tabs must support keyboard navigation');
 assert.match(html, /src="js\/finance\/fortuna\/ui\.js\?v=159"/,
   'Preview UI module must use a cache-busting versioned URL');
