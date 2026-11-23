@@ -127,6 +127,11 @@ Deno.serve(async (req: Request) => {
 
     const { data, error } = await supabase.schema('api').rpc(rpc, body.args)
     if (error) {
+      // Return a stable HTTP conflict when a caller reuses an idempotency key
+      // with a different payload. Never expose raw database error details.
+      if (error.code === 'P0001' && error.message === 'fortuna_idempotency_conflict') {
+        return reply({ error: 'IDEMPOTENCY_CONFLICT' }, 409, origin)
+      }
       // The api schema must remain in the hosted PostgREST Exposed Schemas allowlist.
       // If that configuration drifts, fail closed rather than falling back to
       // service_role or routing through a broader public schema.
