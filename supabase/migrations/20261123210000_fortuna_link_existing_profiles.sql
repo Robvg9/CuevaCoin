@@ -1,7 +1,7 @@
 BEGIN;
 
 -- FORTUNA V167: safe lookup/link of existing active CuevaCoin profiles.
--- Exposes only public identity labels; no email, phone, account balance or private profile data.
+-- Exposes only public identity labels; sensitive profile attributes are excluded.
 CREATE OR REPLACE FUNCTION fortuna_private.fortuna_search_profiles(p_query text)
 RETURNS jsonb
 LANGUAGE plpgsql
