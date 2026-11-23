@@ -1,70 +1,70 @@
-# FORTUNA v1 — Paso 4: contactos y obligaciones persistentes
+# FORTUNA v1 — Fase 4, pasos 4–5: libro persistente y liquidaciones
 
-**Estado:** implementación owner-scoped integrada en PR #66; CI PASS sobre SHA `fe8d4f1944aa4076b371d94bc493b145e457965c`.
-**PWA:** V162.
-**Alcance de este paso:** consulta y gestión autenticada de contactos y obligaciones abiertas. La liquidación y el historial de eventos completos son capacidades separadas.
+**Estado:** Paso 4 y Paso 5 implementados en PR #66 (OPEN/DRAFT). Verificación CI pendiente para el nuevo SHA.
+**PWA:** V163.
+**Producción:** no fusionado ni desplegado desde esta rama. No se ejecutaron movimientos financieros reales.
 
-## Experiencia disponible
+## Paso 4 — contactos y obligaciones persistentes
 
-- FORTUNA es una sección compartida para sesiones autenticadas de administrador y trabajador. La propiedad del libro siempre pertenece a la identidad autenticada; un rol de administrador global no concede acceso al libro de otra persona.
-- Resumen por moneda, una ficha por contacto, búsqueda por nombre/teléfono y filtro de moneda.
-- Detalle con obligaciones abiertas, dirección, principal, pendiente, moneda, descripción y vencimiento cuando exista en el modelo.
-- Alta persistente de contacto y apertura persistente de obligación.
-- Los importes se conservan en unidades menores enteras y se muestran por separado como **Te debe** y **Le debes**. No hay neteo automático ni conversión de monedas.
-- La vista «Obligaciones» representa pendientes abiertos del contacto seleccionado; no se presenta como historial completo de eventos.
+- FORTUNA es una sección compartida para sesiones autenticadas. Cada libro pertenece a la identidad autenticada; el rol de administrador no concede acceso al libro de otra persona.
+- Resumen por moneda, ficha por contacto, búsqueda y filtro por CUP/USD/EUR.
+- Alta de contacto y apertura de obligación mediante operaciones allowlisted del Edge dispatcher.
+- El resumen y las obligaciones abiertas se leen desde el servidor. «Obligaciones» no se presenta como historial completo de eventos.
+- Importes enteros en unidades menores (BigInt); «Te debe» y «Le debes» permanecen separados, sin neteo ni conversión automática.
+- Claves idempotentes criptográficas; el formulario conserva exactamente payload y clave durante un reintento de respuesta incierta.
+- Los formularios y datos transitorios se limpian al cambiar de cuenta o cerrar sesión.
 
-## Ruta de datos y seguridad
+## Paso 5 — vista previa y confirmación de liquidaciones
 
-El frontend usa el cliente Supabase existente únicamente para obtener la sesión actual y llamar al Edge dispatcher `fortuna-dispatch`.
+- En la ficha de cada contacto aparece el panel «Registrar liquidación».
+- El propietario selecciona si recibió dinero o pagó dinero, la moneda, el importe y el método FIFO o manual.
+- FIFO y manual se calculan exclusivamente en el servidor. La respuesta incluye obligaciones elegibles, asignaciones por obligación, importes asignados, exceso y dirección del exceso.
+- El cliente valida el esquema y la reconciliación de la respuesta con BigInt; no calcula ni modifica el ledger ni crea el fingerprint.
+- La vista previa queda invalidada cuando cambia cualquier parámetro relevante o se recargan las obligaciones. La confirmación permanece deshabilitada hasta obtener una nueva vista previa.
+- La acción de confirmar es independiente de la acción de previsualizar.
+- Si hay exceso, la interfaz informa la obligación opuesta que se creará y exige una casilla de confirmación explícita antes de enviar.
+- La confirmación envía el fingerprint SHA-256 generado por el servidor. El servidor vuelve a calcular el plan bajo bloqueo; si las obligaciones cambiaron, rechaza la operación como STALE_PREVIEW (HTTP 409). La UI descarta el plan y obliga a generar otro.
+- Un reintento por respuesta incierta conserva el payload completo, el fingerprint y la misma clave idempotente. No se genera otra clave para un envío cuyo resultado no se conoce.
+- Tras éxito, se vuelven a consultar los contactos, saldos y obligaciones desde el servidor.
+- Cambiar de ficha, cerrar la ficha o cerrar sesión queda bloqueado mientras exista una confirmación cuyo resultado no se haya resuelto.
 
-| Acción de la UI | Operación del dispatcher | RPC owner-scoped |
+## Arquitectura y seguridad
+
+El frontend utiliza el cliente Supabase existente únicamente para obtener el JWT vigente y llamar fortuna-dispatch. El dispatcher valida la identidad con Auth y reenvía el mismo JWT a api mediante una allowlist cerrada. Las funciones SQL privadas derivan actor y libro desde auth.uid().
+
+| Acción | Operación | RPC owner-scoped |
 | --- | --- | --- |
-| Cargar contactos y resumen | `list_contacts` | `api.list_contacts` |
-| Crear contacto | `create_contact` | `api.create_contact` |
-| Abrir detalle de obligaciones | `list_obligations` | `api.list_obligations` |
-| Registrar obligación | `open_obligation` | `api.open_obligation` |
+| Cargar contactos | list_contacts | api.list_contacts |
+| Crear contacto | create_contact | api.create_contact |
+| Consultar obligaciones | list_obligations | api.list_obligations |
+| Abrir obligación | open_obligation | api.open_obligation |
+| Vista previa | preview_settlement | api.preview_settlement |
+| Recibir dinero | receive_cash | api.receive_cash |
+| Pagar contacto | pay_contact | api.pay_contact |
 
-- El JWT de la sesión actual se transmite como Bearer al dispatcher; el mismo token se valida con Auth y se reenvía a PostgREST.
-- El dispatcher recibe una operación de una allowlist cerrada; el navegador no envía nombres de tablas, esquemas, SQL, actor ID ni propietario.
-- El frontend no accede directamente a tablas privadas, no usa `service_role`, no crea un segundo cliente privilegiado y no contiene llamadas directas a fetch/RPC.
-- Las funciones privadas derivan el actor de `auth.uid()` y resuelven el libro en el servidor.
-- Las escrituras requieren claves idempotentes generadas con el generador criptográfico del navegador. Ante una respuesta de red incierta, el formulario conserva temporalmente el payload y la misma clave en la pestaña; no dispara reintentos automáticos ni inventa una clave nueva.
-- Los datos transitorios y los formularios se limpian al cambiar de cuenta o cerrar sesión.
+- No existe acceso directo del navegador a tablas privadas, RPC arbitraria, fetch, service_role, almacenamiento local financiero o parámetros de libro/actor suministrados por el cliente.
+- El Service Worker no cachea respuestas del dispatcher ni datos financieros.
+- La fecha de vencimiento se mantiene fuera del formulario hasta contar con una regla inequívoca de zona horaria.
 
-## Validación y consistencia
+## PWA y caché
 
-- Nombre de contacto: 1–120 caracteres; teléfono: hasta 40; notas: hasta 1.000.
-- Obligación: `receivable` o `payable`; CUP/USD/EUR; importe positivo en unidades menores; concepto 1–500 caracteres.
-- `BigInt` para parseo, suma y formato; sin aritmética monetaria de punto flotante.
-- Se rechazan valores fuera del rango `bigint` y respuestas del servidor con importes, monedas o estructuras inválidas.
-- Los totales visibles proceden del modelo agregado por el servidor. El cliente no calcula el pendiente contable de cada obligación ni altera el ledger.
-- La fecha de vencimiento se deja sin captura desde esta interfaz hasta que exista una regla explícita para convertir una fecha local en un instante con zona horaria. No se inventa una hora UTC.
-
-## Ciclo PWA
-
-- HTML, versión fallback y Service Worker alineados en **V162**.
-- El shell precarga `ui.js?v=162`, `preview-domain.mjs` y `api.mjs`.
-- Las consultas financieras siguen siendo de red; el Service Worker no almacena respuestas del dispatcher ni datos del libro.
+- HTML, versión fallback y Service Worker alineados en V163.
+- El shell precarga ui.js?v=163, preview-domain.mjs y api.mjs.
+- Se renueva el nombre de caché del shell para que los dispositivos adopten el módulo de liquidación.
 
 ## Verificación reproducible
 
-En el workflow GitHub-hosted `FORTUNA owner UI integration contract`:
+Workflow GitHub-hosted FORTUNA owner UI integration contract:
+1. node --check de UI, API y dominio monetario.
+2. scripts/verify-fortuna-ui-preview.mjs: navegación owner-only, aislamiento de sesión, seguridad, contrato SQL/Edge, UI de liquidación y V163.
+3. scripts/verify-fortuna-api-client.mjs: JWT Bearer, allowlist y argumentos exactos, validación de preview/commit, FIFO/manual, dirección del exceso, error 409 por fingerprint obsoleto, ausencia de sesión e idempotencia.
+4. scripts/verify-step10-release.mjs: contrato de release.
 
-1. `node --check` de los módulos UI y API.
-2. `scripts/verify-fortuna-ui-preview.mjs`: navegación owner-only, ciclo de sesión, no acceso directo a tablas, precisión monetaria, contratos SQL/Edge y V162.
-3. `scripts/verify-fortuna-api-client.mjs`: JWT Bearer, allowlist y argumentos exactos de las siete operaciones, validación del modelo de lectura, falta de sesión, generación de clave y manejo HTTP 409/503.
-4. `scripts/verify-step10-release.mjs`: regresión del contrato de release.
+Las pruebas de UI/API usan verificaciones de contrato y respuestas simuladas; no crean contactos, obligaciones ni eventos en Supabase LIVE. No sustituyen la aceptación visual en una sesión autenticada.
 
-**Evidencia:** run [45223325032](https://github.com/Robvg9/CuevaCoin/actions/runs/45223325032) SUCCESS sobre el SHA exacto `fe8d4f1944aa4076b371d94bc493b145e457965c`; sintaxis, owner UI, cliente API y Step 10 terminaron correctamente.
+## Estado de entrega
 
-## Límites explícitos de este paso
-
-- No incluye pagos/abonos, asignación FIFO/manual, excesos, compensaciones ni reversiones en la UI.
-- No incluye historial completo de eventos ni paginación de auditoría.
-- El contrato del backend para vista previa y confirmación de liquidación está disponible para el siguiente paso; esta entrega no expone botones de liquidación.
-- La PR continúa Draft y no forma parte de `main`; no se ha fusionado ni desplegado desde esta rama.
-
-
-## Continuidad
-
-**Fase 4 · Paso 4: CERRADO.** La siguiente entrega es el Paso 5: interfaz de vista previa de liquidación, presentación de asignaciones FIFO/manual, exceso explícito y confirmación separada con fingerprint del servidor. El cliente ya contiene el mapeo de los endpoints correspondientes; el Paso 5 construirá el recorrido visual y sus estados de seguridad.
+- Paso 4: CERRADO por implementación y CI en el SHA b1b93fa816199b61ef040a830da6669ecfc6d70a.
+- Paso 5: implementación añadida en la misma PR #66; su cierre formal depende del CI sobre el nuevo SHA.
+- PR #66 permanece OPEN/DRAFT; no se ha fusionado ni desplegado.
+- No se ejecutó ninguna liquidación real ni se modificaron saldos o movimientos de producción.
