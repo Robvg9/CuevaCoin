@@ -70,11 +70,11 @@
     "20261104235424_admin_salary_individual_batch.sql",
     "20261121124522_transfer_recipient_id_privacy_active_admin.sql",
     "20261122173537_fortuna_v1_private_ledger_and_owner_api.sql",
-    "20261122192417_fortuna_private_fk_covering_indexes.sql",
-    "20261123182957_fortuna_owner_activity_history.sql",
-    "20261123210000_fortuna_link_existing_profiles.sql",
-    "20261123223000_fortuna_profile_balance_initial_obligation.sql",
-    "20261124010000_fortuna_dependent_classification.sql"
+    "20261122210505_fortuna_private_fk_covering_indexes.sql",
+    "20261123194707_fortuna_owner_activity_history.sql",
+    "20261123203456_fortuna_link_existing_profiles.sql",
+    "20261123211142_fortuna_profile_balance_initial_obligation.sql",
+    "20261123221127_fortuna_dependent_classification.sql"
   ],
   "recovered": [
     {
@@ -391,7 +391,7 @@
       "live_version": "20261122173537"
     },
     {
-      "file": "20261122192417_fortuna_private_fk_covering_indexes.sql",
+      "file": "20261122210505_fortuna_private_fk_covering_indexes.sql",
       "purpose": "Add 14 B-tree covering indexes for the 15 FORTUNA private-schema foreign-key findings; the financial_audit composite index also covers the book_id prefix.",
       "execution_status": "applied_live_index_catalog_verified",
       "applied_to_live": true,
@@ -409,7 +409,7 @@
       "financial_data_rows_written": 0
     },
     {
-      "file": "20261123182957_fortuna_owner_activity_history.sql",
+      "file": "20261123194707_fortuna_owner_activity_history.sql",
       "purpose": "Read-only owner-scoped FORTUNA activity history with cursor pagination and authenticated API wrapper",
       "live_version": "20261123194707",
       "applied_to_live": true,
@@ -417,7 +417,7 @@
       "source": "Applied to Supabase LIVE project zqgmjwfvluboiporytcq on 2026-11-23; repository SQL is the deployed migration source."
     },
     {
-      "file": "20261123210000_fortuna_link_existing_profiles.sql",
+      "file": "20261123203456_fortuna_link_existing_profiles.sql",
       "purpose": "FORTUNA V167 owner-scoped lookup of active profiles and idempotent linking to the owner's private contact book",
       "execution_status": "applied_live",
       "applied_to_live": true,
@@ -425,7 +425,7 @@
       "live_version": "20261123203456"
     },
     {
-      "file": "20261123223000_fortuna_profile_balance_initial_obligation.sql",
+      "file": "20261123211142_fortuna_profile_balance_initial_obligation.sql",
       "purpose": "Return the active linked CuevaCoin profile's current CUP balance only during the authenticated owner-scoped link action, as a prefilled Fortuna payable obligation",
       "applied_to_live": true,
       "execution_status": "applied_live",
@@ -433,17 +433,13 @@
       "live_version": "20261123211142"
     },
     {
-      "file": "20261124010000_fortuna_dependent_classification.sql",
+      "file": "20261123221127_fortuna_dependent_classification.sql",
       "purpose": "Separate FORTUNA private-ledger contacts from CuevaCoin/BattleCruiser dependents; explicit owner-selected classification and server-side payroll guards",
       "applied_to_live": true,
       "execution_status": "applied_live",
       "characters": 21083,
-      "source": "Applied to Supabase LIVE project zqgmjwfvluboiporytcq on 2026-11-23. Supabase registry contains two entries with this migration name from idempotent repeated application; the migration only adds/updates the dependent classification and replaces guarded RPCs. It creates no contacts, obligations, ledger events, transactions, or balance changes.",
-      "live_version": "20261123221152",
-      "live_versions": [
-        "20261123221127",
-        "20261123221152"
-      ]
+      "source": "Verified in Supabase LIVE migration registry on 2026-11-23; applied before V169 PWA rollout.",
+      "live_version": "20261123221127"
     }
   ],
   "pending_forward_migrations": []
