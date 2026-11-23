@@ -328,14 +328,42 @@ BEGIN
    LIMIT 1;
   IF NOT FOUND THEN RAISE EXCEPTION 'fortuna_profile_migration_opening_event_missing'; END IF;
 
-  -- Replace only the synthetic opening-balance snapshot created by profile linking.
-  -- The source transactions below become the actual ledger history.
-  DELETE FROM fortuna_private.financial_audit
-   WHERE book_id = v_book_id AND event_id = v_opening_event_id;
+  -- Preserve the synthetic opening event because the idempotency ledger
+  -- references it. Remove only its placeholder ledger line and turn it into
+  -- a zero-effect migration marker; never break the original idempotency key.
   DELETE FROM fortuna_private.financial_ledger_entries
    WHERE book_id = v_book_id AND event_id = v_opening_event_id;
-  DELETE FROM fortuna_private.financial_events
+  UPDATE fortuna_private.financial_events
+     SET event_type = 'legacy_history',
+         total_amount_minor = 1,
+         metadata = pg_catalog.jsonb_build_object(
+           'source_system', 'CuevaCoin',
+           'source_kind', 'opening_snapshot_replaced',
+           'source_profile_id', v_profile_id,
+           'replaced_opening_amount_minor', (
+             SELECT a.details->>'amount_minor'
+               FROM fortuna_private.financial_audit a
+              WHERE a.book_id = v_book_id AND a.event_id = v_opening_event_id
+              ORDER BY a.created_at DESC, a.id DESC LIMIT 1
+           ),
+           'affects_balance', false,
+           'explanation', 'Marcador técnico: el saldo inicial sintético fue sustituido por los movimientos históricos originales.'
+         ),
+         occurred_at = (
+           SELECT min(t.creado_en) - interval '2 microseconds'
+             FROM public.transacciones t WHERE t.usuario_id = v_profile_id
+         )
    WHERE book_id = v_book_id AND id = v_opening_event_id;
+  UPDATE fortuna_private.financial_audit
+     SET action = 'cuevacoin_opening_snapshot_replaced',
+         details = details || pg_catalog.jsonb_build_object(
+           'source_system', 'CuevaCoin',
+           'source_profile_id', v_profile_id,
+           'replacement', 'legacy_history',
+           'affects_balance', false
+         )
+   WHERE book_id = v_book_id AND event_id = v_opening_event_id
+     AND action = 'obligation_opened';
 
   FOR v_tx IN
     SELECT t.* FROM public.transacciones t
