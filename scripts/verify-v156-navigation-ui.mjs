@@ -156,4 +156,4 @@ console.log('PASS — V156 header logout placement and responsive styles');
 console.log('PASS — global hamburger badge ignores stale feature-announcement state');
 console.log('PASS — real unread notifications still light the bell and hamburger');
 console.log('PASS — opening notification panel clears all unread records for the active user');
-console.log('PASS — V156 navigation behavior and V158 release/cache version are aligned');
+console.log('PASS — V156 navigation behavior and current release/cache versions are aligned');
