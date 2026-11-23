@@ -143,6 +143,38 @@ await assert.rejects(
   (error) => error instanceof FortunaApiError && error.code === 'INVALID_RESPONSE',
 );
 
+const manualArgs = {
+  ...settlementArgs,
+  mode: 'manual',
+  totalAmountMinor: '2500',
+  requestedAllocations: [{ obligation_id: 'o1', amount_minor: '2500' }],
+};
+const manualPreview = {
+  ...validPreview,
+  mode: 'manual',
+  total_amount_minor: '2500',
+  allocations: [{ obligation_id: 'o1', amount_minor: '2500' }],
+  allocated_minor: '2500',
+  overage_minor: '0',
+  overage_direction: null,
+  preview_fingerprint: 'b'.repeat(64),
+};
+nextResult = { data: { data: { ...validPreview, contact_id: 'another-contact' } }, error: null };
+await assert.rejects(
+  () => previewSettlement(settlementArgs),
+  (error) => error instanceof FortunaApiError && error.code === 'INVALID_RESPONSE',
+);
+nextResult = { data: { data: manualPreview }, error: null };
+assert.equal((await previewSettlement(manualArgs)).mode, 'manual');
+lastCall('preview_settlement', {
+  p_contact_id: 'c1',
+  p_currency_code: 'CUP',
+  p_flow: 'cash_received',
+  p_mode: 'manual',
+  p_total_amount_minor: '2500',
+  p_requested_allocations: [{ obligation_id: 'o1', amount_minor: '2500' }],
+});
+
 const overagePreview = {
   ...validPreview,
   total_amount_minor: '15000',
@@ -179,6 +211,15 @@ const validCommit = {
   allocations: [{ obligation_id: 'o1', amount_minor: '5000' }],
   overage_obligation_id: null,
 };
+await assert.rejects(
+  () => receiveCash({ ...commitArgs, previewFingerprint: 'not-a-fingerprint' }),
+  (error) => error instanceof FortunaApiError && error.code === 'INVALID_ARGUMENTS',
+);
+nextResult = { data: { data: { ...validCommit, total_amount_minor: '6000' } }, error: null };
+await assert.rejects(
+  () => receiveCash(commitArgs),
+  (error) => error instanceof FortunaApiError && error.code === 'INVALID_RESPONSE',
+);
 nextResult = { data: { data: validCommit }, error: null };
 assert.deepEqual(await receiveCash(commitArgs), validCommit);
 lastCall('receive_cash', {
@@ -189,6 +230,32 @@ lastCall('receive_cash', {
   p_requested_allocations: [],
   p_preview_fingerprint: 'a'.repeat(64),
   p_confirm_overage: false,
+  p_idempotency_key: 'settlement-idempotency-01',
+});
+
+const overageCommit = {
+  ...validCommit,
+  event_id: 'e-overage',
+  total_amount_minor: '15000',
+  allocated_minor: '10000',
+  overage_minor: '5000',
+  allocations: [{ obligation_id: 'o1', amount_minor: '10000' }],
+  overage_obligation_id: 'new-obligation',
+};
+nextResult = { data: { data: overageCommit }, error: null };
+assert.deepEqual(await receiveCash({
+  ...commitArgs,
+  totalAmountMinor: '15000',
+  confirmOverage: true,
+}), overageCommit);
+lastCall('receive_cash', {
+  p_contact_id: 'c1',
+  p_currency_code: 'CUP',
+  p_mode: 'fifo',
+  p_total_amount_minor: '15000',
+  p_requested_allocations: [],
+  p_preview_fingerprint: 'a'.repeat(64),
+  p_confirm_overage: true,
   p_idempotency_key: 'settlement-idempotency-01',
 });
 
