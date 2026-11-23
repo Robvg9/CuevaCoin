@@ -221,14 +221,14 @@ assert.doesNotMatch(profileLinkSql, /email|correo|saldo|salario/i, 'Profile sear
 console.log('PASS — FORTUNA V167 profile-link migration is tracked as pending LIVE and restricted to active-profile identity fields');
 
 const profileBalanceSql = readFileSync('supabase/migrations/20261123223000_fortuna_profile_balance_initial_obligation.sql', 'utf8');
-assert.match(profileBalanceSql, /CREATE OR REPLACE FUNCTION fortuna_private\\.fortuna_link_profile_contact/);
-assert.match(profileBalanceSql, /p\\.saldo/);
+assert.match(profileBalanceSql, /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_link_profile_contact/);
+assert.match(profileBalanceSql, /p\.saldo/);
 assert.match(profileBalanceSql, /'balance_minor'/);
-assert.match(profileBalanceSql, /auth\\.uid\\(\\)/);
+assert.match(profileBalanceSql, /auth\.uid\(\)/);
 assert.match(profileBalanceSql, /fortuna_ensure_current_book_id/);
 assert.match(profileBalanceSql, /owner_profile\.es_admin IS TRUE/);
 assert.match(profileBalanceSql, /owner_profile\.estado = 'activo'/);
-assert.doesNotMatch(profileBalanceSql, /UPDATE public\\.perfiles|INSERT INTO public\\.transacciones/i);
+assert.doesNotMatch(profileBalanceSql, /UPDATE public\.perfiles|INSERT INTO public\.transacciones/i);
 const pendingProfileBalance = (ledgerManifest.forward_migrations || []).find(entry => entry.file === '20261123223000_fortuna_profile_balance_initial_obligation.sql');
 assert.ok(pendingProfileBalance, 'FORTUNA V168 linked-balance migration must be tracked');
 assert.equal(pendingProfileBalance.applied_to_live, false, 'FORTUNA V168 linked-balance migration must not be claimed as LIVE');
