@@ -719,11 +719,16 @@ BEGIN
     || COALESCE((
       SELECT pg_catalog.jsonb_agg(pg_catalog.to_jsonb(b) ORDER BY b.creado_en, b.idempotency_key)::text
         FROM public.admin_pagos_salario_idempotencia b
-       WHERE pg_catalog.jsonb_typeof(b.payload) = 'array'
-         AND EXISTS (
-           SELECT 1 FROM pg_catalog.jsonb_array_elements(COALESCE(b.payload, '[]'::jsonb)) item
-            WHERE item->>'usuario_id' = v_profile_id::text
-         )
+       WHERE (
+         CASE WHEN pg_catalog.jsonb_typeof(b.payload) = 'array' THEN
+           EXISTS (
+             SELECT 1 FROM pg_catalog.jsonb_array_elements(b.payload) item
+              WHERE item->>'usuario_id' = v_profile_id::text
+           )
+         ELSE false END
+       )
+       OR COALESCE(b.payload, '{}'::jsonb)::text LIKE '%' || v_profile_id::text || '%'
+       OR COALESCE(b.resultado, '{}'::jsonb)::text LIKE '%' || v_profile_id::text || '%'
     ), '[]')
     || COALESCE((
       SELECT pg_catalog.jsonb_agg(pg_catalog.to_jsonb(t) ORDER BY t.creado_en, t.idempotency_key)::text
