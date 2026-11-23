@@ -429,6 +429,23 @@ BEGIN
     v_actor
   ) RETURNING id INTO v_new_obligation_id;
 
+  INSERT INTO fortuna_private.financial_audit (
+    book_id, event_id, actor_user_id, action, details, created_at
+  ) VALUES (
+    v_book_id, NULL, v_actor, 'cuevacoin_historical_obligation_created',
+    pg_catalog.jsonb_build_object(
+      'source_system', 'CuevaCoin',
+      'source_profile_id', v_profile_id,
+      'new_obligation_id', v_new_obligation_id,
+      'historical_principal_minor', v_principal_minor::text,
+      'remaining_balance_minor', v_source_balance_minor::text,
+      'source_transaction_count', (v_preview->>'transaction_count')::integer,
+      'source_withdrawal_request_count', (v_preview->>'withdrawal_request_count')::integer,
+      'reconciliation_count', (v_preview->>'reconciliation_count')::integer
+    ),
+    now()
+  );
+
   FOR v_tx IN
     SELECT t.* FROM public.transacciones t
      WHERE t.usuario_id = v_profile_id
@@ -654,11 +671,12 @@ BEGIN
          pg_catalog.jsonb_build_object('source_system', 'CuevaCoin', 'source_table', 'public.admin_pagos_salario_idempotencia', 'source_record', pg_catalog.to_jsonb(b)),
          COALESCE(b.completado_en, b.creado_en)
     FROM public.admin_pagos_salario_idempotencia b
-   WHERE (pg_catalog.jsonb_typeof(b.payload) = 'array'
-          AND EXISTS (
-            SELECT 1 FROM pg_catalog.jsonb_array_elements(COALESCE(b.payload, '[]'::jsonb)) item
-             WHERE item->>'usuario_id' = v_profile_id::text
-          ))
+   WHERE CASE WHEN pg_catalog.jsonb_typeof(b.payload) = 'array' THEN
+           EXISTS (
+             SELECT 1 FROM pg_catalog.jsonb_array_elements(b.payload) item
+              WHERE item->>'usuario_id' = v_profile_id::text
+           )
+         ELSE false END
       OR COALESCE(b.payload, '{}'::jsonb)::text LIKE '%' || v_profile_id::text || '%'
       OR COALESCE(b.resultado, '{}'::jsonb)::text LIKE '%' || v_profile_id::text || '%';
 
