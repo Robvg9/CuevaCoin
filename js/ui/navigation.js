@@ -51,6 +51,7 @@ export function loadSection(section) {
 
     const usuarioActual = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual') || 'null');
     const isAdmin = usuarioActual && usuarioActual.esAdmin;
+    if (isAdmin && section === 'auditoria') section = 'historial-general';
     if (isAdmin && typeof section === 'string' && section) {
         sessionStorage.setItem('cuevacoin_admin_last_section', section);
     }
