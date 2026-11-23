@@ -39,6 +39,10 @@ assert.ok(frontendPush.includes('      - "main"'), 'Step 10 frontend verificatio
 assert.ok(sqlSafetyPush.includes('      - "main"'), 'Step 10 SQL safety verification must run on main pushes');
 const frontendRequiredPaths = [
   'index.html',
+  'js/finance/fortuna/**',
+  'js/session/logout.js',
+  'js/ui/navigation.js',
+  'scripts/verify-fortuna-ui-preview.mjs',
   'js/legacy-app.js',
   'js/core/app.js',
   'js/core/utils.js',

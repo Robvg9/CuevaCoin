@@ -3737,6 +3737,137 @@
         }
 </style>
 
+<style id="fortuna-preview-styles">
+        .fortuna-page { display:flex; flex-direction:column; gap:16px; }
+        .fortuna-header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:4px 2px; }
+        .fortuna-header h1 { margin:2px 0 4px; font-size:clamp(25px,5vw,34px); letter-spacing:-.04em; }
+        .fortuna-kicker { color:var(--secondary-color); font-size:11px; font-weight:800; letter-spacing:.12em; }
+        .fortuna-subtitle { opacity:.76; font-size:14px; }
+        .fortuna-preview-badge,.fortuna-menu-tag { display:inline-flex; align-items:center; border:1px solid var(--border-color); border-radius:999px; padding:5px 10px; color:var(--text-primary); background:var(--card-bg); font-size:11px; font-weight:800; white-space:nowrap; }
+        .fortuna-menu-tag { margin-left:6px; padding:2px 7px; font-size:9px; opacity:.8; }
+        .fortuna-safety-notice { display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border:1px solid var(--border-color); border-radius:15px; background:color-mix(in srgb,var(--primary-color) 12%,var(--card-bg)); }
+        .fortuna-safety-icon { font-size:21px; line-height:1.3; }
+        .fortuna-safety-notice strong { display:block; margin-bottom:3px; }
+        .fortuna-safety-notice p { font-size:13px; line-height:1.5; opacity:.82; }
+        .fortuna-summary-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+        .fortuna-summary-card { display:flex; flex-direction:column; gap:4px; min-width:0; padding:16px; border:1px solid var(--border-color); border-radius:15px; background:var(--card-bg); box-shadow:var(--shadow); }
+        .fortuna-summary-label { font-size:12px; font-weight:700; opacity:.75; }
+        .fortuna-summary-card strong { font-size:clamp(22px,4vw,30px); line-height:1.25; font-variant-numeric:tabular-nums; }
+        .fortuna-summary-card small { font-size:11px; opacity:.62; }
+        .fortuna-primary-actions { display:flex; flex-wrap:wrap; gap:9px; }
+        .fortuna-primary-actions .btn { min-height:42px; }
+        .fortuna-primary-actions .btn:disabled { opacity:.5; cursor:not-allowed; filter:saturate(.55); }
+        .fortuna-tabs { display:flex; gap:6px; border-bottom:1px solid var(--border-color); overflow-x:auto; }
+        .fortuna-tab { flex:0 0 auto; border:0; border-bottom:3px solid transparent; padding:11px 15px; background:transparent; color:var(--text-primary); font:inherit; font-size:13px; font-weight:700; opacity:.68; cursor:pointer; }
+        .fortuna-tab.is-active { border-bottom-color:var(--secondary-color); opacity:1; }
+        .fortuna-tab:focus-visible { outline:2px solid var(--secondary-color); outline-offset:2px; border-radius:7px; }
+        .fortuna-tab-panel { min-width:0; }
+        .fortuna-overview-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+        .fortuna-info-card { display:flex; gap:12px; padding:16px; border:1px solid var(--border-color); border-radius:15px; background:var(--card-bg); }
+        .fortuna-info-card h3 { margin:0 0 5px; font-size:15px; }
+        .fortuna-info-card p { font-size:12px; line-height:1.5; opacity:.75; }
+        .fortuna-info-icon { display:grid; place-items:center; flex:0 0 34px; width:34px; height:34px; border-radius:11px; background:color-mix(in srgb,var(--primary-color) 22%,var(--card-bg)); color:var(--text-primary); font-size:19px; font-weight:800; }
+        .fortuna-currency-note { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:13px 15px; border-radius:13px; background:var(--card-bg); border:1px solid var(--border-color); font-size:12px; }
+        .fortuna-currency-note strong { margin-right:5px; }
+        .fortuna-currency-note span { padding:3px 8px; border-radius:7px; background:color-mix(in srgb,var(--primary-color) 20%,var(--card-bg)); font-weight:800; }
+        .fortuna-currency-note small { width:100%; opacity:.65; }
+        .fortuna-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+        .fortuna-panel-heading h2 { font-size:20px; margin-bottom:3px; }
+        .fortuna-panel-heading p { font-size:12px; opacity:.72; }
+        .fortuna-panel-count { font-size:13px; font-weight:800; }
+        .fortuna-disabled-filters { display:flex; flex-wrap:wrap; gap:9px; margin-bottom:14px; }
+        .fortuna-disabled-filters input,.fortuna-disabled-filters select { min-height:42px; min-width:min(100%,210px); flex:1; padding:9px 12px; border:1px solid var(--border-color); border-radius:10px; background:var(--card-bg); color:var(--text-primary); }
+        .fortuna-disabled-filters :disabled { opacity:.55; cursor:not-allowed; }
+        .fortuna-empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-height:190px; padding:24px; border:1px dashed var(--border-color); border-radius:15px; text-align:center; background:var(--card-bg); }
+        .fortuna-empty-state > span { font-size:28px; }
+        .fortuna-empty-state h3 { margin:4px 0 0; font-size:15px; }
+        .fortuna-empty-state p { max-width:530px; font-size:12px; line-height:1.55; opacity:.72; }
+        @media(max-width:720px) {
+            .fortuna-summary-grid { grid-template-columns:1fr 1fr; }
+            .fortuna-summary-card:last-child { grid-column:1 / -1; }
+            .fortuna-overview-grid { grid-template-columns:1fr; }
+            .fortuna-primary-actions .btn { flex:1 1 100%; }
+            .fortuna-header { align-items:center; }
+        }
+        @media(max-width:380px) {
+            .fortuna-summary-grid { grid-template-columns:1fr; }
+            .fortuna-summary-card:last-child { grid-column:auto; }
+            .fortuna-tab { padding-inline:11px; }
+        }
+        .fortuna-local-workbench{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:13px 15px;border:1px solid var(--border-color);border-radius:14px;background:var(--card-bg)}
+        .fortuna-workbench-copy{display:flex;flex-direction:column;gap:2px}
+        .fortuna-workbench-copy strong{font-size:13px}
+        .fortuna-workbench-copy span,.fortuna-session-status{font-size:11px;opacity:.7}
+        .fortuna-session-status{min-height:16px;margin-top:-8px}
+        .fortuna-server-note{display:flex;flex-direction:column;gap:3px;padding:10px 13px;border-left:3px solid var(--secondary-color);border-radius:9px;background:color-mix(in srgb,var(--primary-color) 12%,var(--card-bg));font-size:12px}
+        .fortuna-server-note span{opacity:.75;line-height:1.45}
+        .fortuna-contact-filters{display:grid;grid-template-columns:minmax(0,2fr) minmax(150px,1fr);gap:10px;margin:12px 0}
+        .fortuna-filter-control,.fortuna-form-field{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:12px;font-weight:700}
+        .fortuna-filter-control input,.fortuna-filter-control select,.fortuna-form-field input,.fortuna-form-field select,.fortuna-form-field textarea{width:100%;min-height:42px;padding:10px 12px;border:1px solid var(--border-color);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font:inherit;font-weight:400}
+        .fortuna-form-field textarea{resize:vertical;min-height:82px}
+        .fortuna-form-field b{color:var(--error-color)}
+        .fortuna-form-field small{font-weight:400;opacity:.65}
+        .fortuna-contact-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+        .fortuna-contact-card{display:flex;flex-direction:column;gap:9px;min-width:0;padding:14px;border:1px solid var(--border-color);border-radius:14px;background:var(--card-bg)}
+        .fortuna-contact-card-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+        .fortuna-contact-card h3{font-size:15px;overflow-wrap:anywhere}
+        .fortuna-draft-chip{border:1px dashed var(--border-color);border-radius:999px;padding:3px 7px;font-size:9px;white-space:nowrap;opacity:.8}
+        .fortuna-contact-card small{font-size:11px;opacity:.7;overflow-wrap:anywhere}
+        .fortuna-contact-position{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+        .fortuna-contact-position div{display:flex;flex-direction:column;gap:2px;padding:8px;border-radius:9px;background:color-mix(in srgb,var(--primary-color) 10%,var(--card-bg));min-width:0}
+        .fortuna-contact-position span{font-size:10px;opacity:.7}
+        .fortuna-contact-position strong{font-size:12px;overflow-wrap:anywhere}
+        .fortuna-contact-card button{width:100%;min-height:38px}
+        .fortuna-contact-detail{margin-top:14px;padding:16px;border:1px solid var(--border-color);border-radius:15px;background:var(--card-bg)}
+        .fortuna-activity-list{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+        .fortuna-activity-row{display:flex;flex-direction:column;gap:7px;min-width:0;padding:13px;border:1px solid var(--border-color);border-radius:12px;background:var(--card-bg)}
+        .fortuna-activity-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+        .fortuna-activity-heading strong{font-size:13px;overflow-wrap:anywhere}
+        .fortuna-activity-heading span{font-size:13px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+        .fortuna-activity-meta,.fortuna-activity-audit{font-size:10px;opacity:.68;overflow-wrap:anywhere}
+        .fortuna-activity-audit{text-transform:capitalize}
+        .fortuna-activity-entries{display:flex;flex-direction:column;gap:5px;padding-top:6px;border-top:1px solid var(--border-color)}
+        .fortuna-activity-entry{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;font-size:11px}
+        .fortuna-activity-entry span{min-width:0;overflow-wrap:anywhere}
+        .fortuna-activity-entry strong{white-space:nowrap;font-variant-numeric:tabular-nums}
+        .fortuna-activity-more{width:100%;margin-top:4px}
+        .fortuna-settlement-workbench{display:grid;gap:12px;margin-top:18px;padding:15px;border:1px solid var(--border-color);border-radius:14px;background:color-mix(in srgb,var(--primary-color) 5%,var(--card-bg))}
+        .fortuna-settlement-workbench>h4{font-size:16px;margin:0}
+        .fortuna-settlement-workbench .fortuna-contact-position{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+        .fortuna-settlement-workbench .fortuna-detail-totals{margin:0}
+        .fortuna-settlement-confirmation{display:flex;flex-direction:row;align-items:flex-start;gap:9px}
+        .fortuna-settlement-confirmation input{flex:0 0 auto;width:18px;min-height:18px;margin:1px 0 0;accent-color:var(--secondary-color)}
+        .fortuna-settlement-workbench [disabled]{opacity:.55;cursor:not-allowed}
+        @media(max-width:600px){.fortuna-settlement-workbench .fortuna-contact-position{grid-template-columns:1fr}.fortuna-settlement-workbench .fortuna-detail-totals{grid-template-columns:1fr}}
+        .fortuna-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+        .fortuna-detail-head h3{font-size:18px;overflow-wrap:anywhere}
+        .fortuna-detail-head p,.fortuna-obligation-row p{font-size:12px;opacity:.72}
+        .fortuna-detail-totals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+        .fortuna-detail-total{padding:10px;border-radius:10px;background:color-mix(in srgb,var(--primary-color) 10%,var(--card-bg))}
+        .fortuna-detail-total strong{display:block;font-size:12px}
+        .fortuna-obligation-list{display:grid;gap:8px;margin-top:12px}
+        .fortuna-obligation-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--border-color)}
+        .fortuna-obligation-row strong{display:block;font-size:12px}
+        .fortuna-obligation-row span{font-size:12px;font-weight:800;white-space:nowrap}
+        .fortuna-preview-history-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px;border-bottom:1px solid var(--border-color)}
+        .fortuna-preview-history-row strong{display:block;font-size:12px}
+        .fortuna-preview-history-row small{font-size:11px;opacity:.7}
+        .fortuna-preview-history-row span{font-size:12px;white-space:nowrap;font-weight:700}
+        .fortuna-dialog{width:min(520px,calc(100% - 24px));max-height:min(90dvh,760px);overflow:auto;margin:auto;padding:0;border:1px solid var(--border-color);border-radius:18px;background:var(--card-bg);color:var(--text-primary);box-shadow:0 22px 70px rgba(0,0,0,.3)}
+        .fortuna-dialog::backdrop{background:rgba(10,12,20,.58);backdrop-filter:blur(3px)}
+        .fortuna-dialog form{display:grid;gap:13px;padding:20px}
+        .fortuna-dialog-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+        .fortuna-dialog-heading h2{font-size:21px;margin:2px 0}
+        .fortuna-dialog-close{width:34px;height:34px;border:0;border-radius:9px;background:color-mix(in srgb,var(--primary-color) 16%,var(--card-bg));color:var(--text-primary);cursor:pointer}
+        .fortuna-dialog-note{font-size:12px;line-height:1.5;opacity:.75}
+        .fortuna-field-help{font-size:10px;opacity:.65;margin-top:-9px}
+        .fortuna-form-error{min-height:16px;color:var(--error-color);font-size:12px}
+        .fortuna-dialog-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding-top:4px}
+        .fortuna-dialog-actions .btn{min-height:42px}
+        .fortuna-filter-control input:focus-visible,.fortuna-filter-control select:focus-visible,.fortuna-form-field input:focus-visible,.fortuna-form-field select:focus-visible,.fortuna-form-field textarea:focus-visible{outline:2px solid var(--secondary-color);outline-offset:2px}
+        @media(max-width:720px){.fortuna-contact-list{grid-template-columns:1fr}.fortuna-contact-filters{grid-template-columns:1fr}.fortuna-local-workbench{align-items:stretch}.fortuna-local-workbench .fortuna-primary-actions{width:100%}.fortuna-local-workbench .fortuna-primary-actions .btn{flex:1 1 100%}.fortuna-dialog form{padding:16px}}
+</style>
+
 </head>
 <body>
     <!-- F4 (2026-08-07): splash de arranque, visible por defecto ANTES de
@@ -3861,6 +3992,11 @@
             <li id="historial-general-link-item" style="display:none;">
                 <a role="button" tabindex="0" onclick="loadSection('historial-general')" id="historial-general-link">
                     <i>📚</i> Historial general
+                </a>
+            </li>
+            <li id="fortuna-link-item">
+                <a role="button" tabindex="0" onclick="loadSection('fortuna')" id="fortuna-link">
+                    <i>💼</i> FORTUNA <span class="fortuna-menu-tag">Vista previa</span>
                 </a>
             </li>
             <li style="margin-top: auto; padding-top: 16px; border-top: 2px solid rgba(255,255,255,0.3);">
@@ -4313,7 +4449,142 @@
                     <p id="admin-sugerencias-vacio" class="hidden" style="text-align: center; opacity: 0.8; margin-top: 16px;">Todavía no llegó ninguna sugerencia.</p>
                 </div>
             </div>
+
         </div>
+
+        <!-- FORTUNA v1 — sección compartida; autorización owner-only en servidor. -->
+        <div id="shared-fortuna" class="section hidden fortuna-page" data-fortuna-live="true">
+                <header class="fortuna-header">
+                    <div>
+                        <p class="fortuna-kicker">LIBRO PERSONAL · FORTUNA V1</p>
+                        <h1>FORTUNA</h1>
+                        <p class="fortuna-subtitle">Control de obligaciones personales, por cobrar y por pagar.</p>
+                    </div>
+                    <span class="fortuna-preview-badge">Libro conectado</span>
+                </header>
+                <aside class="fortuna-safety-notice" role="status" aria-live="polite">
+                    <span class="fortuna-safety-icon" aria-hidden="true">🔒</span>
+                    <div>
+                        <strong>Libro personal del propietario autenticado</strong>
+                        <p>Los contactos y obligaciones se consultan y guardan en el servidor mediante operaciones autenticadas. Cada moneda mantiene sus importes brutos por separado.</p>
+                    </div>
+                </aside>
+                <section class="fortuna-summary-grid" aria-label="Resumen del libro">
+                    <article class="fortuna-summary-card">
+                        <span class="fortuna-summary-label">Por cobrar</span>
+                        <strong aria-label="Importes no consultados">—</strong>
+                        <small>Sin datos consultados</small>
+                    </article>
+                    <article class="fortuna-summary-card">
+                        <span class="fortuna-summary-label">Por pagar</span>
+                        <strong aria-label="Importes no consultados">—</strong>
+                        <small>Sin datos consultados</small>
+                    </article>
+                    <article class="fortuna-summary-card">
+                        <span class="fortuna-summary-label">Contactos</span>
+                        <strong aria-label="Cantidad no consultada">—</strong>
+                        <small>Sin datos consultados</small>
+                    </article>
+                </section>
+                <div class="fortuna-local-workbench">
+                    <div class="fortuna-workbench-copy">
+                        <strong>Gestionar tu libro</strong>
+                        <span>Información persistente y privada del propietario autenticado.</span>
+                    </div>
+                    <div class="fortuna-primary-actions" aria-label="Acciones del libro">
+                        <button type="button" id="fortuna-refresh-btn" class="btn btn-secondary">↻ Actualizar</button>
+                        <button type="button" id="fortuna-new-contact-btn" class="btn btn-primary">＋ Nuevo contacto</button>
+                        <button type="button" id="fortuna-new-obligation-btn" class="btn btn-secondary" disabled>＋ Nueva obligación</button>
+                    </div>
+                </div>
+                <p id="fortuna-session-status" class="fortuna-session-status" role="status" aria-live="polite">Abre esta sección para consultar tu libro.</p>
+                <div class="fortuna-tabs" role="tablist" aria-label="Secciones de FORTUNA">
+                    <button type="button" class="fortuna-tab is-active" id="fortuna-tab-overview" role="tab" aria-selected="true" aria-controls="fortuna-panel-overview" data-fortuna-tab="overview">Resumen</button>
+                    <button type="button" class="fortuna-tab" id="fortuna-tab-contacts" role="tab" aria-selected="false" aria-controls="fortuna-panel-contacts" data-fortuna-tab="contacts" tabindex="-1">Contactos</button>
+                    <button type="button" class="fortuna-tab" id="fortuna-tab-history" role="tab" aria-selected="false" aria-controls="fortuna-panel-history" data-fortuna-tab="history" tabindex="-1">Obligaciones</button>
+                </div>
+                <section id="fortuna-panel-overview" class="fortuna-tab-panel" role="tabpanel" aria-labelledby="fortuna-tab-overview" data-fortuna-panel="overview">
+                    <div class="fortuna-overview-grid">
+                        <article class="fortuna-info-card">
+                            <span class="fortuna-info-icon" aria-hidden="true">↗</span>
+                            <div><h3>Te debe</h3><p>Obligaciones abiertas a favor del propietario. Cada moneda conserva su propio total.</p></div>
+                        </article>
+                        <article class="fortuna-info-card">
+                            <span class="fortuna-info-icon" aria-hidden="true">↙</span>
+                            <div><h3>Le debes</h3><p>Obligaciones abiertas a cargo del propietario. Se muestran separadas de lo que te deben.</p></div>
+                        </article>
+                        <article class="fortuna-info-card">
+                            <span class="fortuna-info-icon" aria-hidden="true">⇄</span>
+                            <div><h3>Posiciones mixtas</h3><p>Una ficha por contacto, con «Te debe» y «Le debes» visibles por separado. Nunca se netean automáticamente.</p></div>
+                        </article>
+                    </div>
+                    <div class="fortuna-currency-note">
+                        <strong>Monedas de FORTUNA v1</strong>
+                        <span>CUP</span><span>USD</span><span>EUR</span>
+                        <small>Dos decimales · sin conversión automática</small>
+                    </div>
+                </section>
+                <section id="fortuna-panel-contacts" class="fortuna-tab-panel" role="tabpanel" aria-labelledby="fortuna-tab-contacts" data-fortuna-panel="contacts" hidden>
+                    <div class="fortuna-panel-heading">
+                        <div><h2>Contactos</h2><p>Una ficha por persona, con sus obligaciones agrupadas por moneda y sentido.</p></div>
+                        <span id="fortuna-draft-contact-count" class="fortuna-panel-count">0 contactos</span>
+                    </div>
+                    <div class="fortuna-server-note">
+                        <strong>Datos del libro</strong>
+                        <span>Los contactos se obtienen del libro del propietario autenticado.</span>
+                    </div>
+                    <div class="fortuna-contact-filters">
+                        <label class="fortuna-filter-control"><span>Buscar</span><input type="search" id="fortuna-contact-search" placeholder="Nombre o teléfono..." autocomplete="off"></label>
+                        <label class="fortuna-filter-control"><span>Moneda con movimientos</span><select id="fortuna-contact-currency-filter"><option value="">Todas</option><option value="CUP">CUP</option><option value="USD">USD</option><option value="EUR">EUR</option></select></label>
+                    </div>
+                    <div id="fortuna-contact-list" class="fortuna-contact-list" role="list" aria-label="Contactos de tu libro">
+                        <div class="fortuna-empty-state"><span aria-hidden="true">👤</span><h3>No hay borradores todavía</h3><p>Usa «Nuevo contacto» para probar el formulario sin guardar datos reales.</p></div>
+                    </div>
+                    <section id="fortuna-contact-detail" class="fortuna-contact-detail" aria-label="Detalle del contacto" hidden></section>
+                </section>
+                <section id="fortuna-panel-history" class="fortuna-tab-panel" role="tabpanel" aria-labelledby="fortuna-tab-history" data-fortuna-panel="history" hidden>
+                    <div class="fortuna-panel-heading">
+                        <div><h2>Obligaciones abiertas</h2><p>Detalle de pendientes del contacto seleccionado. No representa un historial completo de eventos.</p></div>
+                    </div>
+                    <div class="fortuna-server-note"><strong>Obligaciones pendientes</strong><span>Esta vista refleja obligaciones abiertas devueltas por el servidor para el contacto seleccionado.</span></div>
+                    <div id="fortuna-preview-history-list" class="fortuna-preview-history-list"><div class="fortuna-empty-state"><span aria-hidden="true">📚</span><h3>Selecciona un contacto</h3><p>Consulta sus obligaciones abiertas desde la ficha.</p></div></div>
+                    <div class="fortuna-panel-heading" style="margin-top:22px"><div><h2>Movimientos y auditoría</h2><p>Eventos financieros registrados por el servidor, ordenados del más reciente al más antiguo.</p></div></div>
+                    <div class="fortuna-server-note"><strong>Historial del libro</strong><span>Solo muestra eventos del contacto dentro del libro del propietario autenticado. Los detalles de auditoría internos no se exponen.</span></div>
+                    <div id="fortuna-activity-list" class="fortuna-activity-list" aria-live="polite"><div class="fortuna-empty-state"><span aria-hidden="true">🧾</span><h3>Selecciona un contacto</h3><p>Consulta sus movimientos financieros desde la ficha.</p></div></div>
+                </section>
+
+                <dialog id="fortuna-contact-dialog" class="fortuna-dialog" aria-labelledby="fortuna-contact-dialog-title">
+                    <form id="fortuna-contact-form" novalidate>
+                        <div class="fortuna-dialog-heading">
+                            <div><p class="fortuna-kicker">LIBRO PERSONAL</p><h2 id="fortuna-contact-dialog-title">Nuevo contacto</h2></div>
+                            <button type="button" class="fortuna-dialog-close" data-close-dialog="fortuna-contact-dialog" aria-label="Cerrar">✕</button>
+                        </div>
+                        <p class="fortuna-dialog-note">El contacto se guardará en tu libro privado. El servidor valida tu identidad y la propiedad del libro.</p>
+                        <label class="fortuna-form-field"><span>Nombre o descripción <b>*</b></span><input id="fortuna-contact-name" type="text" maxlength="120" autocomplete="off" required placeholder="Ej. María Rodríguez"></label>
+                        <label class="fortuna-form-field"><span>Teléfono <small>Opcional</small></span><input id="fortuna-contact-phone" type="tel" maxlength="40" autocomplete="off" placeholder="Número de contacto"></label>
+                        <label class="fortuna-form-field"><span>Notas <small>Opcional</small></span><textarea id="fortuna-contact-notes" rows="3" maxlength="1000" placeholder="Contexto útil..."></textarea></label>
+                        <p id="fortuna-contact-form-error" class="fortuna-form-error" role="alert"></p>
+                        <div class="fortuna-dialog-actions"><button type="button" class="btn btn-secondary" data-close-dialog="fortuna-contact-dialog">Cancelar</button><button type="submit" class="btn btn-primary">Guardar contacto</button></div>
+                    </form>
+                </dialog>
+                <dialog id="fortuna-obligation-dialog" class="fortuna-dialog" aria-labelledby="fortuna-obligation-dialog-title">
+                    <form id="fortuna-obligation-form" novalidate>
+                        <div class="fortuna-dialog-heading">
+                            <div><p class="fortuna-kicker">LIBRO PERSONAL</p><h2 id="fortuna-obligation-dialog-title">Nueva obligación</h2></div>
+                            <button type="button" class="fortuna-dialog-close" data-close-dialog="fortuna-obligation-dialog" aria-label="Cerrar">✕</button>
+                        </div>
+                        <p id="fortuna-obligation-contact" class="fortuna-dialog-note"></p>
+                        <label class="fortuna-form-field"><span>Dirección <b>*</b></span><select id="fortuna-obligation-direction"><option value="receivable">Te deben · Por cobrar</option><option value="payable">Tú debes · Por pagar</option></select></label>
+                        <label class="fortuna-form-field"><span>Moneda <b>*</b></span><select id="fortuna-obligation-currency"><option value="CUP">CUP</option><option value="USD">USD</option><option value="EUR">EUR</option></select></label>
+                        <label class="fortuna-form-field"><span>Importe <b>*</b></span><input id="fortuna-obligation-amount" type="text" inputmode="decimal" maxlength="24" autocomplete="off" placeholder="Ej. 1250,50" aria-describedby="fortuna-amount-help"></label>
+                        <small id="fortuna-amount-help" class="fortuna-field-help">Hasta dos decimales. Usa coma o punto; sin separadores de miles.</small>
+                        <label class="fortuna-form-field"><span>Concepto <b>*</b></span><textarea id="fortuna-obligation-description" rows="3" maxlength="500" placeholder="Describe la obligación..."></textarea></label>
+                         
+                        <p id="fortuna-obligation-form-error" class="fortuna-form-error" role="alert"></p>
+                        <div class="fortuna-dialog-actions"><button type="button" class="btn btn-secondary" data-close-dialog="fortuna-obligation-dialog">Cancelar</button><button type="submit" class="btn btn-primary">Guardar obligación</button></div>
+                    </form>
+                </dialog>
+            </div>
 
         <!-- User Dashboard -->
         <div id="user-dashboard" class="hidden">
@@ -5492,7 +5763,7 @@
             });
 
             window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/service-worker.js').then(
+                navigator.serviceWorker.register('/service-worker.js?v=166', { updateViaCache: 'none' }).then(
                     function(registration) {
                         console.log('ServiceWorker registration successful');
                         mostrarVersionApp();
@@ -5544,7 +5815,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.158';
+                const VERSION_FALLBACK = 'V.166';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -5836,7 +6107,7 @@
     <script type="module" src="js/ui/sound.js"></script>
     <script type="module" src="js/ui/push-helpers.js"></script>
     <script type="module" src="js/ui/theme.js"></script>
-    <script type="module" src="js/ui/navigation.js?v=155"></script>
+    <script type="module" src="js/ui/navigation.js?v=166"></script>
     <!-- Fase 2 / Oleada 3: perfil, notif panel, push, google UI -->
     <script type="module" src="js/profile/profile-ui.js"></script>
     <script type="module" src="js/profile/view-from-chat.js"></script>
@@ -5916,8 +6187,8 @@
     <script type="module" src="js/admin/finance/auditoria.js?v=154"></script>
     <script type="module" src="js/admin/finance/solicitudes-realtime.js"></script>
     <!-- Fase 3 / Oleada 9 — orquestación (última) -->
-    <script type="module" src="js/finance/orchestration/show-admin-panel.js?v=155"></script>
-    <script type="module" src="js/finance/orchestration/show-user-dashboard.js?v=155"></script>
+    <script type="module" src="js/finance/orchestration/show-admin-panel.js?v=166"></script>
+    <script type="module" src="js/finance/orchestration/show-user-dashboard.js?v=166"></script>
     <script type="module" src="js/finance/orchestration/procesar-sesion.js?v=143"></script>
     <!-- Fase 4 — helpers residuales seguros (chat DOM, stats range, auditoría categoría) -->
     <script type="module" src="js/chat/chat-dom.js"></script>
@@ -5930,6 +6201,7 @@
     <!-- Fase 6 — Enter en inputs de chat (delega a send* modulares) -->
     <script type="module" src="js/chat/chat-enter-keys.js"></script>
     <!-- Lógica restante del monolito (diferida: corre DESPUÉS de los módulos anteriores) -->
+    <script type="module" src="js/finance/fortuna/ui.js?v=166"></script>
     <script defer src="js/legacy-app.js"></script>
 
 <script>

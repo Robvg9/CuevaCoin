@@ -11,6 +11,9 @@ on:
       - "scripts/e2e-fortuna-authenticated.mjs"
       - "scripts/verify-fortuna-edge-dispatch.mjs"
       - ".github/workflows/fortuna-authenticated-e2e.yml"
+      - "scripts/verify-fortuna-ui-preview.mjs"
+      - "docs/fortuna/FORTUNA_UI_PREVIEW_V1.md"
+      - ".github/workflows/fortuna-ui-preview.yml"
   push:
     branches: [main, "feat/**", "fix/**"]
     paths:

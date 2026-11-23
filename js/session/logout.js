@@ -58,6 +58,7 @@ export async function logout() {
     // lado local igual, para que la próxima apertura pida login de
     // nuevo en vez de reusar una sesión vieja.
     try {
+        if (typeof window.resetFortunaPreviewDrafts === 'function') window.resetFortunaPreviewDrafts();
         await window.supabaseClient.auth.signOut();
     } catch (err) {
         console.error('signOut falló (probablemente sin conexión), se limpia la sesión local igual:', err);

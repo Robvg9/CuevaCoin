@@ -21,6 +21,9 @@ on:
 
       - "scripts/verify-transfer-recipient-security.mjs"
       - "index.html"
+      - "js/finance/fortuna/**"
+      - "js/ui/navigation.js"
+      - "scripts/verify-fortuna-ui-preview.mjs"
       - "js/legacy-app.js"
       - "js/core/app.js"
       - "js/core/utils.js"
@@ -53,6 +56,7 @@ on:
       - "js/admin/finance/stats.js"
       - "js/finance/orchestration/show-admin-panel.js"
       - "js/finance/orchestration/show-user-dashboard.js"
+      - "js/session/logout.js"
       - "scripts/verify-v149-users-ui.mjs"
       - "wrangler.jsonc"
       - "js/admin/finance/pagos.js"

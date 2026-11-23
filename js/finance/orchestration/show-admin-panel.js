@@ -2,6 +2,7 @@
 
 export function showAdminPanel(admin) {
     try {
+        if (typeof window.resetFortunaPreviewDrafts === 'function') window.resetFortunaPreviewDrafts();
         window.ocultarSplashArranque();
         if (typeof window.ocultarCargando === 'function') window.ocultarCargando();
 
@@ -35,6 +36,8 @@ export function showAdminPanel(admin) {
         document.getElementById('anuncios-link-item').style.display = '';
         document.getElementById('estadisticas-link-item').style.display = '';
         document.getElementById('historial-link-item').style.display = 'none';
+        const fortunaItem = document.getElementById('fortuna-link-item');
+        if (fortunaItem) fortunaItem.style.display = '';
 
         if (typeof window.loadSection === 'function') window.loadSection('inicio');
         if (typeof window.loadAdminStats === 'function') window.loadAdminStats();

@@ -9,6 +9,7 @@ const RPC_BY_OPERATION = {
   open_obligation: 'open_obligation',
   list_contacts: 'list_contacts',
   list_obligations: 'list_obligations',
+  list_activity: 'list_activity',
   preview_settlement: 'preview_settlement',
   receive_cash: 'receive_cash',
   pay_contact: 'pay_contact',
@@ -131,6 +132,9 @@ Deno.serve(async (req: Request) => {
       // with a different payload. Never expose raw database error details.
       if (error.code === 'P0001' && error.message === 'fortuna_idempotency_conflict') {
         return reply({ error: 'IDEMPOTENCY_CONFLICT' }, 409, origin)
+      }
+      if (error.code === 'P0001' && error.message === 'fortuna_stale_preview') {
+        return reply({ error: 'STALE_PREVIEW' }, 409, origin)
       }
       // The api schema must remain in the hosted PostgREST Exposed Schemas allowlist.
       // If that configuration drifts, fail closed rather than falling back to
