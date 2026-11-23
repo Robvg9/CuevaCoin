@@ -133,7 +133,8 @@ async function obtenerTodasLasTransacciones(usuarioId, token) {
     while (true) {
         const { data, error } = await client
             .from('transacciones')
-            .select('*, admin:perfiles!transacciones_admin_id_fkey(nombre, usuario), contraparte:perfiles!transacciones_contraparte_id_fkey(nombre, usuario)')
+            .select('*, trabajadora:perfiles!transacciones_usuario_id_fkey!inner(es_dependiente), admin:perfiles!transacciones_admin_id_fkey(nombre, usuario), contraparte:perfiles!transacciones_contraparte_id_fkey(nombre, usuario)')
+            .eq('trabajadora.es_dependiente', true)
             .eq('usuario_id', usuarioId)
             .order('creado_en', { ascending: false })
             .range(desde, desde + PAGE_SIZE - 1);
