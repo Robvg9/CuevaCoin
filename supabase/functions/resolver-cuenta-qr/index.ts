@@ -50,11 +50,20 @@ Deno.serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+    const { data: caller, error: callerError } = await supabaseAdmin
+      .from('perfiles')
+      .select('es_admin, es_dependiente, estado')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (callerError || !caller || caller.es_admin || caller.es_dependiente !== true || caller.estado !== 'activo') {
+      return jsonResponse({ error: 'cuenta_solo_fortuna' }, 403)
+    }
 
     const { data: destinatario, error: destError } = await supabaseAdmin
       .from('perfiles')
-      .select('id, nombre, apellido, numero_cuenta, usuario, estado')
+      .select('id, nombre, apellido, numero_cuenta, usuario, estado, es_dependiente')
       .eq('numero_cuenta', numeroCuenta.trim())
+      .eq('es_dependiente', true)
       .maybeSingle()
     if (destError) {
       console.error('Error buscando cuenta por QR:', destError)
