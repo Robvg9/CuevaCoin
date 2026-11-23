@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Verify hosted gateway rejects requests without a user JWT
+      - name: Verify dispatcher rejects missing and malformed user JWTs
         run: node scripts/smoke-fortuna-dispatch-auth.mjs
         shell: cmd
       - name: Verify user-JWT dispatcher security contract
