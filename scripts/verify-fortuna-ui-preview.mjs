@@ -28,11 +28,11 @@ const settlementApiTest = read('scripts/verify-fortuna-owner-settlement-api.mjs'
 const authenticatedE2E = read('scripts/e2e-fortuna-authenticated.mjs');
 const authenticatedE2EWorkflow = read('.github/workflows/fortuna-authenticated-e2e.yml');
 
-assert.match(html, /<li id="fortuna-link-item">[\\s\\S]*loadSection\\('fortuna'\\)/);
+assert.match(html, /<li id="fortuna-link-item">.*loadSection\('fortuna'\)/);
 assert.match(adminPanel, /fortuna-link-item/);
 assert.match(adminPanel, /fortunaItem[\s\S]{0,100}style\.display = ''/);
 assert.match(userPanel, /fortuna-link-item/);
-assert.match(userPanel, /fortunaItem[\s\S]{0,100}style\.display = 'none'/);
+assert.ok(userPanel.includes("if (fortunaItem) fortunaItem.style.display = 'none';"));
 assert.match(navigation, /seccionesCompartidas/);
 assert.match(navigation, /'fortuna'/);
 assert.match(navigation, /loadFortunaData/);
