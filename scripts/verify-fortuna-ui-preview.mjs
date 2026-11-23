@@ -88,7 +88,7 @@ assert.match(html, /aria-live="polite"/);
 assert.match(html, /Por cobrar[\s\S]*Por pagar/);
 assert.match(html, /CUP[\s\S]*USD[\s\S]*EUR/);
 assert.match(html, /ui\.js\?v=169/);
-assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], '168');
+assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], '169');
 assert.equal(html.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '168');
 assert.equal(app.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '168');
 assert.match(sw, /\/js\/finance\/fortuna\/ui\.js\?v=169/);
