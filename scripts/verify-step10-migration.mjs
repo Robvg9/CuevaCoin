@@ -223,7 +223,7 @@ assert.match(profileLinkSql, /linked_profile_id/);
 assert.match(profileLinkSql, /REVOKE ALL ON FUNCTION api\.search_fortuna_profiles/);
 assert.match(profileLinkSql, /GRANT EXECUTE ON FUNCTION api\.search_fortuna_profiles[\s\S]*?TO authenticated/);
 assert.doesNotMatch(profileLinkSql, /email|correo|saldo|salario/i, 'Profile search must not expose email, balances or payroll data');
-console.log('PASS — FORTUNA V167 profile-link migration is tracked as pending LIVE and restricted to active-profile identity fields');
+console.log('PASS — FORTUNA V167 profile-link migration is reconciled to LIVE and restricted to active-profile identity fields');
 
 const profileBalanceSql = readFileSync('supabase/migrations/20261123223000_fortuna_profile_balance_initial_obligation.sql', 'utf8');
 assert.match(profileBalanceSql, /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_link_profile_contact/);
@@ -240,7 +240,7 @@ assert.equal(pendingProfileBalance.applied_to_live, true, 'FORTUNA V168 linked-b
 assert.equal(pendingProfileBalance.live_version, '20261123211142');
 assert.equal(pendingProfileBalance.execution_status, 'applied_live');
 assert.equal((ledgerManifest.pending_forward_migrations || []).some(entry => entry.file === pendingProfileBalance.file), false);
-console.log('PASS — FORTUNA V168 balance prefill is owner-authenticated, read-only against CuevaCoin financial records, and pending LIVE');
+console.log('PASS — FORTUNA V168 balance prefill is owner-authenticated, read-only against CuevaCoin financial records, and reconciled to LIVE');
 
 
 
