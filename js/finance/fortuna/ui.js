@@ -929,6 +929,7 @@ function inicializarFortuna() {
   byId('fortuna-new-contact-btn').addEventListener('click', openNewContact);
   byId('fortuna-link-profile-btn').addEventListener('click', () => {
     byId('fortuna-profile-query').value = '';
+    profileIsDependent.checked = false;
     profileResults.replaceChildren();
     byId('fortuna-profile-search-error').textContent = '';
     openDialog(linkProfileDialog, 'fortuna-profile-query');
