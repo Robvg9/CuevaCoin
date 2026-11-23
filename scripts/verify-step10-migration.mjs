@@ -83,6 +83,9 @@ assert.match(salaryBatchTest, /BEGIN;[\s\S]*ROLLBACK;\s*$/i);
 assert.match(salaryBatchTest, /replayed IS DISTINCT FROM true/);
 assert.match(salaryBatchTest, /idempotency_key_payload_mismatch/);
 assert.match(salaryBatchTest, /No se puede pagar a una cuenta no activa/);
+assert.match(salaryBatchTest, /es_dependiente=false/);
+assert.match(salaryBatchTest, /admin_pagar_saldo/);
+assert.match(salaryBatchTest, /no está clasificada como dependiente/);
 console.log('PASS — salary batch transaction test verifies replay, payload mismatch, inactive-worker rejection and rollback');
 
 
