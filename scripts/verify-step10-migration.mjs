@@ -186,12 +186,12 @@ assert.equal(
   'Applied FORTUNA activity history migration must not remain pending',
 );
 const activitySql = readFileSync('supabase/migrations/' + activityForward.file, 'utf8');
-assert.match(activitySql, /CREATE OR REPLACE FUNCTION fortuna_private\\.fortuna_list_activity/);
-assert.match(activitySql, /CREATE OR REPLACE FUNCTION api\\.list_activity/);
+assert.match(activitySql, /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_list_activity/);
+assert.match(activitySql, /CREATE OR REPLACE FUNCTION api\.list_activity/);
 assert.match(activitySql, /SECURITY INVOKER/);
-assert.match(activitySql, /REVOKE ALL ON FUNCTION api\\.list_activity[\\s\\S]*?FROM PUBLIC, anon, authenticated/);
-assert.match(activitySql, /GRANT EXECUTE ON FUNCTION api\\.list_activity[\\s\\S]*?TO authenticated/);
-assert.match(activitySql, /BEGIN;[\\s\\S]*COMMIT;\\s*$/i);
+assert.match(activitySql, /REVOKE ALL ON FUNCTION api\.list_activity[\s\S]*?FROM PUBLIC, anon, authenticated/);
+assert.match(activitySql, /GRANT EXECUTE ON FUNCTION api\.list_activity[\s\S]*?TO authenticated/);
+assert.match(activitySql, /BEGIN;[\s\S]*COMMIT;\s*$/i);
 console.log('PASS — FORTUNA owner activity history migration reconciled to LIVE version 20261123194707; authenticated read-only wrapper tracked without replay');
 
 const recipientForward = (ledgerManifest.forward_migrations || []).find(entry =>
