@@ -1,6 +1,6 @@
 # FORTUNA v1 — Paso 4: contactos y obligaciones persistentes
 
-**Estado:** implementación owner-scoped integrada en PR #66; CI PASS sobre SHA `6433505fffc36bad049a38aec835473c56b76dbc`.
+**Estado:** implementación owner-scoped integrada en PR #66; CI PASS sobre SHA `fe8d4f1944aa4076b371d94bc493b145e457965c`.
 **PWA:** V162.
 **Alcance de este paso:** consulta y gestión autenticada de contactos y obligaciones abiertas. La liquidación y el historial de eventos completos son capacidades separadas.
 
@@ -55,7 +55,7 @@ En el workflow GitHub-hosted `FORTUNA owner UI integration contract`:
 3. `scripts/verify-fortuna-api-client.mjs`: JWT Bearer, allowlist y argumentos exactos de las siete operaciones, validación del modelo de lectura, falta de sesión, generación de clave y manejo HTTP 409/503.
 4. `scripts/verify-step10-release.mjs`: regresión del contrato de release.
 
-**Evidencia:** run [45222786934](https://github.com/Robvg9/CuevaCoin/actions/runs/45222786934) SUCCESS sobre el SHA exacto `6433505fffc36bad049a38aec835473c56b76dbc`; todos los pasos del workflow terminaron correctamente.
+**Evidencia:** run [45223325032](https://github.com/Robvg9/CuevaCoin/actions/runs/45223325032) SUCCESS sobre el SHA exacto `fe8d4f1944aa4076b371d94bc493b145e457965c`; sintaxis, owner UI, cliente API y Step 10 terminaron correctamente.
 
 ## Límites explícitos de este paso
 
@@ -63,3 +63,8 @@ En el workflow GitHub-hosted `FORTUNA owner UI integration contract`:
 - No incluye historial completo de eventos ni paginación de auditoría.
 - El contrato del backend para vista previa y confirmación de liquidación está disponible para el siguiente paso; esta entrega no expone botones de liquidación.
 - La PR continúa Draft y no forma parte de `main`; no se ha fusionado ni desplegado desde esta rama.
+
+
+## Continuidad
+
+**Fase 4 · Paso 4: CERRADO.** La siguiente entrega es el Paso 5: interfaz de vista previa de liquidación, presentación de asignaciones FIFO/manual, exceso explícito y confirmación separada con fingerprint del servidor. El cliente ya contiene el mapeo de los endpoints correspondientes; el Paso 5 construirá el recorrido visual y sus estados de seguridad.
