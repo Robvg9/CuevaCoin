@@ -4,6 +4,8 @@
  * No service-role key, direct PostgREST table access, browser storage or retry.
  */
 
+import { FORTUNA_CURRENCIES, MAX_MINOR_UNITS } from './preview-domain.mjs';
+
 const EDGE_FUNCTION = 'fortuna-dispatch';
 const ALLOWED_OPERATIONS = new Set([
   'create_contact',
@@ -56,12 +58,12 @@ async function readFunctionError(error) {
       SERVICE_UNAVAILABLE: 'El servicio FORTUNA no está disponible temporalmente.',
       FORTUNA_OPERATION_REJECTED: 'El servidor rechazó la operación. Revisa los datos e inténtalo de nuevo.',
     };
-    return new FortunaApiError(code, messages[code] || 'No se pudo completar la operación.', { status });
+    return new FortunaApiError(code, messages[code] || 'No se pudo completar la operación.', { status, retryable: status >= 500 });
   }
   return new FortunaApiError(
     status ? 'HTTP_ERROR' : 'NETWORK_UNCERTAIN',
     status ? 'El servidor no pudo completar la solicitud.' : 'No se pudo confirmar la respuesta del servidor. Actualiza los datos antes de repetir.',
-    { status, retryable: !status }
+    { status, retryable: status >= 500 || !status }
   );
 }
 
@@ -123,13 +125,38 @@ export function createIdempotencyKey() {
   return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
 }
 
+function validateMinorString(value) {
+  if (typeof value !== 'string' || !/^(?:0|[1-9][0-9]*)$/.test(value)) return false;
+  try {
+    return BigInt(value) <= MAX_MINOR_UNITS;
+  } catch {
+    return false;
+  }
+}
+
 export async function listContacts() {
   const result = await invokeFortuna('list_contacts', {});
   if (!Array.isArray(result)) throw new FortunaApiError('INVALID_RESPONSE', 'La lista de contactos no es válida.');
+  for (const contact of result) {
+    if (!contact || typeof contact.contact_id !== 'string' || !contact.contact_id
+      || typeof contact.display_name !== 'string' || !Array.isArray(contact.currencies)) {
+      throw new FortunaApiError('INVALID_RESPONSE', 'El servidor devolvió un contacto incompleto.');
+    }
+    for (const position of contact.currencies) {
+      if (!FORTUNA_CURRENCIES.includes(position?.currency)
+        || !validateMinorString(position.te_debe_minor)
+        || !validateMinorString(position.le_debes_minor)) {
+        throw new FortunaApiError('INVALID_RESPONSE', 'El servidor devolvió un saldo inválido.');
+      }
+    }
+  }
   return result;
 }
 
 export async function createContact({ displayName, phone = '', notes = '', idempotencyKey }) {
+  if (typeof idempotencyKey !== 'string' || idempotencyKey.length < 8) {
+    throw new FortunaApiError('INVALID_ARGUMENTS', 'Falta una clave idempotente segura.');
+  }
   return invokeFortuna('create_contact', {
     p_display_name: displayName,
     p_phone: phone || null,
@@ -142,16 +169,31 @@ export async function listObligations(contactId, currencyCode = null, direction 
   if (typeof contactId !== 'string' || !contactId.trim()) {
     throw new FortunaApiError('INVALID_ARGUMENTS', 'Selecciona un contacto válido.');
   }
-  return invokeFortuna('list_obligations', {
+  const result = await invokeFortuna('list_obligations', {
     p_contact_id: contactId,
     p_currency_code: currencyCode,
     p_direction: direction,
   });
+  if (!Array.isArray(result)) throw new FortunaApiError('INVALID_RESPONSE', 'La lista de obligaciones no es válida.');
+  for (const obligation of result) {
+    if (!obligation || typeof obligation.obligation_id !== 'string'
+      || !FORTUNA_CURRENCIES.includes(obligation.currency)
+      || !['receivable', 'payable'].includes(obligation.direction)
+      || !validateMinorString(obligation.principal_minor)
+      || !validateMinorString(obligation.remaining_minor)
+      || typeof obligation.description !== 'string') {
+      throw new FortunaApiError('INVALID_RESPONSE', 'El servidor devolvió una obligación incompleta.');
+    }
+  }
+  return result;
 }
 
 export async function openObligation({
   contactId, direction, currency, amountMinor, description, dueAt = null, idempotencyKey,
 }) {
+  if (typeof idempotencyKey !== 'string' || idempotencyKey.length < 8) {
+    throw new FortunaApiError('INVALID_ARGUMENTS', 'Falta una clave idempotente segura.');
+  }
   return invokeFortuna('open_obligation', {
     p_contact_id: contactId,
     p_direction: direction,
