@@ -22,6 +22,7 @@ on:
       - "scripts/verify-transfer-recipient-security.mjs"
       - "index.html"
       - "js/finance/fortuna/**"
+      - "js/ui/navigation.js"
       - "scripts/verify-fortuna-ui-preview.mjs"
       - "js/legacy-app.js"
       - "js/core/app.js"
