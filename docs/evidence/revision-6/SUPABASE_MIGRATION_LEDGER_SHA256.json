@@ -437,7 +437,7 @@
       "purpose": "Separate FORTUNA private-ledger contacts from CuevaCoin/BattleCruiser dependents; explicit owner-selected classification and server-side payroll guards",
       "applied_to_live": false,
       "execution_status": "pending_review_not_applied",
-      "characters": 18671,
+      "characters": 21083,
       "source": "FORTUNA V169 migration source in this PR; pending exact-SHA CI, local Auth/Postgres E2E and coordinated LIVE rollout."
     }
   ],
