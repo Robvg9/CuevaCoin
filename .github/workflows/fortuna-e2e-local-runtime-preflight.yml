@@ -1,0 +1,84 @@
+name: FORTUNA local E2E runtime preflight
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/fortuna-e2e-local-runtime-preflight.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fortuna-local-runtime-preflight-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  read-only-host-preflight:
+    runs-on: [self-hosted, Windows, X64, cuevacoin]
+    timeout-minutes: 3
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Inspect local Supabase prerequisites without starting services
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+
+          $os = Get-CimInstance -ClassName Win32_OperatingSystem
+          $computer = Get-CimInstance -ClassName Win32_ComputerSystem
+          $totalRamMb = [math]::Round($computer.TotalPhysicalMemory / 1MB)
+          $freeRamMb = [math]::Round($os.FreePhysicalMemory / 1KB)
+
+          $workspaceRoot = [System.IO.Path]::GetPathRoot($env:GITHUB_WORKSPACE)
+          $driveLetter = $workspaceRoot.Substring(0, 1)
+          $drive = Get-PSDrive -Name $driveLetter -ErrorAction SilentlyContinue
+          $freeDiskMb = if ($drive) { [math]::Round($drive.Free / 1MB) } else { 0 }
+
+          Write-Host "PREFLIGHT_HOST_RAM_TOTAL_MB=$totalRamMb"
+          Write-Host "PREFLIGHT_HOST_RAM_FREE_MB=$freeRamMb"
+          Write-Host "PREFLIGHT_WORKSPACE_DRIVE=$driveLetter"
+          Write-Host "PREFLIGHT_WORKSPACE_DISK_FREE_MB=$freeDiskMb"
+
+          $docker = Get-Command docker.exe -ErrorAction SilentlyContinue
+          if (-not $docker) {
+            Write-Host "PREFLIGHT_DOCKER_CLI=NOT_INSTALLED"
+            Write-Host "PREFLIGHT_DOCKER_ENGINE=NOT_CHECKED"
+          } else {
+            Write-Host "PREFLIGHT_DOCKER_CLI=INSTALLED"
+            $dockerVersion = & docker version --format '{{.Server.Version}}' 2>&1
+            if ($LASTEXITCODE -eq 0 -and $dockerVersion) {
+              Write-Host "PREFLIGHT_DOCKER_ENGINE=AVAILABLE"
+              Write-Host "PREFLIGHT_DOCKER_SERVER_VERSION=$dockerVersion"
+              $dockerMemory = & docker info --format '{{.MemTotal}}' 2>$null
+              if ($LASTEXITCODE -eq 0 -and $dockerMemory) {
+                Write-Host "PREFLIGHT_DOCKER_MEMORY_MB=$([math]::Round(([double]$dockerMemory) / 1MB))"
+              }
+            } else {
+              Write-Host "PREFLIGHT_DOCKER_ENGINE=UNAVAILABLE"
+            }
+          }
+
+          $supabase = Get-Command supabase.exe -ErrorAction SilentlyContinue
+          if (-not $supabase) { $supabase = Get-Command supabase -ErrorAction SilentlyContinue }
+          if ($supabase) {
+            Write-Host "PREFLIGHT_SUPABASE_CLI=INSTALLED"
+            $cliVersion = & $supabase.Source --version 2>&1
+            if ($LASTEXITCODE -eq 0) { Write-Host "PREFLIGHT_SUPABASE_CLI_VERSION=$cliVersion" }
+          } else {
+            Write-Host "PREFLIGHT_SUPABASE_CLI=NOT_INSTALLED"
+          }
+
+          $node = Get-Command node.exe -ErrorAction SilentlyContinue
+          if ($node) {
+            $nodeVersion = & node --version 2>&1
+            Write-Host "PREFLIGHT_NODE=$nodeVersion"
+          } else {
+            Write-Host "PREFLIGHT_NODE=NOT_INSTALLED"
+          }
+
+          Write-Host "PREFLIGHT_SIDE_EFFECTS=NONE"
+          Write-Host "PREFLIGHT_SERVICES_STARTED=NO"
+          Write-Host "PREFLIGHT_CONTAINERS_CREATED=NO"
+          Write-Host "PREFLIGHT_IMAGES_DOWNLOADED=NO"
