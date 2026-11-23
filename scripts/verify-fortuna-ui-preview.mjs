@@ -37,7 +37,7 @@ const adminStart = html.indexOf('<div id="admin-panel"');
 const sharedStart = html.indexOf('<div id="shared-fortuna"');
 const adminPrefix = html.slice(adminStart, sharedStart).replace(/<!--[\s\S]*?-->/g, '');
 assert.ok(adminStart >= 0 && sharedStart > adminStart, 'Shared FORTUNA view must follow the admin panel');
-assert.equal((adminPrefix.match(/<div\b/g) || []).length - (adminPrefix.match(/<\/div>/g) || []).length, 0, 'Shared FORTUNA must be outside the admin panel');
+assert.equal((adminPrefix.split('<div').length - 1) - (adminPrefix.split('</div>').length - 1), 0, 'Shared FORTUNA must be outside the admin panel');
 assert.doesNotMatch(html, /id="admin-fortuna"/);
 assert.match(html, /Modo de preparación protegido/);
 assert.match(html, /desaparecen al recargar/);
