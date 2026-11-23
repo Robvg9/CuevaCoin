@@ -13,6 +13,8 @@ const ALLOWED_OPERATIONS = new Set([
   'list_contacts',
   'list_obligations',
   'list_activity',
+  'search_fortuna_profiles',
+  'link_fortuna_profile_contact',
   'preview_settlement',
   'receive_cash',
   'pay_contact',
@@ -408,4 +410,27 @@ export async function payContact({
     p_confirm_overage: confirmOverage,
     p_idempotency_key: idempotencyKey,
   }), { flow: 'cash_paid', mode, currency, totalAmountMinor });
+}
+
+
+export async function searchFortunaProfiles(query) {
+  const normalized = String(query ?? '').trim();
+  if (normalized.length < 2 || normalized.length > 80) {
+    throw new FortunaApiError('INVALID_ARGUMENTS', 'Escribe al menos 2 caracteres para buscar usuarios.');
+  }
+  const result = await invokeFortuna('search_fortuna_profiles', { p_query: normalized });
+  if (!Array.isArray(result)) throw new FortunaApiError('INVALID_RESPONSE', 'La búsqueda de usuarios no es válida.');
+  return result.filter((item) => item && typeof item.profile_id === 'string'
+    && typeof item.username === 'string' && typeof item.display_name === 'string');
+}
+
+export async function linkFortunaProfileContact(profileId) {
+  if (typeof profileId !== 'string' || !profileId.trim()) {
+    throw new FortunaApiError('INVALID_ARGUMENTS', 'Selecciona un usuario válido.');
+  }
+  const result = await invokeFortuna('link_fortuna_profile_contact', { p_profile_id: profileId });
+  if (!result || typeof result.contact_id !== 'string') {
+    throw new FortunaApiError('INVALID_RESPONSE', 'No se pudo vincular el usuario a tu libro.');
+  }
+  return result;
 }
