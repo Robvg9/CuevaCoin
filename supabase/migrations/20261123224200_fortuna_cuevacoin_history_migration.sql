@@ -871,7 +871,7 @@ BEGIN
         'event_id', p.id, 'event_type', p.event_type,
         'currency', p.currency_code, 'total_amount_minor', p.total_amount_minor::text,
         'occurred_at', p.occurred_at, 'reversal_reason', p.reversal_reason,
-        'audit_action', p.audit_action, 'metadata', p.metadata,
+        'audit_action', p.audit_action, 'metadata', COALESCE(p.metadata, '{}'::jsonb),
         'ledger_entries', p.ledger_entries
       ) ORDER BY p.occurred_at DESC, p.id DESC) FROM page p
     ), '[]'::jsonb),
