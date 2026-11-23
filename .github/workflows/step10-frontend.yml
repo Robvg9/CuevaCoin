@@ -56,6 +56,7 @@ on:
       - "js/admin/finance/stats.js"
       - "js/finance/orchestration/show-admin-panel.js"
       - "js/finance/orchestration/show-user-dashboard.js"
+      - "js/session/logout.js"
       - "scripts/verify-v149-users-ui.mjs"
       - "wrangler.jsonc"
       - "js/admin/finance/pagos.js"
