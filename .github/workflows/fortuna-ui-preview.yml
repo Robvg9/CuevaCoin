@@ -11,6 +11,7 @@ on:
       - "js/ui/navigation.js"
       - "js/finance/orchestration/show-admin-panel.js"
       - "js/finance/orchestration/show-user-dashboard.js"
+      - "js/session/logout.js"
       - "service-worker.js"
       - "scripts/verify-fortuna-ui-preview.mjs"
       - "docs/fortuna/FORTUNA_UI_PREVIEW_V1.md"
