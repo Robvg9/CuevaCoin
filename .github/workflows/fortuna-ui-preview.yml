@@ -13,6 +13,7 @@ on:
       - "js/finance/orchestration/show-user-dashboard.js"
       - "js/session/logout.js"
       - "service-worker.js"
+      - "supabase/functions/fortuna-dispatch/index.ts"
       - "scripts/verify-fortuna-ui-preview.mjs"
       - "scripts/verify-fortuna-api-client.mjs"
       - "scripts/verify-step10-release.mjs"
