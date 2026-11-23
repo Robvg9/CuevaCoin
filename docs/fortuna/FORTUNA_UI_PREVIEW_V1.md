@@ -17,3 +17,17 @@
 
 ## Verification
 Run `node scripts/verify-fortuna-ui-preview.mjs`. The GitHub-hosted preview workflow runs on trusted `feat/fortuna-ui/**` pushes and has read-only repository permissions.
+
+
+## Iteration 2 — local-only workflow workbench (V160)
+
+- Adds contact and obligation draft dialogs, contact detail, search, currency filter, summary and preview history.
+- Every item is volatile in-memory state for the current page only. Reloading or closing the tab removes the drafts.
+- No Supabase client, fetch, RPC, localStorage, sessionStorage or IndexedDB is used; no event, ledger entry, audit row or idempotency row is created.
+- Contact validation follows the backend limits: display name 1–120, phone ≤40, notes ≤1000 characters.
+- Obligation validation follows the backend contract: receivable/payable, CUP/USD/EUR, strictly positive amount, up to two decimal places and description 1–500 characters.
+- Money parsing uses string input plus `BigInt` minor units. Input is bounded before conversion, no floating-point arithmetic or rounding is used, and values are checked against PostgreSQL bigint maximum.
+- Comma or point is accepted as the decimal separator; thousand separators and mixed separators are rejected to avoid ambiguous interpretation.
+- Contact positions group by currency and retain separate gross "Te debe" and "Le debes" values; no netting or currency conversion occurs.
+- This preview deliberately does not simulate cash settlement, allocations, overage or reversals. Those must use the backend preview fingerprint and transactional confirmation after hosted owner-isolation E2E passes.
+- UI contract CI verifies the no-network/no-storage boundary, validation limits, maximum amount, two-decimal precision, mixed balances and currency isolation.
