@@ -1060,7 +1060,7 @@ function inicializarFortuna() {
       openNewObligation({ defaults: balanceMinor > 0n ? {
         direction: 'payable',
         currency: 'CUP',
-        amount: formatMinorAmount(balanceMinor.toString()),
+        amount: (balanceMinor / 100n).toString() + ',' + (balanceMinor % 100n).toString().padStart(2, '0'),
         description: 'Saldo CuevaCoin pendiente de liquidar',
       } : null });
     } catch (linkError) {
