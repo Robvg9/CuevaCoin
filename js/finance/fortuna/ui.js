@@ -345,10 +345,26 @@ function inicializarFortuna() {
     }
   }
 
+  function lockFormFields(form, locked) {
+    form.querySelectorAll('input, textarea, select').forEach((field) => {
+      field.readOnly = locked && (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA');
+      field.disabled = locked && field.tagName === 'SELECT';
+    });
+  }
+
   function openNewContact() {
-    state.pendingContact = null;
-    contactForm.reset();
-    byId('fortuna-contact-form-error').textContent = '';
+    if (state.pendingContact?.uncertain) {
+      byId('fortuna-contact-name').value = state.pendingContact.payload.displayName;
+      byId('fortuna-contact-phone').value = state.pendingContact.payload.phone;
+      byId('fortuna-contact-notes').value = state.pendingContact.payload.notes;
+      lockFormFields(contactForm, true);
+      byId('fortuna-contact-form-error').textContent = 'Reintenta exactamente este envío para conservar su clave idempotente.';
+    } else {
+      state.pendingContact = null;
+      contactForm.reset();
+      lockFormFields(contactForm, false);
+      byId('fortuna-contact-form-error').textContent = '';
+    }
     openDialog(contactDialog, 'fortuna-contact-name');
   }
 
@@ -358,9 +374,20 @@ function inicializarFortuna() {
       setStatus('Primero abre la ficha de un contacto.');
       return;
     }
-    state.pendingObligation = null;
-    obligationForm.reset();
-    byId('fortuna-obligation-form-error').textContent = '';
+    if (state.pendingObligation?.uncertain && state.pendingObligation.payload.contactId === contact.contact_id) {
+      const pending = state.pendingObligation.payload;
+      byId('fortuna-obligation-direction').value = pending.direction;
+      byId('fortuna-obligation-currency').value = pending.currency;
+      byId('fortuna-obligation-amount').value = formatMinorAmount(pending.amountMinor);
+      byId('fortuna-obligation-description').value = pending.description;
+      lockFormFields(obligationForm, true);
+      byId('fortuna-obligation-form-error').textContent = 'Reintenta exactamente este envío para conservar su clave idempotente.';
+    } else {
+      state.pendingObligation = null;
+      obligationForm.reset();
+      lockFormFields(obligationForm, false);
+      byId('fortuna-obligation-form-error').textContent = '';
+    }
     byId('fortuna-obligation-contact').textContent = 'Contacto: ' + contact.display_name;
     openDialog(obligationDialog, 'fortuna-obligation-amount');
   }
@@ -398,6 +425,8 @@ function inicializarFortuna() {
         };
       }
       submit.disabled = true;
+      lockFormFields(contactForm, false);
+      contactForm.querySelectorAll('input, textarea').forEach((field) => { field.disabled = true; });
       submit.textContent = 'Guardando…';
       const response = await createContact({
         ...state.pendingContact.payload,
@@ -416,12 +445,21 @@ function inicializarFortuna() {
       setStatus(loaded ? 'Contacto guardado en tu libro.' : 'Contacto guardado. No se pudo actualizar la lista; usa Actualizar.');
     } catch (validationOrApiError) {
       error.textContent = errorMessage(validationOrApiError);
-      if (validationOrApiError?.code === 'IDEMPOTENCY_CONFLICT') {
+      if (validationOrApiError?.retryable && state.pendingContact) {
+        state.pendingContact.uncertain = true;
+        byId('fortuna-contact-name').value = state.pendingContact.payload.displayName;
+        byId('fortuna-contact-phone').value = state.pendingContact.payload.phone;
+        byId('fortuna-contact-notes').value = state.pendingContact.payload.notes;
+        lockFormFields(contactForm, true);
+        error.textContent += ' Reintenta sin cambiar los datos.';
+      } else {
         state.pendingContact = null;
+        lockFormFields(contactForm, false);
       }
     } finally {
       submit.disabled = false;
-      submit.textContent = 'Guardar contacto';
+      contactForm.querySelectorAll('input, textarea').forEach((field) => { field.disabled = false; });
+      submit.textContent = state.pendingContact?.uncertain ? 'Reintentar mismo envío' : 'Guardar contacto';
     }
   });
 
@@ -459,6 +497,7 @@ function inicializarFortuna() {
         };
       }
       submit.disabled = true;
+      obligationForm.querySelectorAll('input, textarea, select').forEach((field) => { field.disabled = true; });
       submit.textContent = 'Guardando…';
       await openObligation({
         ...state.pendingObligation.payload,
@@ -471,12 +510,23 @@ function inicializarFortuna() {
       setStatus('Obligación guardada en el libro y registrada en su historial contable.');
     } catch (validationOrApiError) {
       error.textContent = errorMessage(validationOrApiError);
-      if (validationOrApiError?.code === 'IDEMPOTENCY_CONFLICT') {
+      if (validationOrApiError?.retryable && state.pendingObligation) {
+        state.pendingObligation.uncertain = true;
+        lockFormFields(obligationForm, true);
+        const pending = state.pendingObligation.payload;
+        byId('fortuna-obligation-direction').value = pending.direction;
+        byId('fortuna-obligation-currency').value = pending.currency;
+        byId('fortuna-obligation-amount').value = formatMinorAmount(pending.amountMinor);
+        byId('fortuna-obligation-description').value = pending.description;
+        error.textContent += ' Reintenta sin cambiar los datos.';
+      } else {
         state.pendingObligation = null;
+        lockFormFields(obligationForm, false);
       }
     } finally {
       submit.disabled = false;
-      submit.textContent = 'Guardar obligación';
+      obligationForm.querySelectorAll('input, textarea, select').forEach((field) => { field.disabled = false; });
+      submit.textContent = state.pendingObligation?.uncertain ? 'Reintentar mismo envío' : 'Guardar obligación';
     }
   });
 
