@@ -210,6 +210,7 @@ export async function previewFortunaProfileHistoryMigration(contactId) {
     || typeof result.withdrawal_request_count !== 'number'
     || typeof result.reconciliation_count !== 'number'
     || typeof result.source_balance_minor !== 'string'
+    || typeof result.historical_principal_minor !== 'string'
     || !Array.isArray(result.reconciliation_gaps)) {
     throw new FortunaApiError('INVALID_RESPONSE', 'La vista previa de migración no es válida.');
   }
