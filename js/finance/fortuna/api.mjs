@@ -12,6 +12,7 @@ const ALLOWED_OPERATIONS = new Set([
   'open_obligation',
   'list_contacts',
   'list_obligations',
+  'list_activity',
   'preview_settlement',
   'receive_cash',
   'pay_contact',
@@ -185,6 +186,56 @@ export async function listObligations(contactId, currencyCode = null, direction 
       || typeof obligation.description !== 'string') {
       throw new FortunaApiError('INVALID_RESPONSE', 'El servidor devolvió una obligación incompleta.');
     }
+  }
+  return result;
+}
+
+export async function listActivity(contactId, { limit = 50, before = null } = {}) {
+  if (typeof contactId !== 'string' || !contactId.trim()
+    || !Number.isInteger(limit) || limit < 1 || limit > 100
+    || (before !== null && (!before || typeof before.event_id !== 'string'
+      || typeof before.occurred_at !== 'string' || Number.isNaN(Date.parse(before.occurred_at))))) {
+    throw new FortunaApiError('INVALID_ARGUMENTS', 'Los parámetros del historial no son válidos.');
+  }
+
+  const result = await invokeFortuna('list_activity', {
+    p_contact_id: contactId,
+    p_limit: limit,
+    p_before_occurred_at: before?.occurred_at ?? null,
+    p_before_event_id: before?.event_id ?? null,
+  });
+  const invalid = () => { throw new FortunaApiError('INVALID_RESPONSE', 'El servidor devolvió un historial incompleto o inválido.'); };
+  const eventTypes = new Set(['obligation_opened', 'cash_received', 'cash_paid', 'compensation', 'reversal', 'adjustment']);
+  const entryKinds = new Set(['obligation_opened', 'cash_received', 'cash_paid', 'compensation', 'reversal', 'adjustment']);
+  if (!result || typeof result !== 'object' || Array.isArray(result)
+    || !Array.isArray(result.items) || typeof result.has_more !== 'boolean') invalid();
+
+  for (const item of result.items) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)
+      || typeof item.event_id !== 'string' || !item.event_id
+      || !eventTypes.has(item.event_type)
+      || !FORTUNA_CURRENCIES.includes(item.currency)
+      || !validateMinorString(item.total_amount_minor) || BigInt(item.total_amount_minor) <= 0n
+      || typeof item.occurred_at !== 'string' || Number.isNaN(Date.parse(item.occurred_at))
+      || !(item.reversal_reason === null || typeof item.reversal_reason === 'string')
+      || !(item.audit_action === null || typeof item.audit_action === 'string')
+      || !Array.isArray(item.ledger_entries)) invalid();
+    for (const entry of item.ledger_entries) {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)
+        || typeof entry.obligation_id !== 'string' || !entry.obligation_id
+        || typeof entry.description !== 'string'
+        || !validateMinorString(entry.amount_minor) || BigInt(entry.amount_minor) <= 0n
+        || !entryKinds.has(entry.entry_kind)) invalid();
+    }
+  }
+
+  if (result.has_more) {
+    const last = result.items.at(-1);
+    if (!last || !result.next_cursor
+      || result.next_cursor.event_id !== last.event_id
+      || result.next_cursor.occurred_at !== last.occurred_at) invalid();
+  } else if (result.next_cursor !== null) {
+    invalid();
   }
   return result;
 }
