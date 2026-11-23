@@ -114,7 +114,7 @@ const ledgerManifest = JSON.parse(readFileSync('docs/evidence/revision-6/SUPABAS
 const migrationFiles = readdirSync('supabase/migrations').filter(name => name.length > 18 && [...name.slice(0, 14)].every(ch => ch >= '0' && ch <= '9') && name[14] === '_' && name.endsWith('.sql')).sort();
 assert.equal(ledgerManifest.baseline_ledger_count, 65, 'Recovered LIVE baseline must remain 65 versions');
 assert.equal(ledgerManifest.recovered.length, 58, 'Exactly 58 historical sources must retain provenance hashes');
-assert.equal((ledgerManifest.forward_migrations || []).length, 4, 'Expected the four reviewed forward migrations documented in the recovery ledger');
+assert.equal((ledgerManifest.forward_migrations || []).length, 5, 'Expected four applied forward migrations plus the new pending FORTUNA V167 profile-link migration');
 const fortunaForward = (ledgerManifest.forward_migrations || []).find(entry =>
   entry.file === '20261122173537_fortuna_v1_private_ledger_and_owner_api.sql',
 );
@@ -122,10 +122,20 @@ assert.ok(fortunaForward, 'FORTUNA migration must be present in the forward migr
 assert.equal(fortunaForward.applied_to_live, true, 'FORTUNA migration must be marked as applied to LIVE');
 assert.equal(fortunaForward.live_version, '20261122173537', 'FORTUNA migration filename must match the LIVE migration version');
 assert.equal(fortunaForward.execution_status, 'applied', 'FORTUNA migration must be marked applied');
+const pendingFortunaLink = (ledgerManifest.forward_migrations || []).find(entry =>
+  entry.file === '20261123210000_fortuna_link_existing_profiles.sql',
+);
+assert.ok(pendingFortunaLink, 'FORTUNA V167 profile-link migration must be tracked');
+assert.equal(pendingFortunaLink.applied_to_live, false, 'FORTUNA V167 profile-link migration must not be claimed as LIVE');
+assert.equal(pendingFortunaLink.execution_status, 'pending_review_not_applied');
 assert.equal(
   (ledgerManifest.forward_migrations || []).filter(entry => entry.applied_to_live === false && entry.execution_status === 'pending_review_not_applied').length,
-  0,
-  'No forward migration should be marked pending after FORTUNA was applied',
+  1,
+  'Only the new FORTUNA V167 profile-link migration may remain pending',
+);
+assert.ok(
+  (ledgerManifest.pending_forward_migrations || []).some(entry => entry.file === pendingFortunaLink.file),
+  'The FORTUNA V167 migration must appear in the pending migration list',
 );
 
 const fkIndexForward = (ledgerManifest.forward_migrations || []).find(entry =>
@@ -193,6 +203,20 @@ assert.match(activitySql, /REVOKE ALL ON FUNCTION api\.list_activity[\s\S]*?FROM
 assert.match(activitySql, /GRANT EXECUTE ON FUNCTION api\.list_activity[\s\S]*?TO authenticated/);
 assert.match(activitySql, /BEGIN;[\s\S]*COMMIT;\s*$/i);
 console.log('PASS — FORTUNA owner activity history migration reconciled to LIVE version 20261123194707; authenticated read-only wrapper tracked without replay');
+
+const profileLinkSql = readFileSync('supabase/migrations/20261123210000_fortuna_link_existing_profiles.sql', 'utf8');
+assert.match(profileLinkSql, /BEGIN;[\\s\\S]*COMMIT;\\s*$/i);
+assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION fortuna_private\\.fortuna_search_profiles/);
+assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION fortuna_private\\.fortuna_link_profile_contact/);
+assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION api\\.search_fortuna_profiles/);
+assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION api\\.link_fortuna_profile_contact/);
+assert.match(profileLinkSql, /p\\.estado = 'activo'/);
+assert.match(profileLinkSql, /id <> v_actor/);
+assert.match(profileLinkSql, /linked_profile_id/);
+assert.match(profileLinkSql, /REVOKE ALL ON FUNCTION api\\.search_fortuna_profiles/);
+assert.match(profileLinkSql, /GRANT EXECUTE ON FUNCTION api\\.search_fortuna_profiles[\\s\\S]*?TO authenticated/);
+assert.doesNotMatch(profileLinkSql, /email|correo|saldo|salario/i, 'Profile search must not expose email, balances or payroll data');
+console.log('PASS — FORTUNA V167 profile-link migration is tracked as pending LIVE and restricted to active-profile identity fields');
 
 const recipientForward = (ledgerManifest.forward_migrations || []).find(entry =>
   entry.file === '20261121124522_transfer_recipient_id_privacy_active_admin.sql',
