@@ -34,7 +34,7 @@ assert.match(docs, /67082fb9f84f7fc6ac4b328f7cdf02efd56ffe87ff3dc106a33eef9e9085
 assert.match(docs, /api.*Data API Exposed Schemas/)
 assert.match(docs, /fortuna_private.*excluido/)
 assert.match(docs, /authenticated.*schema USAGE/)
-assert.match(docs, /anon.*no USAGE/)
+assert.match(docs, /anon.*no tiene USAGE/)
 assert.match(docs, /Hosted authenticated E2E/i)
 assert.match(docs, /OPEN — Hosted/i)
 assert.match(docs, /service-role/i)
