@@ -120,7 +120,7 @@ export async function restaurarUsuario(usuarioId) {
     if (!admin?.esAdmin || !client) { toast('Solo el administrador puede restaurar usuarios', 3000); return; }
 
     const { data: perfil, error: readError } = await client.from('perfiles')
-        .select('nombre, usuario, estado, es_admin').eq('id', usuarioId).single();
+        .select('nombre, usuario, estado, es_admin, es_dependiente').eq('es_dependiente', true).eq('id', usuarioId).single();
     if (readError || !perfil) { console.error(readError); toast('No se pudo leer el usuario', 3000); return; }
     if (perfil.es_admin || perfil.estado !== 'archivado') {
         toast('El usuario no está archivado o la cuenta no se puede restaurar desde aquí', 3500); return;
