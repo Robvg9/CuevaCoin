@@ -987,6 +987,7 @@ function inicializarFortuna() {
       setStatus(loaded ? 'Contacto guardado. Ahora registra la deuda inicial.' : 'Contacto guardado. No se pudo actualizar la lista; usa Actualizar.');
       if (response?.contact_id) {
         state.newContactNeedsObligation = false;
+        openNewObligation();
       }
     } catch (validationOrApiError) {
       error.textContent = errorMessage(validationOrApiError);
