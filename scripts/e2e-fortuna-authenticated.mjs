@@ -86,6 +86,7 @@ const unlinkedHistoryPreview = await dispatch(ownerA.token, 'preview_fortuna_pro
 })
 assert.equal(unlinkedHistoryPreview.response.status, 400)
 assert.equal(unlinkedHistoryPreview.body?.error, 'FORTUNA_OPERATION_REJECTED')
+assert.equal(unlinkedHistoryPreview.body?.data, undefined, 'An unlinked contact must not leak CuevaCoin profile details through the migration preview.')
 
 
 // Reusing a key with a changed payload must be translated to HTTP 409.
