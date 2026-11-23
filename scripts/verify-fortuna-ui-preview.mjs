@@ -82,18 +82,18 @@ assert.doesNotMatch(html, /fortuna-obligation-due-date/);
 assert.match(html, /aria-live="polite"/);
 assert.match(html, /Te debe[\s\S]*Le debes/);
 assert.match(html, /CUP[\s\S]*USD[\s\S]*EUR/);
-assert.match(html, /ui\.js\?v=166/);
-assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], '166');
-assert.equal(html.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '166');
-assert.equal(app.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '166');
-assert.match(sw, /\/js\/finance\/fortuna\/ui\.js\?v=166/);
+assert.match(html, /ui\.js\?v=167/);
+assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], '167');
+assert.equal(html.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '167');
+assert.equal(app.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '167');
+assert.match(sw, /\/js\/finance\/fortuna\/ui\.js\?v=167/);
 assert.match(sw, /\/js\/finance\/fortuna\/preview-domain\.mjs/);
 assert.match(sw, /\/js\/finance\/fortuna\/api\.mjs/);
 assert.match(sw, /event\.request\.mode === 'navigate'[\s\S]*fetch\(event\.request, \{ cache: 'no-store' \}\)/);
-assert.match(html, /service-worker\.js\?v=166', \{ updateViaCache: 'none' \}/);
-assert.match(html, /show-admin-panel\.js\?v=166/);
-assert.match(html, /show-user-dashboard\.js\?v=166/);
-assert.match(html, /navigation\.js\?v=166/);
+assert.match(html, /service-worker\.js\?v=167', \{ updateViaCache: 'none' \}/);
+assert.match(html, /show-admin-panel\.js\?v=167/);
+assert.match(html, /show-user-dashboard\.js\?v=167/);
+assert.match(html, /navigation\.js\?v=167/);
 
 // The UI performs no direct requests and uses only the authenticated dispatcher module.
 assert.match(ui, /from '\.\/api\.mjs'/);
