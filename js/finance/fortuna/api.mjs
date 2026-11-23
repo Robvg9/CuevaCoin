@@ -424,14 +424,18 @@ export async function searchFortunaProfiles(query) {
     && typeof item.username === 'string' && typeof item.display_name === 'string');
 }
 
-export async function linkFortunaProfileContact(profileId) {
-  if (typeof profileId !== 'string' || !profileId.trim()) {
-    throw new FortunaApiError('INVALID_ARGUMENTS', 'Selecciona un usuario válido.');
+export async function linkFortunaProfileContact(profileId, isDependent = false) {
+  if (typeof profileId !== 'string' || !profileId.trim() || typeof isDependent !== 'boolean') {
+    throw new FortunaApiError('INVALID_ARGUMENTS', 'Selecciona un usuario y una clasificación válidos.');
   }
-  const result = await invokeFortuna('link_fortuna_profile_contact', { p_profile_id: profileId });
+  const result = await invokeFortuna('link_fortuna_profile_contact', {
+    p_profile_id: profileId,
+    p_is_dependent: isDependent,
+  });
   if (!result || typeof result.contact_id !== 'string'
-    || !/^\d+$/.test(String(result.balance_minor ?? '0'))) {
-    throw new FortunaApiError('INVALID_RESPONSE', 'No se pudo vincular el usuario a tu libro.');
+    || !/^\\d+$/.test(String(result.balance_minor ?? '0'))
+    || result.is_dependent !== isDependent) {
+    throw new FortunaApiError('INVALID_RESPONSE', 'No se pudo vincular y clasificar el usuario.');
   }
   return { ...result, balance_minor: String(result.balance_minor ?? '0') };
 }
