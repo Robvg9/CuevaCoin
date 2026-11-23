@@ -88,7 +88,7 @@ Todo cambio LIVE requiere su propio Human Gate explícito.
   - Solo FORTUNA (`es_dependiente = false`): no aparece en roster de dependientes y no puede recibir salarios/bonos por las RPC administrativas.
   - Dependiente y FORTUNA (`es_dependiente = true`): aparece en el roster de dependientes y conserva su libro personal separado.
 - Los contactos externos sin perfil CuevaCoin son exclusivamente FORTUNA.
-- En cada resultado de búsqueda, el administrador ve la clasificación actual y elige explícitamente «Solo FORTUNA» o «FORTUNA + dependiente»; la elección es individual por cuenta.
+- En cada resultado de búsqueda, el administrador ve la clasificación actual y si ya existe el contacto FORTUNA. Puede cambiar el rol sin vincular ni crear un contacto, o elegir «Solo FORTUNA» / «FORTUNA + dependiente» al vincular. La elección es individual por cuenta.
 - El backfill conserva como dependientes los perfiles activos existentes no vinculados a FORTUNA; los perfiles ya vinculados a FORTUNA pasan a solo FORTUNA. Los perfiles nuevos nacen no dependientes hasta clasificación explícita.
 - Pagar o cobrar desde FORTUNA solo afecta al libro privado. No toca `perfiles.saldo`, nómina, jornadas ni transacciones de CuevaCoin.
 - Re-vincular un perfil existente actualiza su clasificación sin crear otro contacto ni volver a ofrecer el saldo como una obligación inicial; evita duplicar deudas.
