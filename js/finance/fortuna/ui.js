@@ -1066,9 +1066,16 @@ function inicializarFortuna() {
       await loadContacts({ preserveStatus: true });
       activateTab('contacts');
       const balanceMinor = BigInt(String(linked.balance_minor ?? '0'));
-      setStatus((linked.is_dependent ? 'Usuario vinculado como dependiente de CuevaCoin y contacto de FORTUNA. ' : 'Usuario vinculado solo a FORTUNA; no aparecerá en dependientes ni nómina. ')
-        + (balanceMinor > 0n ? 'Revisa y confirma el saldo de CuevaCoin como deuda en CUP.' : 'Puedes registrar una obligación cuando corresponda.'));
-      if (linked.is_new_contact && balanceMinor > 0n) {
+      const hasNewBalanceToConfirm = linked.is_new_contact && balanceMinor > 0n;
+      const roleMessage = linked.is_dependent
+        ? 'Usuario clasificado como dependiente y contacto de FORTUNA. '
+        : 'Usuario clasificado solo para FORTUNA; no aparecerá en dependientes ni nómina. ';
+      setStatus(roleMessage + (hasNewBalanceToConfirm
+        ? 'Revisa y confirma el saldo de CuevaCoin como deuda inicial en CUP.'
+        : linked.is_new_contact
+          ? 'Contacto creado. Puedes registrar una obligación cuando corresponda.'
+          : 'Clasificación actualizada. Se conservó la ficha y no se duplicó ninguna deuda.'));
+      if (hasNewBalanceToConfirm) {
         openNewObligation({ defaults: {
           direction: 'payable',
           currency: 'CUP',
