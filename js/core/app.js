@@ -65,6 +65,8 @@ export function showLoginScreen() {
     if (topbar) topbar.classList.add('hidden');
     const googleScreen = document.getElementById('google-vinculacion-screen');
     if (googleScreen) googleScreen.classList.add('hidden');
+    const fortunaOnlyScreen = document.getElementById('fortuna-only-screen');
+    if (fortunaOnlyScreen) fortunaOnlyScreen.classList.add('hidden');
     document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
     if (typeof window !== 'undefined' && typeof window.closeSidebar === 'function') {
         window.closeSidebar();
