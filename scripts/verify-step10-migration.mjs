@@ -85,6 +85,7 @@ assert.match(salaryBatchTest, /idempotency_key_payload_mismatch/);
 assert.match(salaryBatchTest, /No se puede pagar a una cuenta no activa/);
 assert.match(salaryBatchTest, /es_dependiente=false/);
 assert.match(salaryBatchTest, /admin_pagar_saldo/);
+assert.match(salaryBatchTest, /self-promoted into dependent payroll role/);
 assert.match(salaryBatchTest, /no está clasificada como dependiente/);
 console.log('PASS — salary batch transaction test verifies replay, payload mismatch, inactive-worker rejection and rollback');
 
@@ -252,6 +253,8 @@ assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION fortuna_private\.fort
 assert.match(dependentRoleSql, /'is_dependent', p\.es_dependiente/);
 assert.match(dependentRoleSql, /owner_profile\.es_admin IS TRUE/);
 assert.match(dependentRoleSql, /SET es_dependiente = p_is_dependent/);
+assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION public\\.proteger_columnas_sensibles_perfil/);
+assert.match(dependentRoleSql, /NEW\\.es_dependiente := OLD\\.es_dependiente/);
 assert.match(dependentRoleSql, /v_target\.es_dependiente IS DISTINCT FROM true/);
 assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION public\.admin_pagar_saldo/);
 assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION public\.admin_pagar_salarios_individuales/);
