@@ -435,16 +435,16 @@
     {
       "file": "20261124010000_fortuna_dependent_classification.sql",
       "purpose": "Separate FORTUNA private-ledger contacts from CuevaCoin/BattleCruiser dependents; explicit owner-selected classification and server-side payroll guards",
-      "applied_to_live": false,
-      "execution_status": "pending_review_not_applied",
+      "applied_to_live": true,
+      "execution_status": "applied_live",
       "characters": 21083,
-      "source": "FORTUNA V169 migration source in this PR; pending exact-SHA CI, local Auth/Postgres E2E and coordinated LIVE rollout."
+      "source": "Applied to Supabase LIVE project zqgmjwfvluboiporytcq on 2026-11-23. Supabase registry contains two entries with this migration name from idempotent repeated application; the migration only adds/updates the dependent classification and replaces guarded RPCs. It creates no contacts, obligations, ledger events, transactions, or balance changes.",
+      "live_version": "20261123221152",
+      "live_versions": [
+        "20261123221127",
+        "20261123221152"
+      ]
     }
   ],
-  "pending_forward_migrations": [
-    {
-      "file": "20261124010000_fortuna_dependent_classification.sql",
-      "reason": "FORTUNA V169 dependent classification and payroll boundary; pending exact-SHA CI, local E2E and coordinated LIVE rollout."
-    }
-  ]
+  "pending_forward_migrations": []
 }
