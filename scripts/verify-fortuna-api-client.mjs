@@ -10,6 +10,8 @@ import {
   previewSettlement,
   receiveCash,
   payContact,
+  searchFortunaProfiles,
+  linkFortunaProfileContact,
 } from '../js/finance/fortuna/api.mjs';
 
 const calls = [];
@@ -389,5 +391,14 @@ await assert.rejects(
   () => listContacts(),
   (error) => error instanceof FortunaApiError && error.code === 'SERVICE_UNAVAILABLE' && error.retryable === true,
 );
+
+nextResult = { data: { data: [{ profile_id: 'profile-2', username: 'maria', display_name: 'María Pérez' }] }, error: null };
+assert.deepEqual(await searchFortunaProfiles('mar'), [{ profile_id: 'profile-2', username: 'maria', display_name: 'María Pérez' }]);
+lastCall('search_fortuna_profiles', { p_query: 'mar' });
+nextResult = { data: { data: { contact_id: 'contact-linked', display_name: 'María Pérez', username: 'maria', linked_profile_id: 'profile-2' } }, error: null };
+assert.equal((await linkFortunaProfileContact('profile-2')).contact_id, 'contact-linked');
+lastCall('link_fortuna_profile_contact', { p_profile_id: 'profile-2' });
+await assert.rejects(() => searchFortunaProfiles('x'), (error) => error.code === 'INVALID_ARGUMENTS');
+await assert.rejects(() => linkFortunaProfileContact(''), (error) => error.code === 'INVALID_ARGUMENTS');
 
 console.log('PASS — authenticated dispatcher client: caller JWT, allowlisted operations, schema-validated settlement plans and commits, overage direction, stale-preview HTTP 409, secure idempotency and session guards.');
