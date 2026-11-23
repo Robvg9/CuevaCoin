@@ -118,7 +118,7 @@ assert.match(ui, /detail\.showModal\(\)/);
 assert.match(ui, /detail\.addEventListener\('cancel'/);
 assert.match(ui, /button\.dataset\.linkProfileDependent === 'true'/);
 assert.match(ui, /profileRow\?\.querySelectorAll\('button'\)\.forEach/);
-assert.match(ui, /profile\.is_dependent \? 'Dependiente' : 'Solo FORTUNA'/);
+assert.match(ui, /'Clasificación actual: ' \+ \(profile\.is_dependent \? 'Dependiente' : 'No dependiente'\)/);
 assert.match(ui, /const hasNewBalanceToConfirm = linked\.is_new_contact && balanceMinor > 0n/);
 assert.match(ui, /no se duplicó ninguna deuda/);
 assert.match(api, /typeof item\.is_dependent === 'boolean'/);
