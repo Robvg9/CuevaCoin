@@ -14,6 +14,7 @@ import {
   createIdempotencyKey,
   listContacts,
   listObligations,
+  listActivity,
   openObligation,
   previewSettlement,
   receiveCash,
@@ -30,6 +31,11 @@ function inicializarFortuna() {
     contacts: [],
     selectedContactId: null,
     selectedObligations: [],
+    activityItems: [],
+    activityHasMore: false,
+    activityCursor: null,
+    loadingActivity: false,
+    activityRequest: 0,
     loadingContacts: false,
     loadingObligations: false,
     sessionEpoch: 0,
@@ -47,6 +53,7 @@ function inicializarFortuna() {
   const list = byId('fortuna-contact-list');
   const detail = byId('fortuna-contact-detail');
   const history = byId('fortuna-preview-history-list');
+  const activity = byId('fortuna-activity-list');
   const search = byId('fortuna-contact-search');
   const currencyFilter = byId('fortuna-contact-currency-filter');
   const status = byId('fortuna-session-status');
@@ -596,7 +603,7 @@ function inicializarFortuna() {
       const empty = el('div', 'fortuna-empty-state');
       empty.append(el('span', '', '📚'));
       empty.append(el('h3', '', 'Selecciona un contacto'));
-      empty.append(el('p', '', 'Esta vista muestra obligaciones abiertas del contacto seleccionado, no movimientos cerrados.'));
+      empty.append(el('p', '', 'Selecciona un contacto para consultar sus obligaciones pendientes.'));
       history.append(empty);
       return;
     }
@@ -616,6 +623,75 @@ function inicializarFortuna() {
         + (obligation.direction === 'receivable' ? 'Te deben' : 'Tú debes') + ' · Abierta'));
       row.append(copy, el('span', '', formatMinorAmount(obligation.remaining_minor) + ' ' + obligation.currency));
       history.append(row);
+    }
+  }
+
+  function renderActivity() {
+    activity.replaceChildren();
+    const contact = selected();
+    if (!contact) {
+      const empty = el('div', 'fortuna-empty-state');
+      empty.append(el('span', '', '🧾'));
+      empty.append(el('h3', '', 'Selecciona un contacto'));
+      empty.append(el('p', '', 'Aquí aparecerán las obligaciones creadas, liquidaciones y sus referencias de auditoría. No se muestran datos de otros propietarios.'));
+      activity.append(empty);
+      return;
+    }
+    if (state.loadingActivity && !state.activityItems.length) {
+      activity.append(el('div', 'fortuna-empty-state', 'Consultando movimientos…'));
+      return;
+    }
+    if (!state.activityItems.length) {
+      const empty = el('div', 'fortuna-empty-state');
+      empty.append(el('span', '', '🧾'));
+      empty.append(el('h3', '', 'Sin movimientos registrados'));
+      empty.append(el('p', '', contact.display_name + ' todavía no tiene eventos financieros en tu libro.'));
+      activity.append(empty);
+      return;
+    }
+
+    const labels = {
+      obligation_opened: 'Obligación creada',
+      cash_received: 'Dinero recibido',
+      cash_paid: 'Dinero pagado',
+      compensation: 'Compensación',
+      reversal: 'Reversión',
+      adjustment: 'Ajuste',
+    };
+    for (const item of state.activityItems) {
+      const row = el('article', 'fortuna-activity-row');
+      const heading = el('div', 'fortuna-activity-heading');
+      heading.append(el('strong', '', labels[item.event_type] || 'Movimiento registrado'));
+      heading.append(el('span', '', formatMinorAmount(item.total_amount_minor) + ' ' + item.currency));
+      row.append(heading);
+      const date = new Date(item.occurred_at);
+      row.append(el('small', 'fortuna-activity-meta',
+        (Number.isNaN(date.getTime()) ? 'Fecha no disponible' : date.toLocaleString())
+        + ' · ' + item.currency));
+      if (item.ledger_entries.length) {
+        const entries = el('div', 'fortuna-activity-entries');
+        for (const entry of item.ledger_entries) {
+          const entryRow = el('div', 'fortuna-activity-entry');
+          entryRow.append(el('span', '', entry.description));
+          entryRow.append(el('strong', '', formatMinorAmount(entry.amount_minor) + ' ' + item.currency));
+          entries.append(entryRow);
+        }
+        row.append(entries);
+      }
+      if (item.reversal_reason) row.append(el('p', 'fortuna-activity-meta', 'Motivo de reversión: ' + item.reversal_reason));
+      if (item.audit_action) {
+        row.append(el('small', 'fortuna-activity-audit', 'Auditoría: ' + item.audit_action.replace(/_/g, ' ')));
+      }
+      activity.append(row);
+    }
+
+    if (state.activityHasMore) {
+      const more = el('button', 'btn btn-secondary fortuna-activity-more',
+        state.loadingActivity ? 'Cargando…' : 'Cargar movimientos anteriores');
+      more.type = 'button';
+      more.dataset.loadMoreActivity = 'true';
+      more.disabled = state.loadingActivity;
+      activity.append(more);
     }
   }
 
@@ -650,6 +726,7 @@ function inicializarFortuna() {
     renderContacts();
     renderContactDetail();
     renderHistory();
+    renderActivity();
   }
 
   function errorMessage(error) {
@@ -668,10 +745,14 @@ function inicializarFortuna() {
       if (state.selectedContactId && !state.contacts.some((item) => item.contact_id === state.selectedContactId)) {
         state.selectedContactId = null;
         state.selectedObligations = [];
+        state.activityItems = [];
+        state.activityHasMore = false;
+        state.activityCursor = null;
+        state.activityRequest += 1;
       }
       state.loadingContacts = false;
       renderSummary();
-      if (state.selectedContactId) await loadSelectedObligations();
+      if (state.selectedContactId) await Promise.all([loadSelectedObligations(), loadSelectedActivity()]);
       if (!preserveStatus) setStatus(state.contacts.length
         ? 'Libro actualizado desde el servidor.'
         : 'Tu libro está vacío. Crea tu primer contacto.');
@@ -681,6 +762,10 @@ function inicializarFortuna() {
       state.contacts = [];
       state.selectedContactId = null;
       state.selectedObligations = [];
+      state.activityItems = [];
+      state.activityHasMore = false;
+      state.activityCursor = null;
+      state.activityRequest += 1;
       state.loadingContacts = false;
       renderSummary();
       setStatus(errorMessage(error));
@@ -714,6 +799,47 @@ function inicializarFortuna() {
       renderContactDetail();
       setStatus(errorMessage(error));
       return false;
+    }
+  }
+
+  async function loadSelectedActivity({ append = false } = {}) {
+    const contact = selected();
+    if (!contact || state.loadingActivity) return false;
+    const epoch = state.sessionEpoch;
+    const request = ++state.activityRequest;
+    const contactId = contact.contact_id;
+    const cursor = append ? state.activityCursor : null;
+    if (!append) {
+      state.activityItems = [];
+      state.activityHasMore = false;
+      state.activityCursor = null;
+    }
+    state.loadingActivity = true;
+    renderActivity();
+    try {
+      const page = await listActivity(contactId, { limit: 50, before: cursor });
+      if (epoch !== state.sessionEpoch || request !== state.activityRequest
+        || state.selectedContactId !== contactId) return false;
+      state.activityItems = append ? [...state.activityItems, ...page.items] : page.items;
+      state.activityHasMore = page.has_more;
+      state.activityCursor = page.next_cursor;
+      return true;
+    } catch (error) {
+      if (epoch !== state.sessionEpoch || request !== state.activityRequest
+        || state.selectedContactId !== contactId) return false;
+      setStatus(errorMessage(error));
+      if (!append) {
+        state.activityItems = [];
+        state.activityHasMore = false;
+        state.activityCursor = null;
+      }
+      return false;
+    } finally {
+      if (epoch === state.sessionEpoch && request === state.activityRequest
+        && state.selectedContactId === contactId) {
+        state.loadingActivity = false;
+        renderActivity();
+      }
     }
   }
 
@@ -918,10 +1044,14 @@ function inicializarFortuna() {
     }
     state.selectedContactId = button.dataset.openContact;
     state.selectedObligations = [];
+    state.activityItems = [];
+    state.activityHasMore = false;
+    state.activityCursor = null;
     renderContactDetail();
     renderHistory();
-    setStatus('Consultando ficha y obligaciones del contacto…');
-    await loadSelectedObligations();
+    renderActivity();
+    setStatus('Consultando ficha, obligaciones y movimientos del contacto…');
+    await Promise.all([loadSelectedObligations(), loadSelectedActivity()]);
   });
 
   detail.addEventListener('click', (event) => {
@@ -932,14 +1062,26 @@ function inicializarFortuna() {
       }
       state.selectedContactId = null;
       state.selectedObligations = [];
+      state.activityItems = [];
+      state.activityHasMore = false;
+      state.activityCursor = null;
+      state.activityRequest += 1;
       state.settlementDraft = null;
       state.obligationRequest += 1;
       renderContactDetail();
       renderHistory();
+      renderActivity();
     }
     if (event.target.closest('[data-add-obligation]')) openNewObligation();
     if (event.target.closest('[data-settlement-preview]')) void previewSettlementDraft();
     if (event.target.closest('[data-settlement-commit]')) void confirmSettlementDraft();
+  });
+
+  activity.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-load-more-activity]');
+    if (button && state.activityHasMore && !state.loadingActivity) {
+      void loadSelectedActivity({ append: true });
+    }
   });
 
   detail.addEventListener('input', (event) => {
@@ -1006,6 +1148,11 @@ function inicializarFortuna() {
     state.contacts = [];
     state.selectedContactId = null;
     state.selectedObligations = [];
+    state.activityItems = [];
+    state.activityHasMore = false;
+    state.activityCursor = null;
+    state.loadingActivity = false;
+    state.activityRequest += 1;
     state.loadingContacts = false;
     state.loadingObligations = false;
     state.pendingContact = null;
@@ -1022,6 +1169,7 @@ function inicializarFortuna() {
     closeDialog(obligationDialog);
     activateTab('overview');
     renderSummary();
+    renderActivity();
     setStatus('Datos de la sesión anterior eliminados. Actualiza al entrar en tu libro.');
   };
 
