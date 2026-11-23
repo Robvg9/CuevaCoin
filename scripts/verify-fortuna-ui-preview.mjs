@@ -81,7 +81,7 @@ assert.match(html, /maxlength="500"/);
 assert.match(html, /id="fortuna-new-obligation-btn" class="btn btn-secondary fortuna-icon-action"/);
 assert.doesNotMatch(html, /fortuna-obligation-due-date/);
 assert.match(html, /aria-live="polite"/);
-assert.match(html, /Te debe[\s\S]*Le debes/);
+assert.match(html, /Por cobrar[\s\S]*Por pagar/);
 assert.match(html, /CUP[\s\S]*USD[\s\S]*EUR/);
 assert.match(html, /ui\.js\?v=168/);
 assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], '168');
