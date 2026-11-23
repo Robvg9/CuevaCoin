@@ -3799,8 +3799,8 @@
         .fortuna-workbench-copy strong{font-size:13px}
         .fortuna-workbench-copy span,.fortuna-session-status{font-size:11px;opacity:.7}
         .fortuna-session-status{min-height:16px;margin-top:-8px}
-        .fortuna-local-preview-warning{display:flex;flex-direction:column;gap:3px;padding:10px 13px;border-left:3px solid var(--secondary-color);border-radius:9px;background:color-mix(in srgb,var(--primary-color) 12%,var(--card-bg));font-size:12px}
-        .fortuna-local-preview-warning span{opacity:.75;line-height:1.45}
+        .fortuna-server-note{display:flex;flex-direction:column;gap:3px;padding:10px 13px;border-left:3px solid var(--secondary-color);border-radius:9px;background:color-mix(in srgb,var(--primary-color) 12%,var(--card-bg));font-size:12px}
+        .fortuna-server-note span{opacity:.75;line-height:1.45}
         .fortuna-contact-filters{display:grid;grid-template-columns:minmax(0,2fr) minmax(150px,1fr);gap:10px;margin:12px 0}
         .fortuna-filter-control,.fortuna-form-field{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:12px;font-weight:700}
         .fortuna-filter-control input,.fortuna-filter-control select,.fortuna-form-field input,.fortuna-form-field select,.fortuna-form-field textarea{width:100%;min-height:42px;padding:10px 12px;border:1px solid var(--border-color);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font:inherit;font-weight:400}
@@ -4509,7 +4509,7 @@
                         <div><h2>Contactos</h2><p>Una ficha por persona, con sus obligaciones agrupadas por moneda y sentido.</p></div>
                         <span id="fortuna-draft-contact-count" class="fortuna-panel-count">0 contactos</span>
                     </div>
-                    <div class="fortuna-local-preview-warning">
+                    <div class="fortuna-server-note">
                         <strong>Datos del libro</strong>
                         <span>Los contactos se obtienen del libro del propietario autenticado.</span>
                     </div>
@@ -4526,7 +4526,7 @@
                     <div class="fortuna-panel-heading">
                         <div><h2>Obligaciones abiertas</h2><p>Detalle de pendientes del contacto seleccionado. No representa un historial completo de eventos.</p></div>
                     </div>
-                    <div class="fortuna-local-preview-warning"><strong>Obligaciones pendientes</strong><span>Esta vista refleja obligaciones abiertas devueltas por el servidor para el contacto seleccionado.</span></div>
+                    <div class="fortuna-server-note"><strong>Obligaciones pendientes</strong><span>Esta vista refleja obligaciones abiertas devueltas por el servidor para el contacto seleccionado.</span></div>
                     <div id="fortuna-preview-history-list" class="fortuna-preview-history-list"><div class="fortuna-empty-state"><span aria-hidden="true">📚</span><h3>Selecciona un contacto</h3><p>Consulta sus obligaciones abiertas desde la ficha.</p></div></div>
                 </section>
 
