@@ -14,6 +14,9 @@ on:
       - "js/session/logout.js"
       - "service-worker.js"
       - "supabase/functions/fortuna-dispatch/index.ts"
+      - "supabase/migrations/**"
+      - "scripts/verify-step10-migration.mjs"
+      - "docs/evidence/revision-6/SUPABASE_MIGRATION_LEDGER_SHA256.json"
       - "scripts/verify-fortuna-ui-preview.mjs"
       - "scripts/verify-fortuna-api-client.mjs"
       - "scripts/e2e-fortuna-authenticated.mjs"
@@ -77,6 +80,8 @@ jobs:
         run: node scripts/verify-fortuna-api-client.mjs
       - name: Verify Step 10 release contract
         run: node scripts/verify-step10-release.mjs
+      - name: Verify Step 10 SQL migration safety and pending LIVE ledger
+        run: node scripts/verify-step10-migration.mjs
       - name: Verify Cloudflare Worker build gates without deployment
         run: |
           node scripts/verify-password-recovery.mjs
