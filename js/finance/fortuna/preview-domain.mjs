@@ -39,6 +39,7 @@ export function formatMinorAmount(value) {
   const input = String(value ?? '');
   if (!/^(?:0|[1-9][0-9]*)$/.test(input)) throw new Error('Unidades menores inválidas.');
   const minor = BigInt(input);
+  if (minor > MAX_MINOR_UNITS) throw new Error('El importe supera el máximo admitido.');
   const whole = (minor / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   return whole + ',' + (minor % 100n).toString().padStart(2, '0');
 }
@@ -71,7 +72,11 @@ export function summarizeObligations(obligations = []) {
     if (!/^[1-9][0-9]*$/.test(amount)) throw new Error('Importe interno inválido.');
 
     const current = totals.get(currency) ?? { receivable: 0n, payable: 0n };
-    current[direction] += BigInt(amount);
+    const nextTotal = current[direction] + BigInt(amount);
+    if (nextTotal > MAX_MINOR_UNITS) {
+      throw new Error('La suma de obligaciones en esta moneda supera el máximo admitido.');
+    }
+    current[direction] = nextTotal;
     totals.set(currency, current);
   }
 
