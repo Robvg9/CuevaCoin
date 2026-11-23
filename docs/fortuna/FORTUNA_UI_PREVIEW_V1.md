@@ -19,7 +19,7 @@
 Run `node scripts/verify-fortuna-ui-preview.mjs`. The GitHub-hosted preview workflow runs on trusted `feat/fortuna-ui/**` pushes and has read-only repository permissions.
 
 
-## Iteration 2 — local-only workflow workbench (V160)
+## Iteration 2 — local-only workflow workbench (V161)
 
 - Adds contact and obligation draft dialogs, contact detail, search, currency filter, summary and preview history.
 - Every item is volatile in-memory state for the current page only. Reloading or closing the tab removes the drafts.
@@ -38,3 +38,5 @@ Run `node scripts/verify-fortuna-ui-preview.mjs`. The GitHub-hosted preview work
 - The approved product decision is owner-only, not admin-only. The view now lives in the shared authenticated section (`shared-fortuna`) and is reachable by both administrator and worker sessions.
 - `js/ui/navigation.js` routes `fortuna` through the shared-section allowlist; both session orchestrators reveal the same navigation entry after authentication.
 - This is navigation only. It grants no book access. The backend resolves ownership exclusively from verified `auth.uid()`; a global CuevaCoin administrator who is not the book owner remains denied.
+
+- PWA offline optimization: V161 precaches the versioned FORTUNA UI module and its domain helper in the service-worker shell, so the UI does not require a first-use network fetch after install/update.
