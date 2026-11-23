@@ -16,6 +16,8 @@ on:
       - "supabase/functions/fortuna-dispatch/index.ts"
       - "scripts/verify-fortuna-ui-preview.mjs"
       - "scripts/verify-fortuna-api-client.mjs"
+      - "scripts/e2e-fortuna-authenticated.mjs"
+      - ".github/workflows/fortuna-authenticated-e2e.yml"
       - "scripts/verify-step10-release.mjs"
       - "docs/fortuna/FORTUNA_UI_PREVIEW_V1.md"
       - ".github/workflows/fortuna-ui-preview.yml"
@@ -36,6 +38,8 @@ on:
       - "scripts/verify-step10-release.mjs"
       - "docs/fortuna/FORTUNA_UI_PREVIEW_V1.md"
       - ".github/workflows/fortuna-ui-preview.yml"
+      - "scripts/e2e-fortuna-authenticated.mjs"
+      - ".github/workflows/fortuna-authenticated-e2e.yml"
 
 permissions:
   contents: read
@@ -60,6 +64,7 @@ jobs:
           node --check js/finance/fortuna/ui.js
           node --check js/finance/fortuna/api.mjs
           node --check js/finance/fortuna/preview-domain.mjs
+          node --check scripts/e2e-fortuna-authenticated.mjs
       - name: Verify FORTUNA owner UI contract
         run: node scripts/verify-fortuna-ui-preview.mjs
       - name: Verify authenticated API client
