@@ -116,10 +116,10 @@ function inicializarFortuna() {
     const line = el('div', 'fortuna-contact-position');
     const receivable = el('div', 'is-receivable');
     receivable.append(el('span', '', 'Te debe'));
-    receivable.append(el('strong', '', formatMinorAmount(String(safeMinor(summary.te_debe_minor))) + ' ' + summary.currency));
+    receivable.append(el('strong', '', summary.currency + ': ' + formatMinorAmount(String(safeMinor(summary.te_debe_minor)))));
     const payable = el('div', 'is-payable');
     payable.append(el('span', '', 'Le debes'));
-    payable.append(el('strong', '', formatMinorAmount(String(safeMinor(summary.le_debes_minor))) + ' ' + summary.currency));
+    payable.append(el('strong', '', summary.currency + ': ' + formatMinorAmount(String(safeMinor(summary.le_debes_minor)))));
     line.append(receivable, payable);
     container.append(line);
   }
@@ -542,7 +542,7 @@ function inicializarFortuna() {
     detail.replaceChildren();
     if (!contact) {
       detail.hidden = true;
-      byId('fortuna-new-obligation-btn').disabled = true;
+      byId('fortuna-new-obligation-btn').disabled = false;
       return;
     }
 
@@ -642,7 +642,7 @@ function inicializarFortuna() {
       const empty = el('div', 'fortuna-empty-state');
       empty.append(el('span', '', '🧾'));
       empty.append(el('h3', '', 'Selecciona un contacto'));
-      empty.append(el('p', '', 'Aquí aparecerán las obligaciones creadas, liquidaciones y sus referencias de auditoría. No se muestran datos de otros propietarios.'));
+      empty.append(el('p', '', 'Selecciona un contacto para ver sus movimientos.'));
       activity.append(empty);
       return;
     }
@@ -714,19 +714,28 @@ function inicializarFortuna() {
         totals.set(item.currency, current);
       }
     }
-    const summaryText = (key) => [...totals.entries()]
-      .filter(([, amounts]) => amounts[key] > 0n)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([currency, amounts]) => formatTotal(amounts[key]) + ' ' + currency)
-      .join(' · ') || '0,00';
+    const summaryRows = (key) => {
+      const currencies = new Set(['CUP', 'USD']);
+      for (const [currency, amounts] of totals.entries()) if (amounts[key] > 0n) currencies.add(currency);
+      return [...currencies].sort((a, b) => a === 'CUP' ? -1 : b === 'CUP' ? 1 : a.localeCompare(b))
+        .map((currency) => [currency, totals.get(currency)?.[key] ?? 0n]);
+    };
     const cards = root.querySelectorAll('.fortuna-summary-card');
-    if (cards[0]) {
-      cards[0].querySelector('strong').textContent = state.loadingContacts ? '…' : summaryText('receivable');
-      cards[0].querySelector('small').textContent = 'Saldos abiertos en tu libro';
-    }
-    if (cards[1]) {
-      cards[1].querySelector('strong').textContent = state.loadingContacts ? '…' : summaryText('payable');
-      cards[1].querySelector('small').textContent = 'Saldos abiertos en tu libro';
+    for (const [index, key] of [[0, 'receivable'], [1, 'payable']]) {
+      const strong = cards[index]?.querySelector('strong');
+      if (!strong) continue;
+      strong.replaceChildren();
+      if (state.loadingContacts) strong.textContent = '…';
+      else {
+        const rows = el('span', 'fortuna-summary-values');
+        for (const [currency, amount] of summaryRows(key)) {
+          const row = el('span', 'fortuna-summary-value');
+          row.append(el('span', '', currency), el('span', '', ':'), el('b', '', formatTotal(amount)));
+          rows.append(row);
+        }
+        strong.append(rows);
+      }
+      cards[index].querySelector('small').textContent = 'Totales por moneda';
     }
     if (cards[2]) {
       cards[2].querySelector('strong').textContent = state.loadingContacts ? '…' : String(state.contacts.length);
@@ -878,10 +887,12 @@ function inicializarFortuna() {
     openDialog(contactDialog, 'fortuna-contact-name');
   }
 
-  function openNewObligation() {
+  function openNewObligation({ defaults = null } = {}) {
     const contact = selected();
     if (!contact) {
-      setStatus('Primero abre la ficha de un contacto.');
+      activateTab('contacts');
+      setStatus('Selecciona un contacto para registrar la obligación.');
+      search.focus();
       return;
     }
     if (state.pendingObligation?.uncertain && state.pendingObligation.payload.contactId !== contact.contact_id) {
@@ -901,6 +912,12 @@ function inicializarFortuna() {
       obligationForm.reset();
       lockFormFields(obligationForm, false);
       byId('fortuna-obligation-form-error').textContent = '';
+      if (defaults) {
+        byId('fortuna-obligation-direction').value = defaults.direction || 'payable';
+        byId('fortuna-obligation-currency').value = defaults.currency || 'CUP';
+        byId('fortuna-obligation-amount').value = defaults.amount || '';
+        byId('fortuna-obligation-description').value = defaults.description || '';
+      }
     }
     byId('fortuna-obligation-contact').textContent = 'Contacto: ' + contact.display_name;
     openDialog(obligationDialog, 'fortuna-obligation-amount');
@@ -918,21 +935,14 @@ function inicializarFortuna() {
 
   root.querySelectorAll('[data-close-dialog]').forEach((button) => {
     button.addEventListener('click', (event) => {
-      if (button.dataset.closeDialog === 'fortuna-obligation-dialog' && state.newContactNeedsObligation) {
-        event.preventDefault();
-        byId('fortuna-obligation-form-error').textContent = 'Registra la deuda inicial para terminar de crear este contacto.';
-        return;
-      }
+      if (button.dataset.closeDialog === 'fortuna-obligation-dialog') state.newContactNeedsObligation = false;
       closeDialog(byId(button.dataset.closeDialog));
     });
   });
   root.querySelectorAll('dialog').forEach((dialog) => {
     dialog.addEventListener('click', (event) => {
       if (event.target === dialog) {
-        if (dialog === obligationDialog && state.newContactNeedsObligation) {
-          byId('fortuna-obligation-form-error').textContent = 'Registra la deuda inicial para terminar de crear este contacto.';
-          return;
-        }
+        if (dialog === obligationDialog) state.newContactNeedsObligation = false;
         closeDialog(dialog);
       }
     });
@@ -976,7 +986,7 @@ function inicializarFortuna() {
       if (response?.contact_id) activateTab('contacts');
       setStatus(loaded ? 'Contacto guardado. Ahora registra la deuda inicial.' : 'Contacto guardado. No se pudo actualizar la lista; usa Actualizar.');
       if (response?.contact_id) {
-        state.newContactNeedsObligation = true;
+        state.newContactNeedsObligation = false;
         openNewObligation();
       }
     } catch (validationOrApiError) {
@@ -1000,19 +1010,8 @@ function inicializarFortuna() {
     }
   });
 
-  obligationDialog.addEventListener('cancel', (event) => {
-    if (state.newContactNeedsObligation) {
-      event.preventDefault();
-      byId('fortuna-obligation-form-error').textContent = 'Registra la deuda inicial para terminar de crear este contacto.';
-    }
-  });
-  obligationDialog.querySelectorAll('[data-close-dialog]').forEach((button) => {
-    button.addEventListener('click', (event) => {
-      if (state.newContactNeedsObligation) {
-        event.preventDefault();
-        byId('fortuna-obligation-form-error').textContent = 'Registra la deuda inicial para terminar de crear este contacto.';
-      }
-    });
+  obligationDialog.addEventListener('close', () => {
+    state.newContactNeedsObligation = false;
   });
 
   linkProfileForm.addEventListener('submit', async (event) => {
@@ -1051,12 +1050,19 @@ function inicializarFortuna() {
       const linked = await linkFortunaProfileContact(button.dataset.linkProfileId);
       state.selectedContactId = linked.contact_id;
       state.selectedObligations = [];
-      state.newContactNeedsObligation = true;
       closeDialog(linkProfileDialog);
       await loadContacts({ preserveStatus: true });
       activateTab('contacts');
-      setStatus('Usuario vinculado a tu libro. Registra la deuda inicial.');
-      openNewObligation();
+      const balanceMinor = BigInt(String(linked.balance_minor ?? '0'));
+      setStatus(balanceMinor > 0n
+        ? 'Usuario vinculado. Revisa y confirma el saldo de CuevaCoin como deuda en CUP.'
+        : 'Usuario vinculado. Puedes registrar una obligación cuando corresponda.');
+      openNewObligation({ defaults: balanceMinor > 0n ? {
+        direction: 'payable',
+        currency: 'CUP',
+        amount: (balanceMinor / 100n).toString() + ',' + (balanceMinor % 100n).toString().padStart(2, '0'),
+        description: 'Saldo CuevaCoin pendiente de liquidar',
+      } : null });
     } catch (linkError) {
       button.disabled = false;
       byId('fortuna-profile-search-error').textContent = errorMessage(linkError);
@@ -1271,12 +1277,13 @@ function inicializarFortuna() {
     closeDialog(contactDialog);
     closeDialog(obligationDialog);
     closeDialog(linkProfileDialog);
-    activateTab('overview');
+    activateTab('contacts');
     renderSummary();
     renderActivity();
     setStatus('Datos de la sesión anterior eliminados. Actualiza al entrar en tu libro.');
   };
 
+  activateTab('contacts');
   renderSummary();
 }
 

@@ -53,7 +53,7 @@ export function loadSection(section) {
     const isAdmin = usuarioActual && usuarioActual.esAdmin;
     if (isAdmin && section === 'auditoria') section = 'historial-general';
     if (isAdmin && typeof section === 'string' && section) {
-        sessionStorage.setItem('cuevacoin_admin_last_section', section);
+        localStorage.setItem('cuevacoin_admin_last_section', section);
     }
 
     document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));

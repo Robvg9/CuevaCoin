@@ -114,7 +114,7 @@ const ledgerManifest = JSON.parse(readFileSync('docs/evidence/revision-6/SUPABAS
 const migrationFiles = readdirSync('supabase/migrations').filter(name => name.length > 18 && [...name.slice(0, 14)].every(ch => ch >= '0' && ch <= '9') && name[14] === '_' && name.endsWith('.sql')).sort();
 assert.equal(ledgerManifest.baseline_ledger_count, 65, 'Recovered LIVE baseline must remain 65 versions');
 assert.equal(ledgerManifest.recovered.length, 58, 'Exactly 58 historical sources must retain provenance hashes');
-assert.equal((ledgerManifest.forward_migrations || []).length, 5, 'Expected four applied forward migrations plus the new pending FORTUNA V167 profile-link migration');
+assert.equal((ledgerManifest.forward_migrations || []).length, 6, 'Expected four applied forward migrations plus two pending FORTUNA profile-link/balance migrations');
 const fortunaForward = (ledgerManifest.forward_migrations || []).find(entry =>
   entry.file === '20261122173537_fortuna_v1_private_ledger_and_owner_api.sql',
 );
@@ -130,8 +130,8 @@ assert.equal(pendingFortunaLink.applied_to_live, false, 'FORTUNA V167 profile-li
 assert.equal(pendingFortunaLink.execution_status, 'pending_review_not_applied');
 assert.equal(
   (ledgerManifest.forward_migrations || []).filter(entry => entry.applied_to_live === false && entry.execution_status === 'pending_review_not_applied').length,
-  1,
-  'Only the new FORTUNA V167 profile-link migration may remain pending',
+  2,
+  'Only the two new FORTUNA profile-link and balance migrations may remain pending',
 );
 assert.ok(
   (ledgerManifest.pending_forward_migrations || []).some(entry => entry.file === pendingFortunaLink.file),
@@ -219,6 +219,23 @@ assert.match(profileLinkSql, /REVOKE ALL ON FUNCTION api\.search_fortuna_profile
 assert.match(profileLinkSql, /GRANT EXECUTE ON FUNCTION api\.search_fortuna_profiles[\s\S]*?TO authenticated/);
 assert.doesNotMatch(profileLinkSql, /email|correo|saldo|salario/i, 'Profile search must not expose email, balances or payroll data');
 console.log('PASS — FORTUNA V167 profile-link migration is tracked as pending LIVE and restricted to active-profile identity fields');
+
+const profileBalanceSql = readFileSync('supabase/migrations/20261123223000_fortuna_profile_balance_initial_obligation.sql', 'utf8');
+assert.match(profileBalanceSql, /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_link_profile_contact/);
+assert.match(profileBalanceSql, /p\.saldo/);
+assert.match(profileBalanceSql, /'balance_minor'/);
+assert.match(profileBalanceSql, /auth\.uid\(\)/);
+assert.match(profileBalanceSql, /fortuna_ensure_current_book_id/);
+assert.match(profileBalanceSql, /owner_profile\.es_admin IS TRUE/);
+assert.match(profileBalanceSql, /owner_profile\.estado = 'activo'/);
+assert.doesNotMatch(profileBalanceSql, /UPDATE public\.perfiles|INSERT INTO public\.transacciones/i);
+const pendingProfileBalance = (ledgerManifest.forward_migrations || []).find(entry => entry.file === '20261123223000_fortuna_profile_balance_initial_obligation.sql');
+assert.ok(pendingProfileBalance, 'FORTUNA V168 linked-balance migration must be tracked');
+assert.equal(pendingProfileBalance.applied_to_live, false, 'FORTUNA V168 linked-balance migration must not be claimed as LIVE');
+assert.equal(pendingProfileBalance.execution_status, 'pending_review_not_applied');
+assert.ok((ledgerManifest.pending_forward_migrations || []).some(entry => entry.file === pendingProfileBalance.file));
+console.log('PASS — FORTUNA V168 balance prefill is owner-authenticated, read-only against CuevaCoin financial records, and pending LIVE');
+
 
 const recipientForward = (ledgerManifest.forward_migrations || []).find(entry =>
   entry.file === '20261121124522_transfer_recipient_id_privacy_active_admin.sql',

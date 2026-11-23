@@ -429,8 +429,9 @@ export async function linkFortunaProfileContact(profileId) {
     throw new FortunaApiError('INVALID_ARGUMENTS', 'Selecciona un usuario válido.');
   }
   const result = await invokeFortuna('link_fortuna_profile_contact', { p_profile_id: profileId });
-  if (!result || typeof result.contact_id !== 'string') {
+  if (!result || typeof result.contact_id !== 'string'
+    || !/^\d+$/.test(String(result.balance_minor ?? '0'))) {
     throw new FortunaApiError('INVALID_RESPONSE', 'No se pudo vincular el usuario a tu libro.');
   }
-  return result;
+  return { ...result, balance_minor: String(result.balance_minor ?? '0') };
 }
