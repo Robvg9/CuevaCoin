@@ -19,6 +19,7 @@ export function perfilAUsuarioApp(perfil) {
         nombre: perfil.nombre,
         usuario: perfil.usuario,
         esAdmin: perfil.es_admin,
+        esDependiente: perfil.es_dependiente === true,
         saldo: perfil.saldo,
         numeroCuenta: perfil.numero_cuenta,
         foto: perfil.foto_url,
