@@ -127,7 +127,7 @@ assert.equal(fortunaForward.applied_to_live, true, 'FORTUNA migration must be ma
 assert.equal(fortunaForward.live_version, '20261122173537', 'FORTUNA migration filename must match the LIVE migration version');
 assert.equal(fortunaForward.execution_status, 'applied', 'FORTUNA migration must be marked applied');
 const pendingFortunaLink = (ledgerManifest.forward_migrations || []).find(entry =>
-  entry.file === '20261123210000_fortuna_link_existing_profiles.sql',
+  entry.file === '20261123203456_fortuna_link_existing_profiles.sql',
 );
 assert.ok(pendingFortunaLink, 'FORTUNA V167 profile-link migration must be tracked');
 assert.equal(pendingFortunaLink.applied_to_live, true, 'FORTUNA V167 profile-link migration must be recorded as LIVE');
@@ -145,7 +145,7 @@ assert.equal(
 );
 
 const fkIndexForward = (ledgerManifest.forward_migrations || []).find(entry =>
-  entry.file === '20261122192417_fortuna_private_fk_covering_indexes.sql',
+  entry.file === '20261122210505_fortuna_private_fk_covering_indexes.sql',
 );
 assert.ok(fkIndexForward, 'FORTUNA FK index migration must be tracked as a forward migration');
 assert.equal(fkIndexForward.applied_to_live, true, 'FORTUNA FK indexes must be recorded as applied to LIVE');
@@ -167,7 +167,7 @@ assert.ok(
 );
 assert.equal(
   (ledgerManifest.pending_forward_migrations || []).some(entry =>
-    entry.file === '20261122192417_fortuna_private_fk_covering_indexes.sql'),
+    entry.file === '20261122210505_fortuna_private_fk_covering_indexes.sql'),
   false,
   'An applied FORTUNA index migration must not remain in the pending list',
 );
@@ -186,7 +186,7 @@ assert.doesNotMatch(
 console.log('PASS — FORTUNA FK index migration is reconciled to LIVE version 20261122210505 with 14 verified indexes and no pending duplicate');
 
 const activityForward = (ledgerManifest.forward_migrations || []).find(entry =>
-  entry.file === '20261123182957_fortuna_owner_activity_history.sql',
+  entry.file === '20261123194707_fortuna_owner_activity_history.sql',
 );
 assert.ok(activityForward, 'FORTUNA owner activity history migration must be tracked as a forward migration');
 assert.equal(activityForward.applied_to_live, true, 'FORTUNA activity history migration must be recorded as applied to LIVE');
@@ -210,7 +210,7 @@ assert.match(activitySql, /GRANT EXECUTE ON FUNCTION api\.list_activity[\s\S]*?T
 assert.match(activitySql, /BEGIN;[\s\S]*COMMIT;\s*$/i);
 console.log('PASS — FORTUNA owner activity history migration reconciled to LIVE version 20261123194707; authenticated read-only wrapper tracked without replay');
 
-const profileLinkSql = readFileSync('supabase/migrations/20261123210000_fortuna_link_existing_profiles.sql', 'utf8');
+const profileLinkSql = readFileSync('supabase/migrations/20261123203456_fortuna_link_existing_profiles.sql', 'utf8');
 assert.match(profileLinkSql, /BEGIN;[\s\S]*COMMIT;\s*$/i);
 assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_search_profiles/);
 assert.match(profileLinkSql, /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_link_profile_contact/);
@@ -226,7 +226,7 @@ assert.match(profileLinkSql, /GRANT EXECUTE ON FUNCTION api\.search_fortuna_prof
 assert.doesNotMatch(profileLinkSql, /email|correo|saldo|salario/i, 'Profile search must not expose email, balances or payroll data');
 console.log('PASS — FORTUNA V167 profile-link migration is reconciled to LIVE and restricted to active-profile identity fields');
 
-const profileBalanceSql = readFileSync('supabase/migrations/20261123223000_fortuna_profile_balance_initial_obligation.sql', 'utf8');
+const profileBalanceSql = readFileSync('supabase/migrations/20261123211142_fortuna_profile_balance_initial_obligation.sql', 'utf8');
 assert.match(profileBalanceSql, /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_link_profile_contact/);
 assert.match(profileBalanceSql, /p\.saldo/);
 assert.match(profileBalanceSql, /'balance_minor'/);
@@ -235,7 +235,7 @@ assert.match(profileBalanceSql, /fortuna_ensure_current_book_id/);
 assert.match(profileBalanceSql, /owner_profile\.es_admin IS TRUE/);
 assert.match(profileBalanceSql, /owner_profile\.estado = 'activo'/);
 assert.doesNotMatch(profileBalanceSql, /UPDATE public\.perfiles|INSERT INTO public\.transacciones/i);
-const pendingProfileBalance = (ledgerManifest.forward_migrations || []).find(entry => entry.file === '20261123223000_fortuna_profile_balance_initial_obligation.sql');
+const pendingProfileBalance = (ledgerManifest.forward_migrations || []).find(entry => entry.file === '20261123211142_fortuna_profile_balance_initial_obligation.sql');
 assert.ok(pendingProfileBalance, 'FORTUNA V168 linked-balance migration must be tracked');
 assert.equal(pendingProfileBalance.applied_to_live, true, 'FORTUNA V168 linked-balance migration must be recorded as LIVE');
 assert.equal(pendingProfileBalance.live_version, '20261123211142');
