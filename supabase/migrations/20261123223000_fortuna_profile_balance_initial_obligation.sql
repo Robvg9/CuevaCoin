@@ -49,7 +49,7 @@ BEGIN
     'display_name', v_name,
     'username', v_username,
     'linked_profile_id', p_profile_id,
-    'balance_minor', pg_catalog.greatest(0, pg_catalog.round(v_balance * 100))::bigint::text
+    'balance_minor', CASE WHEN v_balance > 0 THEN pg_catalog.round(v_balance * 100)::bigint::text ELSE '0' END
   );
 END;
 $fortuna_link_profile_contact$;
