@@ -14,10 +14,10 @@ const SHELL_FILES = [
   '/icon.png',
   '/icon-192.png',
   '/badge.png',
-  '/js/finance/fortuna/ui.js?v=168',
-  '/js/finance/orchestration/show-admin-panel.js?v=168',
-  '/js/finance/orchestration/show-user-dashboard.js?v=168',
-  '/js/ui/navigation.js?v=168',
+  '/js/finance/fortuna/ui.js?v=169',
+  '/js/finance/orchestration/show-admin-panel.js?v=169',
+  '/js/finance/orchestration/show-user-dashboard.js?v=169',
+  '/js/ui/navigation.js?v=169',
   '/js/finance/fortuna/preview-domain.mjs',
   '/js/finance/fortuna/api.mjs'
 ];
