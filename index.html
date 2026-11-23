@@ -3819,6 +3819,18 @@
         .fortuna-contact-position strong{font-size:12px;overflow-wrap:anywhere}
         .fortuna-contact-card button{width:100%;min-height:38px}
         .fortuna-contact-detail{margin-top:14px;padding:16px;border:1px solid var(--border-color);border-radius:15px;background:var(--card-bg)}
+        .fortuna-activity-list{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+        .fortuna-activity-row{display:flex;flex-direction:column;gap:7px;min-width:0;padding:13px;border:1px solid var(--border-color);border-radius:12px;background:var(--card-bg)}
+        .fortuna-activity-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+        .fortuna-activity-heading strong{font-size:13px;overflow-wrap:anywhere}
+        .fortuna-activity-heading span{font-size:13px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+        .fortuna-activity-meta,.fortuna-activity-audit{font-size:10px;opacity:.68;overflow-wrap:anywhere}
+        .fortuna-activity-audit{text-transform:capitalize}
+        .fortuna-activity-entries{display:flex;flex-direction:column;gap:5px;padding-top:6px;border-top:1px solid var(--border-color)}
+        .fortuna-activity-entry{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;font-size:11px}
+        .fortuna-activity-entry span{min-width:0;overflow-wrap:anywhere}
+        .fortuna-activity-entry strong{white-space:nowrap;font-variant-numeric:tabular-nums}
+        .fortuna-activity-more{width:100%;margin-top:4px}
         .fortuna-settlement-workbench{display:grid;gap:12px;margin-top:18px;padding:15px;border:1px solid var(--border-color);border-radius:14px;background:color-mix(in srgb,var(--primary-color) 5%,var(--card-bg))}
         .fortuna-settlement-workbench>h4{font-size:16px;margin:0}
         .fortuna-settlement-workbench .fortuna-contact-position{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
@@ -4536,6 +4548,9 @@
                     </div>
                     <div class="fortuna-server-note"><strong>Obligaciones pendientes</strong><span>Esta vista refleja obligaciones abiertas devueltas por el servidor para el contacto seleccionado.</span></div>
                     <div id="fortuna-preview-history-list" class="fortuna-preview-history-list"><div class="fortuna-empty-state"><span aria-hidden="true">📚</span><h3>Selecciona un contacto</h3><p>Consulta sus obligaciones abiertas desde la ficha.</p></div></div>
+                    <div class="fortuna-panel-heading" style="margin-top:22px"><div><h2>Movimientos y auditoría</h2><p>Eventos financieros registrados por el servidor, ordenados del más reciente al más antiguo.</p></div></div>
+                    <div class="fortuna-server-note"><strong>Historial del libro</strong><span>Solo muestra eventos del contacto dentro del libro del propietario autenticado. Los detalles de auditoría internos no se exponen.</span></div>
+                    <div id="fortuna-activity-list" class="fortuna-activity-list" aria-live="polite"><div class="fortuna-empty-state"><span aria-hidden="true">🧾</span><h3>Selecciona un contacto</h3><p>Consulta sus movimientos financieros desde la ficha.</p></div></div>
                 </section>
 
                 <dialog id="fortuna-contact-dialog" class="fortuna-dialog" aria-labelledby="fortuna-contact-dialog-title">
@@ -5800,7 +5815,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.163';
+                const VERSION_FALLBACK = 'V.164';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
@@ -6186,7 +6201,7 @@
     <!-- Fase 6 — Enter en inputs de chat (delega a send* modulares) -->
     <script type="module" src="js/chat/chat-enter-keys.js"></script>
     <!-- Lógica restante del monolito (diferida: corre DESPUÉS de los módulos anteriores) -->
-    <script type="module" src="js/finance/fortuna/ui.js?v=163"></script>
+    <script type="module" src="js/finance/fortuna/ui.js?v=164"></script>
     <script defer src="js/legacy-app.js"></script>
 
 <script>
