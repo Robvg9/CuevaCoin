@@ -40,6 +40,7 @@ assert.ok(sqlSafetyPush.includes('      - "main"'), 'Step 10 SQL safety verifica
 const frontendRequiredPaths = [
   'index.html',
   'js/finance/fortuna/**',
+  'js/ui/navigation.js',
   'scripts/verify-fortuna-ui-preview.mjs',
   'js/legacy-app.js',
   'js/core/app.js',
