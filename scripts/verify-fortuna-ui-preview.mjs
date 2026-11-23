@@ -66,8 +66,10 @@ assert.match(html, /Te debe[\s\S]*Le debes/);
 assert.match(html, /CUP[\s\S]*USD[\s\S]*EUR/);
 assert.match(html, /ui\.js\?v=160/);
 assert.equal(sw.match(/const CACHE_NAME = 'cuevacoin-shell-v(\d+)'/)?.[1], '160');
-assert.equal(html.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '160');
-assert.equal(app.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '160');
+assert.equal(html.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '161');
+assert.equal(app.match(/const VERSION_FALLBACK = 'V\.(\d+)'/)?.[1], '161');
+assert.match(sw, /\/js\/finance\/fortuna\/ui\.js\?v=161/);
+assert.match(sw, /\/js\/finance\/fortuna\/preview-domain\.mjs/);
 
 // The UI may manipulate DOM only; it must not make requests or persist financial drafts.
 for (const forbidden of [
