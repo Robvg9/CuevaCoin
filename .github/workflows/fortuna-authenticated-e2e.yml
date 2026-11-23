@@ -1,0 +1,113 @@
+name: FORTUNA authenticated local Supabase E2E
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/config.toml"
+      - "supabase/functions/fortuna-dispatch/**"
+      - "supabase/migrations/**"
+      - "supabase/tests/fortuna-local-e2e-grants.sql"
+      - "scripts/e2e-fortuna-authenticated.mjs"
+      - "scripts/verify-fortuna-edge-dispatch.mjs"
+      - ".github/workflows/fortuna-authenticated-e2e.yml"
+  push:
+    branches: [main, "feat/**", "fix/**"]
+    paths:
+      - "supabase/config.toml"
+      - "supabase/functions/fortuna-dispatch/**"
+      - "supabase/migrations/**"
+      - "supabase/tests/fortuna-local-e2e-grants.sql"
+      - "scripts/e2e-fortuna-authenticated.mjs"
+      - "scripts/verify-fortuna-edge-dispatch.mjs"
+      - ".github/workflows/fortuna-authenticated-e2e.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fortuna-authenticated-local-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  authenticated-local-e2e:
+    name: Auth + Edge + PostgREST + owner isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 3.2.0
+
+      - name: Validate isolated local configuration
+        run: |
+          supabase --version
+          supabase config validate
+
+      - name: Start disposable local Supabase stack
+        run: |
+          supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,logflare,vector,supavisor
+
+      - name: Apply repository migrations to disposable local database
+        run: |
+          supabase db reset
+
+      - name: Apply separately approved schema USAGE grants locally only
+        run: |
+          supabase db query -f supabase/tests/fortuna-local-e2e-grants.sql
+
+      - name: Export local API URL and public key
+        shell: bash
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase-local.env"
+          set -a
+          source "$RUNNER_TEMP/supabase-local.env"
+          set +a
+          : "${API_URL:?Supabase status did not return API_URL}"
+          LOCAL_PUBLIC_KEY="${ANON_KEY:-${PUBLISHABLE_KEY:-}}"
+          test -n "$LOCAL_PUBLIC_KEY"
+          {
+            echo "FORTUNA_E2E_URL=$API_URL"
+            echo "FORTUNA_E2E_API_KEY=$LOCAL_PUBLIC_KEY"
+          } >> "$GITHUB_ENV"
+
+      - name: Serve dispatcher locally with JWT verification enabled
+        shell: bash
+        run: |
+          supabase functions serve fortuna-dispatch > "$RUNNER_TEMP/fortuna-edge-runtime.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/fortuna-edge-runtime.pid"
+          ready=false
+          for attempt in $(seq 1 90); do
+            code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              --request POST "$FORTUNA_E2E_URL/functions/v1/fortuna-dispatch" \
+              --header "apikey: $FORTUNA_E2E_API_KEY" \
+              --header "content-type: application/json" \
+              --data '{"operation":"list_contacts","args":{}}' || true)
+            if [ "$code" = "401" ]; then
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != "true" ]; then
+            cat "$RUNNER_TEMP/fortuna-edge-runtime.log"
+            echo "Local Edge Function did not reach the expected JWT-protected state." >&2
+            exit 1
+          fi
+
+      - name: Run authenticated two-owner integration tests
+        run: node scripts/e2e-fortuna-authenticated.mjs
+
+      - name: Stop disposable Supabase stack
+        if: always()
+        continue-on-error: true
+        run: supabase stop --no-backup
