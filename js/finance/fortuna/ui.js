@@ -499,11 +499,16 @@ function inicializarFortuna() {
         draft.overageConfirmed = false;
         setStatus('El saldo cambió después de la vista previa. Se descartó el plan; consulta de nuevo y revisa la nueva distribución.');
         await loadSelectedObligations();
-      } else if (error?.retryable || code === 'IDEMPOTENCY_CONFLICT') {
+      } else if (code === 'IDEMPOTENCY_CONFLICT') {
+        draft.pendingCommit = null;
+        draft.preview = null;
+        draft.previewKey = null;
+        draft.overageConfirmed = false;
+        setStatus('Esta clave ya está vinculada a otra operación. No se repetirá el envío; actualiza las obligaciones y genera una nueva vista previa antes de continuar.');
+        await loadSelectedObligations();
+      } else if (error?.retryable) {
         pending.uncertain = true;
-        setStatus(code === 'IDEMPOTENCY_CONFLICT'
-          ? 'La clave idempotente entró en conflicto. Se bloqueó una nueva liquidación; conserva esta ficha y no cambies los datos.'
-          : 'No se pudo confirmar la respuesta. Reintenta esta misma confirmación: se reutilizarán exactamente los mismos datos, fingerprint y clave.');
+        setStatus('No se pudo confirmar la respuesta. Reintenta esta misma confirmación: se reutilizarán exactamente los mismos datos, fingerprint y clave.');
       } else {
         draft.pendingCommit = null;
         draft.preview = null;
