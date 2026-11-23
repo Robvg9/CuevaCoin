@@ -266,6 +266,7 @@ DECLARE
   v_expected_balance numeric := 0;
   v_principal_minor bigint := 0;
   v_current_ledger_minor bigint;
+  v_old_ledger_minor bigint;
   v_transaction_count integer := 0;
   v_withdrawal_count integer := 0;
   v_audit_count integer := 0;
@@ -741,6 +742,14 @@ BEGIN
   v_digest := pg_catalog.encode(
     pg_catalog.sha256(pg_catalog.convert_to(v_digest_payload, 'UTF8')), 'hex'
   );
+
+  SELECT COALESCE(pg_catalog.sum(le.signed_minor), 0)::bigint
+    INTO v_old_ledger_minor
+    FROM fortuna_private.financial_ledger_entries le
+   WHERE le.book_id = v_book_id AND le.obligation_id = v_obligation_id;
+  IF v_old_ledger_minor <> 0 THEN
+    RAISE EXCEPTION 'fortuna_profile_migration_opening_snapshot_not_neutralized';
+  END IF;
 
   SELECT COALESCE(pg_catalog.sum(le.signed_minor), 0)::bigint
     INTO v_current_ledger_minor
