@@ -15,11 +15,13 @@ const SHELL_FILES = [
   '/icon-192.png',
   '/badge.png',
   '/js/finance/fortuna/ui.js?v=170',
-  '/js/finance/orchestration/show-admin-panel.js?v=169',
+  '/js/finance/orchestration/show-admin-panel.js?v=170',
   '/js/finance/orchestration/show-user-dashboard.js?v=170',
-  '/js/ui/navigation.js?v=169',
+  '/js/ui/navigation.js?v=170',
   '/js/finance/fortuna/preview-domain.mjs',
-  '/js/finance/fortuna/api.mjs'
+  '/js/finance/fortuna/api.mjs',
+  '/js/data/profiles.js?v=170',
+  '/js/core/app.js?v=170'
 ];
 
 const EXTERNAL_SHELL_FILES = [
