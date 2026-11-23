@@ -105,9 +105,29 @@ const settlementArgs = {
   totalAmountMinor: '5000',
   requestedAllocations: [],
 };
-nextResult = { data: { data: { preview_fingerprint: 'a'.repeat(64), overage_minor: '0' } }, error: null };
+const validPreview = {
+  version: 1,
+  book_id: 'book-1',
+  contact_id: 'c1',
+  currency: 'CUP',
+  flow: 'cash_received',
+  mode: 'fifo',
+  total_amount_minor: '5000',
+  eligible_obligations: [{
+    obligation_id: 'o1',
+    opened_at: '2026-01-01T00:00:00Z',
+    remaining_minor: '10000',
+  }],
+  allocations: [{ obligation_id: 'o1', amount_minor: '5000' }],
+  allocated_minor: '5000',
+  overage_minor: '0',
+  overage_direction: null,
+  preview_fingerprint: 'a'.repeat(64),
+};
+nextResult = { data: { data: validPreview }, error: null };
 const preview = await previewSettlement(settlementArgs);
 assert.equal(preview.preview_fingerprint, 'a'.repeat(64));
+assert.deepEqual(preview.allocations, [{ obligation_id: 'o1', amount_minor: '5000' }]);
 lastCall('preview_settlement', {
   p_contact_id: 'c1',
   p_currency_code: 'CUP',
@@ -117,14 +137,50 @@ lastCall('preview_settlement', {
   p_requested_allocations: [],
 });
 
+nextResult = { data: { data: { ...validPreview, allocated_minor: '4000' } }, error: null };
+await assert.rejects(
+  () => previewSettlement(settlementArgs),
+  (error) => error instanceof FortunaApiError && error.code === 'INVALID_RESPONSE',
+);
+
+const overagePreview = {
+  ...validPreview,
+  total_amount_minor: '15000',
+  allocated_minor: '10000',
+  overage_minor: '5000',
+  overage_direction: 'payable',
+  allocations: [{ obligation_id: 'o1', amount_minor: '10000' }],
+};
+nextResult = { data: { data: overagePreview }, error: null };
+assert.equal((await previewSettlement({ ...settlementArgs, totalAmountMinor: '15000' })).overage_direction, 'payable');
+lastCall('preview_settlement', {
+  p_contact_id: 'c1',
+  p_currency_code: 'CUP',
+  p_flow: 'cash_received',
+  p_mode: 'fifo',
+  p_total_amount_minor: '15000',
+  p_requested_allocations: [],
+});
+
 const commitArgs = {
   ...settlementArgs,
   previewFingerprint: 'a'.repeat(64),
   confirmOverage: false,
   idempotencyKey: 'settlement-idempotency-01',
 };
-nextResult = { data: { data: { event_id: 'e1' } }, error: null };
-assert.deepEqual(await receiveCash(commitArgs), { event_id: 'e1' });
+const validCommit = {
+  event_id: 'e1',
+  flow: 'cash_received',
+  mode: 'fifo',
+  currency: 'CUP',
+  total_amount_minor: '5000',
+  allocated_minor: '5000',
+  overage_minor: '0',
+  allocations: [{ obligation_id: 'o1', amount_minor: '5000' }],
+  overage_obligation_id: null,
+};
+nextResult = { data: { data: validCommit }, error: null };
+assert.deepEqual(await receiveCash(commitArgs), validCommit);
 lastCall('receive_cash', {
   p_contact_id: 'c1',
   p_currency_code: 'CUP',
@@ -136,11 +192,12 @@ lastCall('receive_cash', {
   p_idempotency_key: 'settlement-idempotency-01',
 });
 
-nextResult = { data: { data: { event_id: 'e2' } }, error: null };
+const validPayCommit = { ...validCommit, event_id: 'e2', flow: 'cash_paid' };
+nextResult = { data: { data: validPayCommit }, error: null };
 assert.deepEqual(await payContact({
   ...commitArgs,
   flow: 'cash_paid',
-}), { event_id: 'e2' });
+}), validPayCommit);
 lastCall('pay_contact', {
   p_contact_id: 'c1',
   p_currency_code: 'CUP',
@@ -151,6 +208,17 @@ lastCall('pay_contact', {
   p_confirm_overage: false,
   p_idempotency_key: 'settlement-idempotency-01',
 });
+
+nextError = {
+  context: new Response(JSON.stringify({ error: 'STALE_PREVIEW' }), {
+    status: 409,
+    headers: { 'Content-Type': 'application/json' },
+  }),
+};
+await assert.rejects(
+  () => receiveCash(commitArgs),
+  (error) => error instanceof FortunaApiError && error.code === 'STALE_PREVIEW' && error.status === 409,
+);
 
 const callsBeforeMissingSession = calls.length;
 session = null;
@@ -199,4 +267,4 @@ await assert.rejects(
   (error) => error instanceof FortunaApiError && error.code === 'SERVICE_UNAVAILABLE' && error.retryable === true,
 );
 
-console.log('PASS — authenticated dispatcher client: caller JWT, allowlisted contact/obligation/settlement operations, exact args, secure idempotency keys, missing-session rejection and HTTP 409 mapping.');
+console.log('PASS — authenticated dispatcher client: caller JWT, allowlisted operations, schema-validated settlement plans and commits, overage direction, stale-preview HTTP 409, secure idempotency and session guards.');
