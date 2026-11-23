@@ -421,7 +421,8 @@ export async function searchFortunaProfiles(query) {
   const result = await invokeFortuna('search_fortuna_profiles', { p_query: normalized });
   if (!Array.isArray(result)) throw new FortunaApiError('INVALID_RESPONSE', 'La búsqueda de usuarios no es válida.');
   return result.filter((item) => item && typeof item.profile_id === 'string'
-    && typeof item.username === 'string' && typeof item.display_name === 'string');
+    && typeof item.username === 'string' && typeof item.display_name === 'string'
+    && typeof item.is_dependent === 'boolean');
 }
 
 export async function linkFortunaProfileContact(profileId, isDependent = false) {
