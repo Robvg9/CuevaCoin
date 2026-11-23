@@ -134,7 +134,7 @@ assert.equal(
   1,
   'Only the new FORTUNA V169 dependent-classification migration may remain pending',
 );
-assert.ok(
+assert.equal(
   (ledgerManifest.pending_forward_migrations || []).some(entry => entry.file === pendingFortunaLink.file),
   false,
   'The applied FORTUNA V167 migration must not remain in the pending migration list',
