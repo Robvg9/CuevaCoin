@@ -87,3 +87,32 @@ emit('SIDE_EFFECTS', 'NONE');
 emit('SERVICES_STARTED', 'NO');
 emit('CONTAINERS_CREATED', 'NO');
 emit('IMAGES_DOWNLOADED', 'NO');
+
+const podman = findExecutable(['podman.exe', 'podman']);
+if (!podman) {
+  emit('PODMAN_CLI', 'NOT_INSTALLED');
+} else {
+  const version = spawnSync(podman, ['--version'], {
+    encoding: 'utf8', timeout: 8000, windowsHide: true
+  });
+  emit('PODMAN_CLI', version.status === 0 ? 'INSTALLED' : 'FOUND_BUT_FAILED');
+  if (version.status === 0) emit('PODMAN_VERSION', (version.stdout || '').trim());
+}
+
+const wsl = findExecutable(['wsl.exe', 'wsl']);
+if (!wsl) {
+  emit('WSL', 'NOT_INSTALLED');
+} else {
+  const status = spawnSync(wsl, ['--status'], {
+    encoding: 'utf8', timeout: 8000, windowsHide: true
+  });
+  emit('WSL', status.status === 0 ? 'AVAILABLE' : 'PRESENT_BUT_UNAVAILABLE');
+  const distros = spawnSync(wsl, ['--list', '--quiet'], {
+    encoding: 'utf8', timeout: 8000, windowsHide: true
+  });
+  if (distros.status === 0) {
+    const names = (distros.stdout || '').replace(/\0/g, '').split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+    emit('WSL_DISTRO_COUNT', names.length);
+  }
+}
+
