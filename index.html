@@ -3866,6 +3866,34 @@
         .fortuna-dialog-actions .btn{min-height:42px}
         .fortuna-filter-control input:focus-visible,.fortuna-filter-control select:focus-visible,.fortuna-form-field input:focus-visible,.fortuna-form-field select:focus-visible,.fortuna-form-field textarea:focus-visible{outline:2px solid var(--secondary-color);outline-offset:2px}
         @media(max-width:720px){.fortuna-contact-list{grid-template-columns:1fr}.fortuna-contact-filters{grid-template-columns:1fr}.fortuna-local-workbench{align-items:stretch}.fortuna-local-workbench .fortuna-primary-actions{width:100%}.fortuna-local-workbench .fortuna-primary-actions .btn{flex:1 1 100%}.fortuna-dialog form{padding:16px}}
+
+        /* FORTUNA V167 — compact, action-first layout */
+        #shared-fortuna .fortuna-overview-grid { display:none; }
+        #shared-fortuna .fortuna-safety-notice { padding:9px 11px; gap:8px; }
+        #shared-fortuna .fortuna-safety-notice p { display:none; }
+        #shared-fortuna .fortuna-summary-grid { gap:8px; }
+        #shared-fortuna .fortuna-summary-card { padding:11px 12px; gap:2px; }
+        #shared-fortuna .fortuna-summary-card strong { font-size:clamp(19px,4vw,25px); }
+        #shared-fortuna .fortuna-tabs { margin-top:2px; }
+        #shared-fortuna .fortuna-tab { padding:9px 12px; }
+        #shared-fortuna .fortuna-contact-card { padding:11px; gap:7px; }
+        #shared-fortuna .fortuna-contact-position { gap:7px; }
+        #shared-fortuna .fortuna-contact-position > div { padding:7px 9px; border-radius:9px; }
+        #shared-fortuna .fortuna-contact-position .is-receivable { background:rgba(22,163,74,.10); color:#15803d; }
+        #shared-fortuna .fortuna-contact-position .is-payable { background:rgba(220,38,38,.09); color:#dc2626; }
+        #shared-fortuna .fortuna-contact-position strong { font-size:12px; }
+        #shared-fortuna .fortuna-settlement-details { margin-top:10px; border:1px solid var(--border-color); border-radius:12px; padding:10px 12px; }
+        #shared-fortuna .fortuna-settlement-details > summary { cursor:pointer; font-weight:800; font-size:13px; list-style:none; }
+        #shared-fortuna .fortuna-settlement-details > summary::-webkit-details-marker { display:none; }
+        #shared-fortuna .fortuna-settlement-details[open] > summary { margin-bottom:12px; }
+        #shared-fortuna .fortuna-settlement-details .fortuna-settlement-workbench { margin-top:0; }
+        #shared-fortuna .fortuna-contact-detail { gap:9px; }
+        #shared-fortuna .fortuna-detail-head { margin-bottom:4px; }
+        #shared-fortuna .fortuna-detail-totals { margin:7px 0; }
+        @media(max-width:560px) {
+          #shared-fortuna .fortuna-summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+          #shared-fortuna .fortuna-summary-card:last-child { grid-column:1 / -1; }
+        }
 </style>
 
 </head>
@@ -4499,9 +4527,9 @@
                 </div>
                 <p id="fortuna-session-status" class="fortuna-session-status" role="status" aria-live="polite">Abre esta sección para consultar tu libro.</p>
                 <div class="fortuna-tabs" role="tablist" aria-label="Secciones de FORTUNA">
-                    <button type="button" class="fortuna-tab is-active" id="fortuna-tab-overview" role="tab" aria-selected="true" aria-controls="fortuna-panel-overview" data-fortuna-tab="overview">Resumen</button>
+                    <button type="button" class="fortuna-tab is-active" id="fortuna-tab-overview" role="tab" aria-selected="true" aria-controls="fortuna-panel-overview" data-fortuna-tab="overview">Operaciones</button>
                     <button type="button" class="fortuna-tab" id="fortuna-tab-contacts" role="tab" aria-selected="false" aria-controls="fortuna-panel-contacts" data-fortuna-tab="contacts" tabindex="-1">Contactos</button>
-                    <button type="button" class="fortuna-tab" id="fortuna-tab-history" role="tab" aria-selected="false" aria-controls="fortuna-panel-history" data-fortuna-tab="history" tabindex="-1">Obligaciones</button>
+                    <button type="button" class="fortuna-tab" id="fortuna-tab-history" role="tab" aria-selected="false" aria-controls="fortuna-panel-history" data-fortuna-tab="history" tabindex="-1">Movimientos</button>
                 </div>
                 <section id="fortuna-panel-overview" class="fortuna-tab-panel" role="tabpanel" aria-labelledby="fortuna-tab-overview" data-fortuna-panel="overview">
                     <div class="fortuna-overview-grid">
