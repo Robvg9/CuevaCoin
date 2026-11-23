@@ -3994,7 +3994,7 @@
                     <i>📚</i> Historial general
                 </a>
             </li>
-            <li id="fortuna-link-item" style="display: none;">
+            <li id="fortuna-link-item">
                 <a role="button" tabindex="0" onclick="loadSection('fortuna')" id="fortuna-link">
                     <i>💼</i> FORTUNA <span class="fortuna-menu-tag">Vista previa</span>
                 </a>
@@ -5815,7 +5815,7 @@
                 // Fuente única: CACHE_NAME del SW. Actualiza login + topbar.
                 const els = Array.from(document.querySelectorAll('#app-version-text, .js-app-version'));
                 if (els.length === 0) return;
-                const VERSION_FALLBACK = 'V.164';
+                const VERSION_FALLBACK = 'V.165';
                 const aplicar = (texto) => { els.forEach((el) => { el.textContent = texto; }); };
                 try {
                     const sw = navigator.serviceWorker.controller
