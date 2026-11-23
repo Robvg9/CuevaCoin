@@ -19,6 +19,39 @@ UPDATE public.perfiles AS p
  WHERE p.es_admin IS FALSE
    AND p.estado = 'activo';
 
+-- Prevent ordinary authenticated users from self-promoting into the payroll roster.
+-- Preserve the existing protected-column behavior and add es_dependiente.
+CREATE OR REPLACE FUNCTION public.proteger_columnas_sensibles_perfil()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path TO 'pg_catalog', 'public'
+AS $function$
+BEGIN
+    IF auth.role() IS DISTINCT FROM 'service_role'
+       AND current_setting('cuevacoin.trusted_balance_write', true) IS DISTINCT FROM '1'
+       AND NEW.saldo IS DISTINCT FROM OLD.saldo THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '42501',
+            MESSAGE = 'saldo_update_requires_atomic_rpc';
+    END IF;
+
+    IF NOT (
+        public.es_admin()
+        OR auth.role() = 'service_role'
+        OR current_setting('cuevacoin.trusted_balance_write', true) = '1'
+    ) THEN
+        NEW.es_admin := OLD.es_admin;
+        NEW.estado := OLD.estado;
+        NEW.numero_cuenta := OLD.numero_cuenta;
+        NEW.usuario := OLD.usuario;
+        NEW.correo_verificado := OLD.correo_verificado;
+        NEW.fecha_limite_verificacion := OLD.fecha_limite_verificacion;
+        NEW.es_dependiente := OLD.es_dependiente;
+    END IF;
+    RETURN NEW;
+END;
+$function$;
+
 -- Search only active non-admin accounts, and disclose their current business role
 -- to the authenticated active owner so the role choice is never made blindly.
 CREATE OR REPLACE FUNCTION fortuna_private.fortuna_search_profiles(p_query text)
