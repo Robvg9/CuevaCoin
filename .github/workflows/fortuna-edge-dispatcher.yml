@@ -1,14 +1,7 @@
 name: FORTUNA Edge Dispatcher contract
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "supabase/functions/fortuna-dispatch/**"
-      - "scripts/verify-fortuna-edge-dispatch.mjs"
-      - "scripts/smoke-fortuna-dispatch-auth.mjs"
-      - "docs/fortuna/edge-dispatcher.md"
-      - ".github/workflows/fortuna-edge-dispatcher.yml"
+  # Public-repo safety: self-hosted Windows jobs must not run fork PR code.
   push:
     branches: [main, "feat/**"]
     paths:

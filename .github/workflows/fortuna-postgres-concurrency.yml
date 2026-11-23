@@ -1,19 +1,7 @@
 name: FORTUNA native PostgreSQL concurrency tests
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "supabase/tests/fortuna_v1_schema_prototype.sql"
-      - "supabase/tests/fortuna_v1_settlement_prototype.sql"
-      - "supabase/tests/fortuna_v1_owner_api_operations_prototype.sql"
-      - "supabase/tests/fortuna_v1_owner_settlement_api_prototype.sql"
-      - "scripts/verify-fortuna-owner-settlement-api.mjs"
-      - "scripts/verify-fortuna-postgres-concurrency.mjs"
-      - "docs/fortuna/**"
-      - ".github/workflows/fortuna-postgres-concurrency.yml"
-      - "supabase/migrations/**"
-      - "scripts/verify-fortuna-production-migration.mjs"
+  # Public-repo safety: self-hosted Windows jobs must not run fork PR code.
   push:
     branches:
       - "main"

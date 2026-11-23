@@ -1,13 +1,7 @@
 name: CuevaCoin Step 10 SQL safety checks
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "supabase/migrations/**"
-      - "supabase/tests/**"
-      - "scripts/verify-step10-migration.mjs"
-      - ".github/workflows/step10-sql-safety.yml"
+  # Public-repo safety: self-hosted Windows jobs must not run fork PR code.
   push:
     branches:
       - "main"

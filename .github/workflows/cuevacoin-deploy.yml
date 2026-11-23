@@ -1,17 +1,7 @@
 name: CuevaCoin governed Worker deployment
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - ".github/workflows/cuevacoin-deploy.yml"
-      - ".assetsignore"
-      - "wrangler.jsonc"
-      - "index.html"
-      - "service-worker.js"
-      - "js/**"
-      - "scripts/verify-cuevacoin-*.mjs"
-      - "supabase/migrations/**"
+  # Public-repo safety: self-hosted Windows jobs must not run fork PR code.
   workflow_dispatch:
     inputs:
       change_summary:
