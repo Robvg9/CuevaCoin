@@ -54,7 +54,7 @@ export function loadSection(section) {
 
     document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
 
-    const seccionesCompartidas = ['perfil', 'config-cambio-contrasena', 'config-modo-oscuro', 'config-notificaciones', 'como-usar'];
+    const seccionesCompartidas = ['perfil', 'config-cambio-contrasena', 'config-modo-oscuro', 'config-notificaciones', 'como-usar', 'fortuna'];
     if (seccionesCompartidas.includes(section)) {
         mostrarConAnimacion(document.getElementById(`shared-${section}`));
         actualizarConfigTabsBar(section);
