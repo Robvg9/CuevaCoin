@@ -123,7 +123,7 @@ assert.match(activitySql, /p_before_occurred_at/);
 assert.match(activitySql, /fortuna_get_current_book_id/);
 assert.match(activitySql, /ORDER BY e\.occurred_at DESC, e\.id DESC/);
 assert.match(activitySql, /REVOKE ALL ON FUNCTION api\.list_activity/);
-assert.match(e2e, /paginated financial history is owner-scoped/);
+assert.match(authenticatedE2E, /paginated financial history is owner-scoped/);
 assert.match(dispatcher, /fortuna_stale_preview/);
 assert.match(dispatcher, /STALE_PREVIEW/);
 for (const operation of ['create_contact','open_obligation','list_contacts','list_obligations','preview_settlement','receive_cash','pay_contact']) {
