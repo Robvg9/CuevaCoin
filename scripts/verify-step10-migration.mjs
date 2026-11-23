@@ -249,6 +249,9 @@ const dependentRoleSql = readFileSync('supabase/migrations/20261124010000_fortun
 assert.match(dependentRoleSql, /ADD COLUMN IF NOT EXISTS es_dependiente boolean NOT NULL DEFAULT false/);
 assert.match(dependentRoleSql, /UPDATE public\.perfiles AS p[\s\S]*?NOT EXISTS[\s\S]*?financial_contacts[\s\S]*?linked_profile_id = p\.id/);
 assert.match(dependentRoleSql, /p_is_dependent boolean DEFAULT false/);
+assert.match(dependentRoleSql, /fortuna_set_profile_dependent_role/);
+assert.match(dependentRoleSql, /api\.set_fortuna_profile_dependent_role/);
+assert.match(dependentRoleSql, /'is_fortuna_contact'/);
 assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_search_profiles/);
 assert.match(dependentRoleSql, /'is_dependent', p\.es_dependiente/);
 assert.match(dependentRoleSql, /owner_profile\.es_admin IS TRUE/);
