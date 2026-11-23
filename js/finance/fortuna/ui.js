@@ -1055,7 +1055,8 @@ function inicializarFortuna() {
   profileResults.addEventListener('click', async (event) => {
     const button = event.target.closest('[data-link-profile-id]');
     if (!button) return;
-    button.disabled = true;
+    const profileRow = button.closest('.fortuna-contact-card');
+    profileRow?.querySelectorAll('button').forEach((item) => { item.disabled = true; });
     try {
       const isDependent = button.dataset.linkProfileDependent === 'true';
       const linked = await linkFortunaProfileContact(button.dataset.linkProfileId, isDependent);
@@ -1076,7 +1077,7 @@ function inicializarFortuna() {
         } });
       }
     } catch (linkError) {
-      button.disabled = false;
+      profileRow?.querySelectorAll('button').forEach((item) => { item.disabled = false; });
       byId('fortuna-profile-search-error').textContent = errorMessage(linkError);
     }
   });
