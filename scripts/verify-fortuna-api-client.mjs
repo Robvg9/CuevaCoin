@@ -175,6 +175,24 @@ lastCall('preview_settlement', {
   p_requested_allocations: [{ obligation_id: 'o1', amount_minor: '2500' }],
 });
 
+const invalidFifoPreview = {
+  ...validPreview,
+  eligible_obligations: [
+    { obligation_id: 'o1', opened_at: '2026-01-01T00:00:00Z', remaining_minor: '5000' },
+    { obligation_id: 'o2', opened_at: '2026-01-02T00:00:00Z', remaining_minor: '5000' },
+  ],
+  allocations: [
+    { obligation_id: 'o2', amount_minor: '2500' },
+    { obligation_id: 'o1', amount_minor: '2500' },
+  ],
+  allocated_minor: '5000',
+};
+nextResult = { data: { data: invalidFifoPreview }, error: null };
+await assert.rejects(
+  () => previewSettlement(settlementArgs),
+  (error) => error instanceof FortunaApiError && error.code === 'INVALID_RESPONSE',
+);
+
 const overagePreview = {
   ...validPreview,
   total_amount_minor: '15000',
