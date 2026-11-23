@@ -12,6 +12,7 @@ const RPC_BY_OPERATION = {
   list_activity: 'list_activity',
   search_fortuna_profiles: 'search_fortuna_profiles',
   link_fortuna_profile_contact: 'link_fortuna_profile_contact',
+  set_fortuna_profile_dependent_role: 'set_fortuna_profile_dependent_role',
   preview_settlement: 'preview_settlement',
   receive_cash: 'receive_cash',
   pay_contact: 'pay_contact',
