@@ -33,8 +33,8 @@ const workflowPushSection = (source) => {
 };
 const frontendPush = workflowPushSection(frontendWorkflow);
 const sqlSafetyPush = workflowPushSection(sqlSafetyWorkflow);
-const frontendPullRequest = frontendWorkflow.slice(frontendWorkflow.indexOf('  pull_request:'), frontendWorkflow.indexOf('\n  push:'));
-const sqlSafetyPullRequest = sqlSafetyWorkflow.slice(sqlSafetyWorkflow.indexOf('  pull_request:'), sqlSafetyWorkflow.indexOf('\n  push:'));
+assert.ok(!/^  pull_request:/m.test(frontendWorkflow), 'Public repository must not send untrusted PR code to the self-hosted Windows runner');
+assert.ok(!/^  pull_request:/m.test(sqlSafetyWorkflow), 'Public repository must not send untrusted PR code to the self-hosted Windows runner');
 assert.ok(frontendPush.includes('      - "main"'), 'Step 10 frontend verification must run on main pushes');
 assert.ok(sqlSafetyPush.includes('      - "main"'), 'Step 10 SQL safety verification must run on main pushes');
 const frontendRequiredPaths = [
@@ -70,7 +70,6 @@ const frontendRequiredPaths = [
 ];
 for (const path of frontendRequiredPaths) {
   assert.ok(frontendPush.includes('"' + path + '"'), 'Step 10 frontend push filter must include ' + path);
-  assert.ok(frontendPullRequest.includes('"' + path + '"'), 'Step 10 frontend PR filter must include ' + path);
 }
 for (const path of [
   'supabase/migrations/**',
@@ -79,9 +78,8 @@ for (const path of [
   '.github/workflows/step10-sql-safety.yml',
 ]) {
   assert.ok(sqlSafetyPush.includes('"' + path + '"'), 'Step 10 SQL safety push filter must include ' + path);
-  assert.ok(sqlSafetyPullRequest.includes('"' + path + '"'), 'Step 10 SQL safety PR filter must include ' + path);
 }
-console.log('PASS — Step 10 frontend and SQL safety checks cover main releases and all governed dependencies');
+console.log('PASS — Step 10 push checks cover governed dependencies; public PRs cannot execute on the self-hosted Windows runner');
 
 const start = legacy.indexOf("document.getElementById('ajustar-saldo-form').addEventListener('submit'");
 const end = legacy.indexOf('// F7 (fix): antes esta función', start);
