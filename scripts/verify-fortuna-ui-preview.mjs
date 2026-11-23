@@ -123,6 +123,16 @@ assert.match(ui, /const hasNewBalanceToConfirm = linked\.is_new_contact && balan
 assert.match(ui, /no se duplicó ninguna deuda/);
 assert.match(api, /typeof item\.is_dependent === 'boolean'/);
 assert.match(api, /typeof result\.is_new_contact !== 'boolean'/);
+assert.match(api, /setFortunaProfileDependentRole/);
+assert.match(api, /set_fortuna_profile_dependent_role/);
+assert.match(api, /typeof item\.is_fortuna_contact === 'boolean'/);
+assert.match(ui, /setFortunaProfileDependentRole\(button\.dataset\.setProfileDependentRole, isDependent\)/);
+assert.match(ui, /Quitar de dependientes/);
+assert.match(ui, /Marcar dependiente/);
+assert.match(dependentRoleSql, /fortuna_set_profile_dependent_role/);
+assert.match(dependentRoleSql, /'is_fortuna_contact'/);
+assert.match(dependentRoleSql, /api\.set_fortuna_profile_dependent_role/);
+assert.match(dispatcher, /set_fortuna_profile_dependent_role: 'set_fortuna_profile_dependent_role'/);
 assert.match(employeeRoster, /\.eq\('es_dependiente', true\)/);
 assert.match(dependentRoleSql, /ADD COLUMN IF NOT EXISTS es_dependiente boolean NOT NULL DEFAULT false/);
 assert.match(dependentRoleSql, /CREATE OR REPLACE FUNCTION fortuna_private\.fortuna_search_profiles/);
