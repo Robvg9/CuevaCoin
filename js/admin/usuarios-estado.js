@@ -19,7 +19,8 @@ export async function eliminarUsuario(usuarioId) {
 
     const { data: perfil, error: errorLectura } = await client
         .from('perfiles')
-        .select('nombre, usuario, estado, es_admin')
+        .select('nombre, usuario, estado, es_admin, es_dependiente')
+        .eq('es_dependiente', true)
         .eq('id', usuarioId)
         .single();
     if (errorLectura || !perfil) {
@@ -49,6 +50,7 @@ export async function eliminarUsuario(usuarioId) {
     const { error: errorUpdate } = await client
         .from('perfiles')
         .update({ estado: nuevoEstado })
+        .eq('es_dependiente', true)
         .eq('id', usuarioId);
     if (errorUpdate) {
         console.error(errorUpdate);
@@ -85,7 +87,7 @@ export async function archivarUsuario(usuarioId) {
     if (!admin?.esAdmin || !client) { toast('Solo el administrador puede archivar usuarios', 3000); return; }
 
     const { data: perfil, error: readError } = await client.from('perfiles')
-        .select('nombre, usuario, estado, es_admin').eq('id', usuarioId).single();
+        .select('nombre, usuario, estado, es_admin, es_dependiente').eq('es_dependiente', true).eq('id', usuarioId).single();
     if (readError || !perfil) { console.error(readError); toast('No se pudo leer el usuario', 3000); return; }
     if (perfil.es_admin) { toast('No se puede archivar una cuenta administradora', 3500); return; }
     if (perfil.estado === 'archivado') { toast('Este usuario ya está archivado', 3000); return; }
@@ -94,7 +96,7 @@ export async function archivarUsuario(usuarioId) {
     const confirmar = '¿Archivar a ' + nombre + '? No podrá iniciar sesión ni operar. Se conservarán saldo, transacciones, retiros, chat y auditoría.';
     if (!confirm(confirmar)) return;
     const { data: actualizado, error } = await client.from('perfiles')
-        .update({ estado: 'archivado' }).eq('id', usuarioId).eq('es_admin', false)
+        .update({ estado: 'archivado' }).eq('id', usuarioId).eq('es_admin', false).eq('es_dependiente', true)
         .neq('estado', 'archivado').select('id').maybeSingle();
     if (error || !actualizado) { console.error(error); toast('No se pudo archivar el usuario', 3500); return; }
 
@@ -126,7 +128,7 @@ export async function restaurarUsuario(usuarioId) {
     const nombre = perfil.nombre || perfil.usuario || 'usuario';
     if (!confirm('¿Restaurar a ' + nombre + '? Quedará inactivo hasta que pulses “Activar”; no recuperará acceso automáticamente.')) return;
     const { data: actualizado, error } = await client.from('perfiles')
-        .update({ estado: 'inactivo' }).eq('id', usuarioId).eq('es_admin', false)
+        .update({ estado: 'inactivo' }).eq('id', usuarioId).eq('es_admin', false).eq('es_dependiente', true)
         .eq('estado', 'archivado').select('id').maybeSingle();
     if (error || !actualizado) { console.error(error); toast('No se pudo restaurar el usuario', 3500); return; }
 
