@@ -5,6 +5,7 @@ import {
   createIdempotencyKey,
   listContacts,
   listObligations,
+  listActivity,
   openObligation,
   previewSettlement,
   receiveCash,
@@ -75,6 +76,43 @@ lastCall('list_obligations', {
   p_currency_code: 'CUP',
   p_direction: 'receivable',
 });
+
+const activityPage = {
+  items: [{
+    event_id: 'e-history-1',
+    event_type: 'cash_received',
+    currency: 'CUP',
+    total_amount_minor: '5000',
+    occurred_at: '2026-11-23T18:00:00.000Z',
+    reversal_reason: null,
+    audit_action: 'cash_received',
+    ledger_entries: [{
+      obligation_id: 'o1',
+      description: 'Préstamo',
+      amount_minor: '5000',
+      entry_kind: 'cash_received',
+    }],
+  }],
+  has_more: true,
+  next_cursor: { event_id: 'e-history-1', occurred_at: '2026-11-23T18:00:00.000Z' },
+};
+nextResult = { data: { data: activityPage }, error: null };
+assert.deepEqual(await listActivity('c1', { limit: 1 }), activityPage);
+lastCall('list_activity', {
+  p_contact_id: 'c1',
+  p_limit: 1,
+  p_before_occurred_at: null,
+  p_before_event_id: null,
+});
+nextResult = { data: { data: { ...activityPage, has_more: true, next_cursor: null } }, error: null };
+await assert.rejects(
+  () => listActivity('c1'),
+  (error) => error instanceof FortunaApiError && error.code === 'INVALID_RESPONSE',
+);
+await assert.rejects(
+  () => listActivity('c1', { limit: 101 }),
+  (error) => error instanceof FortunaApiError && error.code === 'INVALID_ARGUMENTS',
+);
 
 const obligationKey = 'obligation-idempotency-001';
 nextResult = { data: { data: { obligation_id: 'o1', amount_minor: '12550' } }, error: null };
