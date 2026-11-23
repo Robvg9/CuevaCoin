@@ -749,6 +749,7 @@ function inicializarFortuna() {
         state.activityHasMore = false;
         state.activityCursor = null;
         state.activityRequest += 1;
+        state.loadingActivity = false;
       }
       state.loadingContacts = false;
       renderSummary();
@@ -766,6 +767,7 @@ function inicializarFortuna() {
       state.activityHasMore = false;
       state.activityCursor = null;
       state.activityRequest += 1;
+      state.loadingActivity = false;
       state.loadingContacts = false;
       renderSummary();
       setStatus(errorMessage(error));
@@ -804,7 +806,8 @@ function inicializarFortuna() {
 
   async function loadSelectedActivity({ append = false } = {}) {
     const contact = selected();
-    if (!contact || state.loadingActivity) return false;
+    if (!contact || (append && state.loadingActivity)) return false;
+    if (!append) state.loadingActivity = false;
     const epoch = state.sessionEpoch;
     const request = ++state.activityRequest;
     const contactId = contact.contact_id;
@@ -1044,6 +1047,8 @@ function inicializarFortuna() {
     }
     state.selectedContactId = button.dataset.openContact;
     state.selectedObligations = [];
+    state.activityRequest += 1;
+    state.loadingActivity = false;
     state.activityItems = [];
     state.activityHasMore = false;
     state.activityCursor = null;
@@ -1066,6 +1071,7 @@ function inicializarFortuna() {
       state.activityHasMore = false;
       state.activityCursor = null;
       state.activityRequest += 1;
+      state.loadingActivity = false;
       state.settlementDraft = null;
       state.obligationRequest += 1;
       renderContactDetail();
