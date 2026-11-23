@@ -29,8 +29,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: fortuna-authenticated-local-e2e-${{ github.ref }}
-  cancel-in-progress: true
+  group: fortuna-authenticated-local-e2e-${{ github.ref }}-${{ github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   authenticated-local-e2e:
