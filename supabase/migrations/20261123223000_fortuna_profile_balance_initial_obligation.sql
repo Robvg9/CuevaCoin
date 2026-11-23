@@ -20,6 +20,14 @@ BEGIN
   IF v_actor IS NULL THEN
     RAISE EXCEPTION 'fortuna_auth_required' USING ERRCODE = '28000';
   END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.perfiles AS owner_profile
+    WHERE owner_profile.id = v_actor
+      AND owner_profile.es_admin IS TRUE
+      AND owner_profile.estado = 'activo'
+  ) THEN
+    RAISE EXCEPTION 'fortuna_owner_required' USING ERRCODE = '42501';
+  END IF;
   IF p_profile_id IS NULL OR p_profile_id = v_actor THEN
     RAISE EXCEPTION 'fortuna_profile_invalid';
   END IF;
