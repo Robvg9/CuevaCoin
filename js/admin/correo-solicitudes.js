@@ -7,6 +7,12 @@
 export async function aprobarCambioCorreo(solicitudId, usuarioId, correoNuevo, nombreUsuario) {
     if (!window.requiereConexionParaOperar()) return;
     const admin = JSON.parse(sessionStorage.getItem('cuevacoin_usuario_actual'));
+    const { data: perfilDestino, error: errorPerfilDestino } = await window.supabaseClient
+        .from('perfiles').select('es_dependiente').eq('id', usuarioId).maybeSingle();
+    if (errorPerfilDestino || perfilDestino?.es_dependiente !== true) {
+        window.showToast('Esta cuenta pertenece solo a FORTUNA y no se gestiona desde CuevaCoin.', 3500);
+        return;
+    }
 
     // Guardia .eq('estado', 'pendiente') igual que en retiros, para
     // que un doble clic o dos admins a la vez no lo procesen dos veces.
