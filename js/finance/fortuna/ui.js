@@ -10,7 +10,7 @@ import {
 } from './preview-domain.mjs';
 
 function inicializarFortunaPreview() {
-  const root = document.getElementById('admin-fortuna');
+  const root = document.getElementById('shared-fortuna');
   if (!root || root.dataset.fortunaPreviewReady === 'true') return;
   root.dataset.fortunaPreviewReady = 'true';
 
