@@ -32,7 +32,7 @@ assert.match(html, /<li id="fortuna-link-item">[\\s\\S]*loadSection\\('fortuna'\
 assert.match(adminPanel, /fortuna-link-item/);
 assert.match(adminPanel, /fortunaItem[\s\S]{0,100}style\.display = ''/);
 assert.match(userPanel, /fortuna-link-item/);
-assert.match(userPanel, /style\.display = ''/);
+assert.match(userPanel, /fortunaItem[\\s\\S]{0,100}style\\.display = 'none'/);
 assert.match(navigation, /seccionesCompartidas/);
 assert.match(navigation, /'fortuna'/);
 assert.match(navigation, /loadFortunaData/);
