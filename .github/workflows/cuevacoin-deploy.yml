@@ -56,7 +56,7 @@ jobs:
   deploy-worker:
     name: Deploy and verify CuevaCoin Worker
     if: github.event_name == 'workflow_dispatch'
-    runs-on: [self-hosted, Windows, X64, cuevacoin]
+    runs-on: windows-latest
     timeout-minutes: 20
     environment: cuevacoin-production
     steps:
