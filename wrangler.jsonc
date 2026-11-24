@@ -1,5 +1,4 @@
 {
-  // Preview V166: trigger a fresh Workers Build for network-first HTML and cache-busted owner navigation.
   "name": "cuevacoin",
   "compatibility_date": "2026-08-10",
   "assets": {
