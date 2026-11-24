@@ -1,7 +1,7 @@
 name: CuevaCoin governed Worker deployment
 
 on:
-  # Public-repo safety: self-hosted Windows jobs must not run fork PR code.
+  # GitHub-hosted runners keep deployments independent of the owner's PC.
   workflow_dispatch:
     inputs:
       change_summary:
@@ -24,7 +24,7 @@ jobs:
   validate-only:
     name: Validate deploy path (no production writes)
     if: github.event_name == 'pull_request'
-    runs-on: [self-hosted, Windows, X64, cuevacoin]
+    runs-on: windows-latest
     timeout-minutes: 15
     steps:
       - name: Checkout pull request for validation only
